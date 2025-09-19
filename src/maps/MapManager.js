@@ -4,7 +4,7 @@ import { MapData } from './MapData.js';
 export class MapManager {
     constructor() {
         this.maps = {};
-        this.currentMapId = CONSTANTS.MAPS.BUILDING_ENTRANCE;
+        this.currentMapId = CONSTANTS.MAPS.LOBBY;
         this.initializeMaps();
     }
 
