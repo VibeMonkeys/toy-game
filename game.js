@@ -374,72 +374,290 @@ class Game {
 
         this.maps = {
             lobby: {
-                name: '로비',
-                background: '#F5F5F0',
+                name: '휴넷 중앙 로비',
+                background: '#F8F9FA',
                 walls: this.generateWalls().concat([
-                    {x: 15, y: 15}, {x: 16, y: 15}, {x: 17, y: 15},
-                    {x: 15, y: 16}, {x: 17, y: 16},
-                    {x: 15, y: 17}, {x: 16, y: 17}, {x: 17, y: 17}
-                ]),
-                officeItems: officeItems,
-                npcs: [
-                    { x: 7, y: 7, type: 'employee', name: '김대리', dialog: ['안녕하세요! 26주년을 축하합니다!', '회의실에 첫 번째 단서가 있어요. 북쪽 문으로 가보세요!'] },
-                    { x: 27, y: 12, type: 'employee', name: '박대리', dialog: ['여기서 휴식을 취하세요!', '더 큰 세계를 탐험해보세요!'] },
-                    { x: 34, y: 16, type: 'employee', name: '이사원', dialog: ['이곳은 오픈 오피스예요!', '자유롭게 돌아다니며 동료들과 대화해보세요!'] }
-                ],
-                items: [
-                    { x: 10, y: 6, type: 'key', name: '로비 열쇠', collected: false },
-                    { x: 30, y: 25, type: 'key', name: '비밀 열쇠', collected: false }
-                ],
-                portals: [
-                    { x: 20, y: 1, targetMap: 'meeting_room', targetX: 20, targetY: 28, name: '회의실' }
-                ]
-            },
-            meeting_room: {
-                name: '회의실',
-                background: '#E8F4FD',
-                walls: this.generateWalls().concat([
-                    {x: 8, y: 8}, {x: 9, y: 8}, {x: 11, y: 8}, {x: 12, y: 8}, {x: 13, y: 8}, {x: 14, y: 8}, {x: 15, y: 8}, {x: 16, y: 8},
-                    {x: 8, y: 9}, {x: 16, y: 9}, {x: 8, y: 10}, {x: 16, y: 10}, {x: 8, y: 11}, {x: 9, y: 11}, {x: 15, y: 11}, {x: 16, y: 11}
+                    // 중앙 리셉션 데스크
+                    {x: 18, y: 13}, {x: 19, y: 13}, {x: 20, y: 13}, {x: 21, y: 13}, {x: 22, y: 13},
+                    {x: 18, y: 14}, {x: 22, y: 14},
+                    {x: 18, y: 15}, {x: 19, y: 15}, {x: 21, y: 15}, {x: 22, y: 15}
                 ]),
                 officeItems: {
-                    meetingTables: [{x: 10, y: 9, width: 5, height: 2}],
-                    chairs: [{x: 9, y: 10}, {x: 10, y: 10}, {x: 11, y: 10}, {x: 12, y: 10}, {x: 13, y: 10}, {x: 14, y: 10}, {x: 15, y: 10}],
-                    desks: [],
-                    plants: [{x: 20, y: 5}, {x: 25, y: 15}],
-                    printers: []
+                    desks: [
+                        // 리셉션 데스크
+                        {x: 19, y: 14}, {x: 20, y: 14}, {x: 21, y: 14}
+                    ],
+                    chairs: [
+                        // 대기 의자들
+                        {x: 15, y: 18}, {x: 16, y: 18}, {x: 17, y: 18},
+                        {x: 23, y: 18}, {x: 24, y: 18}, {x: 25, y: 18}
+                    ],
+                    plants: [
+                        {x: 5, y: 5}, {x: 35, y: 5}, {x: 5, y: 25}, {x: 35, y: 25},
+                        {x: 12, y: 12}, {x: 28, y: 12}
+                    ],
+                    printers: [],
+                    meetingTables: [
+                        // 중앙 원형 테이블
+                        {x: 19, y: 20, width: 3, height: 2}
+                    ]
                 },
                 npcs: [
-                    { x: 12, y: 10, type: 'manager', name: '박과장', dialog: ['여기는 회의실입니다.', '다음 단서는 카페테리아에서 찾을 수 있어요!'] }
+                    { x: 20, y: 16, type: 'receptionist', name: '안내데스크 직원', dialog: ['휴넷에 오신 것을 환영합니다!', '각 본부로 이동하려면 해당 포털을 이용하세요.', '궁금한 것이 있으면 언제든 물어보세요!'] },
+                    { x: 10, y: 10, type: 'guide', name: '가이드', dialog: ['안녕하세요! 보물찾기 게임에 참여해주셔서 감사합니다.', '각 본부를 방문하여 NPC들과 대화하고 퀘스트를 완료하세요.', '모든 단서를 모으면 CEO가 보물의 위치를 알려드릴 거예요!'] }
                 ],
-                items: [
-                    { x: 10, y: 10, type: 'document', name: '회의록', collected: false }
-                ],
+                items: [],
                 portals: [
-                    { x: 20, y: 29, targetMap: 'lobby', targetX: 20, targetY: 1, name: '로비' },
-                    { x: 38, y: 15, targetMap: 'cafeteria', targetX: 2, targetY: 15, name: '카페테리아' }
+                    // 10개 본부로의 포털들
+                    { x: 10, y: 1, targetMap: 'it_department', targetX: 20, targetY: 28, name: 'IT본부' },
+                    { x: 15, y: 1, targetMap: 'hr_department', targetX: 20, targetY: 28, name: '인경실' },
+                    { x: 20, y: 1, targetMap: 'research_department', targetX: 20, targetY: 28, name: '연구원' },
+                    { x: 25, y: 1, targetMap: 'ai_department', targetX: 20, targetY: 28, name: 'AI연구소' },
+                    { x: 30, y: 1, targetMap: 'planning_department', targetX: 20, targetY: 28, name: '기획본부' },
+
+                    { x: 1, y: 10, targetMap: 'sales_department', targetX: 38, targetY: 15, name: '영업본부' },
+                    { x: 1, y: 15, targetMap: 'marketing_department', targetX: 38, targetY: 15, name: '마케팅본부' },
+                    { x: 1, y: 20, targetMap: 'content_department', targetX: 38, targetY: 15, name: '콘텐츠본부' },
+
+                    { x: 38, y: 10, targetMap: 'design_department', targetX: 2, targetY: 15, name: '디자인본부' },
+                    { x: 38, y: 20, targetMap: 'ceo_office', targetX: 2, targetY: 15, name: 'CEO실' }
                 ]
             },
-            cafeteria: {
-                name: '카페테리아',
-                background: '#FFF8E1',
+            it_department: {
+                name: 'IT본부',
+                background: '#E8F4F8',
                 walls: this.generateWalls(),
                 officeItems: {
-                    meetingTables: [{x: 10, y: 10, width: 4, height: 3}, {x: 25, y: 8, width: 3, height: 2}],
-                    chairs: [{x: 9, y: 10}, {x: 10, y: 9}, {x: 13, y: 9}, {x: 14, y: 10}, {x: 24, y: 8}, {x: 25, y: 7}, {x: 27, y: 7}, {x: 28, y: 8}],
-                    desks: [],
-                    plants: [{x: 5, y: 5}, {x: 35, y: 10}],
-                    printers: [{x: 20, y: 15}]
+                    desks: [
+                        {x: 5, y: 5}, {x: 6, y: 5}, {x: 8, y: 5}, {x: 9, y: 5},
+                        {x: 12, y: 8}, {x: 13, y: 8}, {x: 15, y: 8}, {x: 16, y: 8},
+                        {x: 25, y: 12}, {x: 26, y: 12}, {x: 28, y: 12}, {x: 29, y: 12}
+                    ],
+                    chairs: [
+                        {x: 5, y: 4}, {x: 6, y: 4}, {x: 8, y: 4}, {x: 9, y: 4},
+                        {x: 12, y: 7}, {x: 13, y: 7}, {x: 15, y: 7}, {x: 16, y: 7},
+                        {x: 25, y: 11}, {x: 26, y: 11}, {x: 28, y: 11}, {x: 29, y: 11}
+                    ],
+                    plants: [{x: 18, y: 3}, {x: 32, y: 18}],
+                    printers: [{x: 20, y: 15}],
+                    meetingTables: []
                 },
                 npcs: [
-                    { x: 15, y: 12, type: 'director', name: '이부장', dialog: ['카페테리아에 오신 걸 환영합니다!', '마지막 보물은 CEO실에 숨겨져 있답니다.'] }
+                    { x: 7, y: 6, type: 'developer', name: 'IT팀장', dialog: ['안녕하세요! IT본부입니다.', '저희는 휴넷의 모든 시스템을 관리해요.', '보물찾기를 도와드릴게요!'], quest: 'it_quest' },
+                    { x: 14, y: 9, type: 'developer', name: '개발자', dialog: ['코딩 중이에요...', '잠깐만 기다려주세요!'] },
+                    { x: 27, y: 13, type: 'developer', name: '시스템관리자', dialog: ['서버 상태 점검 중입니다.', '모든 시스템이 정상 작동하고 있어요!'] }
                 ],
-                items: [
-                    { x: 20, y: 5, type: 'coffee', name: '특별한 커피', collected: false }
-                ],
+                items: [],
                 portals: [
-                    { x: 2, y: 15, targetMap: 'meeting_room', targetX: 38, targetY: 15, name: '회의실' },
-                    { x: 38, y: 15, targetMap: 'ceo_office', targetX: 2, targetY: 15, name: 'CEO실' }
+                    { x: 20, y: 29, targetMap: 'lobby', targetX: 10, targetY: 1, name: '로비' }
+                ]
+            },
+            hr_department: {
+                name: '인사경영실',
+                background: '#FFF8E8',
+                walls: this.generateWalls(),
+                officeItems: {
+                    desks: [
+                        {x: 8, y: 8}, {x: 9, y: 8}, {x: 11, y: 8}, {x: 12, y: 8},
+                        {x: 20, y: 12}, {x: 21, y: 12}, {x: 23, y: 12}, {x: 24, y: 12}
+                    ],
+                    chairs: [
+                        {x: 8, y: 7}, {x: 9, y: 7}, {x: 11, y: 7}, {x: 12, y: 7},
+                        {x: 20, y: 11}, {x: 21, y: 11}, {x: 23, y: 11}, {x: 24, y: 11}
+                    ],
+                    plants: [{x: 15, y: 5}, {x: 30, y: 20}],
+                    printers: [{x: 16, y: 15}],
+                    meetingTables: [{x: 15, y: 18, width: 4, height: 2}]
+                },
+                npcs: [
+                    { x: 10, y: 9, type: 'hr', name: '인사팀장', dialog: ['인사경영실에 오신 걸 환영합니다!', '직원들의 성장을 지원하는 것이 저희 역할이에요.', '교육과 관련된 힌트를 드릴게요!'], quest: 'hr_quest' },
+                    { x: 22, y: 13, type: 'hr', name: '교육담당자', dialog: ['교육 프로그램 기획 중이에요.', '휴넷의 교육 철학을 아시나요?'] }
+                ],
+                items: [],
+                portals: [
+                    { x: 20, y: 29, targetMap: 'lobby', targetX: 15, targetY: 1, name: '로비' }
+                ]
+            },
+            research_department: {
+                name: '연구원',
+                background: '#F0F8FF',
+                walls: this.generateWalls(),
+                officeItems: {
+                    desks: [
+                        {x: 6, y: 6}, {x: 7, y: 6}, {x: 10, y: 6}, {x: 11, y: 6},
+                        {x: 15, y: 10}, {x: 16, y: 10}, {x: 18, y: 10}, {x: 19, y: 10}
+                    ],
+                    chairs: [
+                        {x: 6, y: 5}, {x: 7, y: 5}, {x: 10, y: 5}, {x: 11, y: 5},
+                        {x: 15, y: 9}, {x: 16, y: 9}, {x: 18, y: 9}, {x: 19, y: 9}
+                    ],
+                    plants: [{x: 25, y: 8}, {x: 30, y: 15}],
+                    printers: [{x: 12, y: 15}],
+                    meetingTables: [{x: 25, y: 18, width: 6, height: 3}]
+                },
+                npcs: [
+                    { x: 8, y: 7, type: 'researcher', name: '연구팀장', dialog: ['연구원에 오신 걸 환영합니다!', '저희는 새로운 교육 방법론을 연구해요.', '교육의 미래를 함께 만들어가죠!'], quest: 'research_quest' },
+                    { x: 17, y: 11, type: 'researcher', name: '선임연구원', dialog: ['데이터 분석 중이에요.', '학습 효과를 높이는 방법을 찾고 있어요.'] }
+                ],
+                items: [],
+                portals: [
+                    { x: 20, y: 29, targetMap: 'lobby', targetX: 20, targetY: 1, name: '로비' }
+                ]
+            },
+            ai_department: {
+                name: 'AI연구소',
+                background: '#E8F8F5',
+                walls: this.generateWalls(),
+                officeItems: {
+                    desks: [
+                        {x: 10, y: 8}, {x: 11, y: 8}, {x: 13, y: 8}, {x: 14, y: 8},
+                        {x: 20, y: 12}, {x: 21, y: 12}, {x: 24, y: 12}, {x: 25, y: 12}
+                    ],
+                    chairs: [
+                        {x: 10, y: 7}, {x: 11, y: 7}, {x: 13, y: 7}, {x: 14, y: 7},
+                        {x: 20, y: 11}, {x: 21, y: 11}, {x: 24, y: 11}, {x: 25, y: 11}
+                    ],
+                    plants: [{x: 8, y: 15}, {x: 28, y: 8}],
+                    printers: [{x: 18, y: 18}],
+                    meetingTables: []
+                },
+                npcs: [
+                    { x: 12, y: 9, type: 'ai_researcher', name: 'AI연구팀장', dialog: ['AI연구소에 오신 걸 환영합니다!', '인공지능으로 교육의 혁신을 만들어요.', 'AI가 숨긴 단서를 찾아보세요!'], quest: 'ai_quest' },
+                    { x: 22, y: 13, type: 'ai_researcher', name: 'ML엔지니어', dialog: ['머신러닝 모델 훈련 중이에요.', '개인맞춤형 학습을 위한 알고리즘이에요.'] }
+                ],
+                items: [],
+                portals: [
+                    { x: 20, y: 29, targetMap: 'lobby', targetX: 25, targetY: 1, name: '로비' }
+                ]
+            },
+            planning_department: {
+                name: '기획본부',
+                background: '#FDF2E9',
+                walls: this.generateWalls(),
+                officeItems: {
+                    desks: [
+                        {x: 8, y: 10}, {x: 9, y: 10}, {x: 12, y: 10}, {x: 13, y: 10},
+                        {x: 20, y: 15}, {x: 21, y: 15}, {x: 24, y: 15}, {x: 25, y: 15}
+                    ],
+                    chairs: [
+                        {x: 8, y: 9}, {x: 9, y: 9}, {x: 12, y: 9}, {x: 13, y: 9},
+                        {x: 20, y: 14}, {x: 21, y: 14}, {x: 24, y: 14}, {x: 25, y: 14}
+                    ],
+                    plants: [{x: 15, y: 5}, {x: 30, y: 20}],
+                    printers: [{x: 16, y: 18}],
+                    meetingTables: [{x: 28, y: 8, width: 4, height: 3}]
+                },
+                npcs: [
+                    { x: 10, y: 11, type: 'planner', name: '기획팀장', dialog: ['기획본부에 오신 걸 환영합니다!', '회사의 미래 전략을 세우는 곳이에요.', '혁신적인 아이디어가 숨어있을 거예요!'], quest: 'planning_quest' },
+                    { x: 22, y: 16, type: 'planner', name: '전략기획자', dialog: ['새로운 사업 계획을 세우고 있어요.', '교육 트렌드를 분석 중입니다.'] }
+                ],
+                items: [],
+                portals: [
+                    { x: 20, y: 29, targetMap: 'lobby', targetX: 30, targetY: 1, name: '로비' }
+                ]
+            },
+            sales_department: {
+                name: '영업본부',
+                background: '#E8F6F3',
+                walls: this.generateWalls(),
+                officeItems: {
+                    desks: [
+                        {x: 5, y: 8}, {x: 6, y: 8}, {x: 9, y: 8}, {x: 10, y: 8},
+                        {x: 15, y: 12}, {x: 16, y: 12}, {x: 19, y: 12}, {x: 20, y: 12}
+                    ],
+                    chairs: [
+                        {x: 5, y: 7}, {x: 6, y: 7}, {x: 9, y: 7}, {x: 10, y: 7},
+                        {x: 15, y: 11}, {x: 16, y: 11}, {x: 19, y: 11}, {x: 20, y: 11}
+                    ],
+                    plants: [{x: 12, y: 5}, {x: 25, y: 18}],
+                    printers: [{x: 22, y: 8}],
+                    meetingTables: [{x: 28, y: 15, width: 5, height: 2}]
+                },
+                npcs: [
+                    { x: 7, y: 9, type: 'sales', name: '영업팀장', dialog: ['영업본부에 오신 걸 환영합니다!', '고객과의 소통이 저희의 강점이에요.', '성과에 대한 비밀을 알려드릴게요!'], quest: 'sales_quest' },
+                    { x: 17, y: 13, type: 'sales', name: '영업대표', dialog: ['고객 미팅 준비 중이에요.', '휴넷의 교육 솔루션을 소개하러 갑니다!'] }
+                ],
+                items: [],
+                portals: [
+                    { x: 38, y: 15, targetMap: 'lobby', targetX: 1, targetY: 10, name: '로비' }
+                ]
+            },
+            marketing_department: {
+                name: '마케팅본부',
+                background: '#FAE5D3',
+                walls: this.generateWalls(),
+                officeItems: {
+                    desks: [
+                        {x: 8, y: 6}, {x: 9, y: 6}, {x: 12, y: 6}, {x: 13, y: 6},
+                        {x: 18, y: 10}, {x: 19, y: 10}, {x: 22, y: 10}, {x: 23, y: 10}
+                    ],
+                    chairs: [
+                        {x: 8, y: 5}, {x: 9, y: 5}, {x: 12, y: 5}, {x: 13, y: 5},
+                        {x: 18, y: 9}, {x: 19, y: 9}, {x: 22, y: 9}, {x: 23, y: 9}
+                    ],
+                    plants: [{x: 15, y: 15}, {x: 28, y: 20}],
+                    printers: [{x: 25, y: 15}],
+                    meetingTables: [{x: 6, y: 18, width: 6, height: 3}]
+                },
+                npcs: [
+                    { x: 10, y: 7, type: 'marketer', name: '마케팅팀장', dialog: ['마케팅본부에 오신 걸 환영합니다!', '브랜드 가치를 높이는 것이 저희 목표예요.', '창의적인 힌트를 드릴게요!'], quest: 'marketing_quest' },
+                    { x: 20, y: 11, type: 'marketer', name: '브랜드매니저', dialog: ['캠페인 기획 중이에요.', '휴넷의 브랜드 스토리를 만들고 있어요.'] }
+                ],
+                items: [],
+                portals: [
+                    { x: 38, y: 15, targetMap: 'lobby', targetX: 1, targetY: 15, name: '로비' }
+                ]
+            },
+            content_department: {
+                name: '콘텐츠본부',
+                background: '#EBEDEF',
+                walls: this.generateWalls(),
+                officeItems: {
+                    desks: [
+                        {x: 6, y: 8}, {x: 7, y: 8}, {x: 10, y: 8}, {x: 11, y: 8},
+                        {x: 16, y: 12}, {x: 17, y: 12}, {x: 20, y: 12}, {x: 21, y: 12}
+                    ],
+                    chairs: [
+                        {x: 6, y: 7}, {x: 7, y: 7}, {x: 10, y: 7}, {x: 11, y: 7},
+                        {x: 16, y: 11}, {x: 17, y: 11}, {x: 20, y: 11}, {x: 21, y: 11}
+                    ],
+                    plants: [{x: 13, y: 5}, {x: 25, y: 18}],
+                    printers: [{x: 24, y: 8}],
+                    meetingTables: [{x: 28, y: 12, width: 4, height: 4}]
+                },
+                npcs: [
+                    { x: 8, y: 9, type: 'content_creator', name: '콘텐츠팀장', dialog: ['콘텐츠본부에 오신 걸 환영합니다!', '최고의 교육 콘텐츠를 만드는 곳이에요.', '학습자의 마음을 움직이는 비결을 알려드릴게요!'], quest: 'content_quest' },
+                    { x: 18, y: 13, type: 'content_creator', name: '콘텐츠기획자', dialog: ['새로운 강의 콘텐츠를 기획하고 있어요.', '학습 효과를 극대화하는 방법을 연구해요.'] }
+                ],
+                items: [],
+                portals: [
+                    { x: 38, y: 15, targetMap: 'lobby', targetX: 1, targetY: 20, name: '로비' }
+                ]
+            },
+            design_department: {
+                name: '디자인본부',
+                background: '#F4E6FF',
+                walls: this.generateWalls(),
+                officeItems: {
+                    desks: [
+                        {x: 5, y: 6}, {x: 6, y: 6}, {x: 9, y: 6}, {x: 10, y: 6},
+                        {x: 15, y: 10}, {x: 16, y: 10}, {x: 19, y: 10}, {x: 20, y: 10}
+                    ],
+                    chairs: [
+                        {x: 5, y: 5}, {x: 6, y: 5}, {x: 9, y: 5}, {x: 10, y: 5},
+                        {x: 15, y: 9}, {x: 16, y: 9}, {x: 19, y: 9}, {x: 20, y: 9}
+                    ],
+                    plants: [{x: 12, y: 15}, {x: 25, y: 8}],
+                    printers: [{x: 22, y: 15}],
+                    meetingTables: [{x: 25, y: 18, width: 5, height: 3}]
+                },
+                npcs: [
+                    { x: 7, y: 7, type: 'designer', name: '디자인팀장', dialog: ['디자인본부에 오신 걸 환영합니다!', '시각적 경험을 통해 학습을 돕는 곳이에요.', '아름다운 디자인에 숨겨진 메시지가 있을 거예요!'], quest: 'design_quest' },
+                    { x: 17, y: 11, type: 'designer', name: 'UI/UX디자이너', dialog: ['사용자 경험을 개선하고 있어요.', '직관적이고 아름다운 인터페이스를 만들어요.'] }
+                ],
+                items: [],
+                portals: [
+                    { x: 2, y: 15, targetMap: 'lobby', targetX: 38, targetY: 10, name: '로비' }
                 ]
             },
             ceo_office: {
@@ -1361,36 +1579,68 @@ class Game {
         this.ctx.fillStyle = gradient;
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // 제목
+        // 휴넷 로고 및 제목
         this.ctx.fillStyle = 'white';
-        this.ctx.font = 'bold 48px Arial';
+        this.ctx.font = 'bold 52px Arial';
         this.ctx.textAlign = 'center';
         this.ctx.strokeStyle = '#2c3e50';
         this.ctx.lineWidth = 3;
-        this.ctx.strokeText('26주년 창립 기념', this.canvas.width / 2, 150);
-        this.ctx.fillText('26주년 창립 기념', this.canvas.width / 2, 150);
+        this.ctx.strokeText('HUNET', this.canvas.width / 2, 150);
+        this.ctx.fillText('HUNET', this.canvas.width / 2, 150);
+
+        this.ctx.font = 'bold 28px Arial';
+        this.ctx.fillStyle = '#ecf0f1';
+        this.ctx.strokeText('기업교육 선도기업', this.canvas.width / 2, 185);
+        this.ctx.fillText('기업교육 선도기업', this.canvas.width / 2, 185);
 
         this.ctx.font = 'bold 36px Arial';
-        this.ctx.strokeText('보물찾기 게임', this.canvas.width / 2, 200);
-        this.ctx.fillText('보물찾기 게임', this.canvas.width / 2, 200);
-
-        // 회사 아이콘 (간단한 빌딩 모양)
         this.ctx.fillStyle = '#f39c12';
-        this.ctx.fillRect(this.canvas.width / 2 - 40, 220, 80, 60);
-        this.ctx.fillStyle = '#e67e22';
-        this.ctx.fillRect(this.canvas.width / 2 - 35, 225, 70, 50);
+        this.ctx.strokeText('26주년 기념 보물찾기', this.canvas.width / 2, 230);
+        this.ctx.fillText('26주년 기념 보물찾기', this.canvas.width / 2, 230);
 
-        // 빌딩 창문들
-        this.ctx.fillStyle = '#3498db';
-        for (let i = 0; i < 3; i++) {
-            for (let j = 0; j < 2; j++) {
-                this.ctx.fillRect(this.canvas.width / 2 - 30 + i * 20, 235 + j * 15, 8, 8);
-            }
+        // 휴넷 아이콘 (교육 관련 - 책과 컴퓨터)
+        const centerX = this.canvas.width / 2;
+
+        // 책 아이콘
+        this.ctx.fillStyle = '#2ecc71';
+        this.ctx.fillRect(centerX - 60, 250, 40, 50);
+        this.ctx.fillStyle = '#27ae60';
+        this.ctx.fillRect(centerX - 55, 255, 30, 40);
+
+        // 책 페이지 라인들
+        this.ctx.strokeStyle = '#1e8449';
+        this.ctx.lineWidth = 2;
+        for (let i = 0; i < 4; i++) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(centerX - 50, 260 + i * 7);
+            this.ctx.lineTo(centerX - 30, 260 + i * 7);
+            this.ctx.stroke();
         }
 
+        // 컴퓨터 모니터
+        this.ctx.fillStyle = '#3498db';
+        this.ctx.fillRect(centerX + 20, 255, 45, 35);
+        this.ctx.fillStyle = '#2980b9';
+        this.ctx.fillRect(centerX + 25, 260, 35, 25);
+
+        // 모니터 스탠드
+        this.ctx.fillStyle = '#34495e';
+        this.ctx.fillRect(centerX + 37, 290, 10, 8);
+        this.ctx.fillRect(centerX + 25, 298, 34, 4);
+
+        // 화면 내용 (그래프)
+        this.ctx.strokeStyle = '#e74c3c';
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.moveTo(centerX + 28, 280);
+        this.ctx.lineTo(centerX + 35, 270);
+        this.ctx.lineTo(centerX + 42, 275);
+        this.ctx.lineTo(centerX + 50, 265);
+        this.ctx.lineTo(centerX + 57, 268);
+        this.ctx.stroke();
+
         // 메뉴
-        const centerX = this.canvas.width / 2;
-        const startY = 350;
+        const startY = 380;
 
         this.ctx.font = 'bold 24px Arial';
         this.ctx.fillStyle = '#f39c12';
