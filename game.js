@@ -6,6 +6,10 @@ class Game {
         this.mapWidth = 40;
         this.mapHeight = 30;
 
+        // 게임 상태 관리
+        this.gameMode = 'title'; // 'title', 'playing', 'paused'
+        this.hasSavedGame = this.checkSavedGame();
+
         this.camera = {
             x: 0,
             y: 0,
@@ -101,6 +105,113 @@ class Game {
 
         this.setupEventListeners();
         this.gameLoop();
+    }
+
+    checkSavedGame() {
+        try {
+            const savedData = localStorage.getItem('treasureHuntGame');
+            return savedData !== null;
+        } catch (error) {
+            console.warn('로컬 스토리지 접근 불가:', error);
+            return false;
+        }
+    }
+
+    saveGame() {
+        try {
+            const gameData = {
+                currentMap: this.currentMap,
+                player: { ...this.player },
+                inventory: [...this.inventory],
+                gameState: { ...this.gameState },
+                questSystem: {
+                    currentQuest: this.questSystem.currentQuest,
+                    quests: this.questSystem.quests.map(q => ({ ...q }))
+                },
+                timestamp: Date.now()
+            };
+            localStorage.setItem('treasureHuntGame', JSON.stringify(gameData));
+            this.showItemNotification('게임이 저장되었습니다!');
+        } catch (error) {
+            console.warn('게임 저장 실패:', error);
+            this.showItemNotification('게임 저장에 실패했습니다.');
+        }
+    }
+
+    loadGame() {
+        try {
+            const savedData = localStorage.getItem('treasureHuntGame');
+            if (!savedData) return false;
+
+            const gameData = JSON.parse(savedData);
+
+            this.currentMap = gameData.currentMap;
+            this.player = { ...gameData.player };
+            this.inventory = [...gameData.inventory];
+            this.gameState = { ...gameData.gameState };
+            this.questSystem.currentQuest = gameData.questSystem.currentQuest;
+            this.questSystem.quests = gameData.questSystem.quests.map(q => ({ ...q }));
+
+            this.gameMode = 'playing';
+            this.showItemNotification('게임이 로드되었습니다!');
+            return true;
+        } catch (error) {
+            console.warn('게임 로드 실패:', error);
+            this.showItemNotification('게임 로드에 실패했습니다.');
+            return false;
+        }
+    }
+
+    startNewGame() {
+        // 기본값으로 초기화
+        this.currentMap = 'lobby';
+        this.player = {
+            x: 12,
+            y: 15,
+            direction: 'down',
+            animFrame: 0,
+            animTimer: 0,
+            isMoving: false
+        };
+        this.inventory = [];
+        this.gameState = {
+            itemsCollected: 0,
+            totalItems: 4,
+            visitedMaps: ['lobby'],
+            completedQuests: []
+        };
+        this.questSystem.currentQuest = 0;
+        this.questSystem.quests.forEach(quest => {
+            quest.completed = false;
+            quest.progress = 0;
+        });
+
+        this.gameMode = 'playing';
+        this.showItemNotification('새 게임을 시작합니다!');
+    }
+
+    handleTitleScreenInput(keyCode) {
+        switch(keyCode) {
+            case 'Digit1':
+            case 'Enter':
+                this.startNewGame();
+                this.playSound('item', 800, 300, 0.15);
+                break;
+            case 'Digit2':
+                if (this.hasSavedGame) {
+                    this.loadGame();
+                    this.playSound('item', 800, 300, 0.15);
+                }
+                break;
+            case 'Space':
+                if (this.hasSavedGame) {
+                    this.loadGame();
+                } else {
+                    this.startNewGame();
+                }
+                this.playSound('item', 800, 300, 0.15);
+                break;
+        }
     }
 
     initializeAudio() {
@@ -375,8 +486,14 @@ class Game {
         // 게임 관련 키들의 기본 동작을 방지
         document.addEventListener('keydown', (e) => {
             // 게임에서 사용하는 키들의 기본 동작 방지
-            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyI', 'KeyM', 'KeyQ', 'Escape', 'Enter'].includes(e.code)) {
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyI', 'KeyM', 'KeyQ', 'KeyS', 'Escape', 'Enter', 'Digit1', 'Digit2'].includes(e.code)) {
                 e.preventDefault();
+            }
+
+            // 시작 화면에서의 키 처리
+            if (this.gameMode === 'title') {
+                this.handleTitleScreenInput(e.code);
+                return;
             }
             if (this.currentDialog) {
                 if (e.code === 'Space' || e.code === 'Enter') {
@@ -402,6 +519,11 @@ class Game {
 
             if (e.code === 'KeyQ') {
                 this.questSystem.showQuestUI = !this.questSystem.showQuestUI;
+                return;
+            }
+
+            if (e.code === 'KeyS') {
+                this.saveGame();
                 return;
             }
 
@@ -1227,6 +1349,83 @@ class Game {
         this.ctx.fillText(`완료된 퀘스트: ${completedQuests}/${this.questSystem.quests.length}`, questX + questWidth/2, questY + questHeight - 15);
     }
 
+    drawTitleScreen() {
+        // 배경
+        this.ctx.fillStyle = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // 배경 그라디언트 효과
+        const gradient = this.ctx.createLinearGradient(0, 0, this.canvas.width, this.canvas.height);
+        gradient.addColorStop(0, '#667eea');
+        gradient.addColorStop(1, '#764ba2');
+        this.ctx.fillStyle = gradient;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // 제목
+        this.ctx.fillStyle = 'white';
+        this.ctx.font = 'bold 48px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.strokeStyle = '#2c3e50';
+        this.ctx.lineWidth = 3;
+        this.ctx.strokeText('26주년 창립 기념', this.canvas.width / 2, 150);
+        this.ctx.fillText('26주년 창립 기념', this.canvas.width / 2, 150);
+
+        this.ctx.font = 'bold 36px Arial';
+        this.ctx.strokeText('보물찾기 게임', this.canvas.width / 2, 200);
+        this.ctx.fillText('보물찾기 게임', this.canvas.width / 2, 200);
+
+        // 회사 아이콘 (간단한 빌딩 모양)
+        this.ctx.fillStyle = '#f39c12';
+        this.ctx.fillRect(this.canvas.width / 2 - 40, 220, 80, 60);
+        this.ctx.fillStyle = '#e67e22';
+        this.ctx.fillRect(this.canvas.width / 2 - 35, 225, 70, 50);
+
+        // 빌딩 창문들
+        this.ctx.fillStyle = '#3498db';
+        for (let i = 0; i < 3; i++) {
+            for (let j = 0; j < 2; j++) {
+                this.ctx.fillRect(this.canvas.width / 2 - 30 + i * 20, 235 + j * 15, 8, 8);
+            }
+        }
+
+        // 메뉴
+        const centerX = this.canvas.width / 2;
+        const startY = 350;
+
+        this.ctx.font = 'bold 24px Arial';
+        this.ctx.fillStyle = '#f39c12';
+        this.ctx.fillText('1. 새 게임 시작', centerX, startY);
+
+        if (this.hasSavedGame) {
+            this.ctx.fillStyle = '#2ecc71';
+            this.ctx.fillText('2. 게임 계속하기', centerX, startY + 40);
+        } else {
+            this.ctx.fillStyle = '#95a5a6';
+            this.ctx.fillText('2. 게임 계속하기 (저장된 게임 없음)', centerX, startY + 40);
+        }
+
+        // 조작 안내
+        this.ctx.font = '16px Arial';
+        this.ctx.fillStyle = '#ecf0f1';
+        this.ctx.fillText('숫자키 1/2 또는 스페이스바를 눌러주세요', centerX, startY + 100);
+
+        // 하단 정보
+        this.ctx.font = '14px Arial';
+        this.ctx.fillStyle = '#bdc3c7';
+        this.ctx.fillText('방향키: 이동 | 스페이스: 대화 | I: 인벤토리 | M: 미니맵 | Q: 퀘스트 | S: 저장', centerX, this.canvas.height - 30);
+
+        // 반짝이는 효과
+        const time = Date.now() / 1000;
+        const sparkleAlpha = (Math.sin(time * 2) + 1) / 2 * 0.3 + 0.1;
+        this.ctx.fillStyle = `rgba(255, 255, 255, ${sparkleAlpha})`;
+
+        for (let i = 0; i < 5; i++) {
+            const x = centerX + Math.sin(time + i * 2) * 200 + Math.cos(time * 0.7 + i) * 100;
+            const y = 100 + Math.cos(time * 1.3 + i * 1.5) * 50;
+            this.ctx.fillRect(x - 1, y - 1, 2, 2);
+        }
+    }
+
     drawInteractionHint() {
         if (!this.showInteractionHint || this.currentDialog) return;
 
@@ -1288,7 +1487,7 @@ class Game {
             `현재 위치: ${this.getCurrentMap().name}`,
             `아이템: ${this.gameState.itemsCollected}/${this.gameState.totalItems}`,
             `방문한 지역: ${this.gameState.visitedMaps.length}/4`,
-            'I: 인벤토리, M: 미니맵, Q: 퀘스트, 스페이스: 대화'
+            'I: 인벤토리, M: 미니맵, Q: 퀘스트, S: 저장, 스페이스: 대화'
         ];
 
         uiTexts.forEach((text, index) => {
@@ -1313,6 +1512,12 @@ class Game {
 
     draw() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // 시작 화면 표시
+        if (this.gameMode === 'title') {
+            this.drawTitleScreen();
+            return;
+        }
 
         this.drawFloor();
         this.drawOfficeItems();
