@@ -801,31 +801,134 @@ class Game {
         this.ctx.fillText(npc.name, screenX, screenY);
     }
 
-    drawTileMap() {
+    drawFloor() {
         const currentMap = this.getCurrentMap();
 
-        for (let y = this.camera.y; y < this.camera.y + this.camera.viewHeight + 1; y++) {
-            for (let x = this.camera.x; x < this.camera.x + this.camera.viewWidth + 1; x++) {
-                if (x < 0 || x >= this.mapWidth || y < 0 || y >= this.mapHeight) continue;
+        // 전체 바닥을 부드럽게 그리기
+        const startX = this.camera.x * this.tileSize;
+        const startY = this.camera.y * this.tileSize;
+        const viewWidth = this.canvas.width + this.tileSize;
+        const viewHeight = this.canvas.height + this.tileSize;
 
-                const screenX = (x - this.camera.x) * this.tileSize;
-                const screenY = (y - this.camera.y) * this.tileSize;
+        // 기본 바닥 색상
+        this.ctx.fillStyle = currentMap.background;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-                this.ctx.fillStyle = currentMap.background;
-                this.ctx.fillRect(screenX, screenY, this.tileSize, this.tileSize);
+        // 맵별 바닥 텍스처 패턴 추가
+        this.ctx.globalAlpha = 0.05;
 
-                if ((x + y) % 2 === 0) {
-                    this.ctx.globalAlpha = 0.1;
-                    this.ctx.fillStyle = '#000000';
-                    this.ctx.fillRect(screenX, screenY, this.tileSize, this.tileSize);
-                    this.ctx.globalAlpha = 1.0;
+        switch(this.currentMap) {
+            case 'lobby':
+                // 로비 - 대리석 패턴
+                this.drawMarblePattern(0, 0, this.canvas.width, this.canvas.height);
+                break;
+            case 'meeting_room':
+                // 회의실 - 카펫 패턴
+                this.drawCarpetPattern(0, 0, this.canvas.width, this.canvas.height);
+                break;
+            case 'cafeteria':
+                // 카페테리아 - 타일 패턴 (부드럽게)
+                this.drawSoftTilePattern(0, 0, this.canvas.width, this.canvas.height);
+                break;
+            case 'ceo_office':
+                // CEO실 - 고급 우드 패턴
+                this.drawWoodPattern(0, 0, this.canvas.width, this.canvas.height);
+                break;
+        }
+
+        this.ctx.globalAlpha = 1.0;
+
+        // 영역 경계 표시 (벽이 아닌 곳에서만)
+        this.drawAreaBoundaries();
+    }
+
+    drawMarblePattern(x, y, width, height) {
+        // 대리석 베인 패턴 (시드 기반으로 일관성 있게)
+        const seed = 42; // 고정 시드
+        for (let i = 0; i < 20; i++) {
+            this.ctx.strokeStyle = 'rgba(200, 200, 200, 0.3)';
+            this.ctx.lineWidth = 1;
+            this.ctx.beginPath();
+
+            // 시드 기반 의사 랜덤
+            const r1 = Math.sin(seed + i * 1.1) * 0.5 + 0.5;
+            const r2 = Math.sin(seed + i * 2.3) * 0.5 + 0.5;
+            const r3 = Math.sin(seed + i * 3.7) * 0.5 + 0.5;
+
+            this.ctx.moveTo(x + r1 * width, y);
+            this.ctx.quadraticCurveTo(
+                x + r2 * width,
+                y + height * 0.5,
+                x + r3 * width,
+                y + height
+            );
+            this.ctx.stroke();
+        }
+    }
+
+    drawCarpetPattern(x, y, width, height) {
+        // 카펫 텍스처 (시드 기반)
+        for (let i = 0; i < width; i += 8) {
+            for (let j = 0; j < height; j += 8) {
+                const seedValue = Math.sin(i * 0.1 + j * 0.1 + 100) * 0.5 + 0.5;
+                if (seedValue > 0.7) {
+                    this.ctx.fillStyle = 'rgba(100, 100, 100, 0.2)';
+                    this.ctx.fillRect(x + i, y + j, 2, 2);
                 }
-
-                this.ctx.strokeStyle = 'rgba(0,0,0,0.1)';
-                this.ctx.lineWidth = 1;
-                this.ctx.strokeRect(screenX, screenY, this.tileSize, this.tileSize);
             }
         }
+    }
+
+    drawSoftTilePattern(x, y, width, height) {
+        // 부드러운 타일 구분선
+        this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.05)';
+        this.ctx.lineWidth = 1;
+
+        for (let i = 0; i < width; i += this.tileSize * 2) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(x + i, y);
+            this.ctx.lineTo(x + i, y + height);
+            this.ctx.stroke();
+        }
+
+        for (let j = 0; j < height; j += this.tileSize * 2) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(x, y + j);
+            this.ctx.lineTo(x + width, y + j);
+            this.ctx.stroke();
+        }
+    }
+
+    drawWoodPattern(x, y, width, height) {
+        // 나무 결 패턴
+        this.ctx.strokeStyle = 'rgba(139, 69, 19, 0.1)';
+        this.ctx.lineWidth = 1;
+
+        for (let i = 0; i < 10; i++) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(x, y + i * height / 10 + Math.sin(i) * 5);
+            this.ctx.lineTo(x + width, y + i * height / 10 + Math.sin(i + width/50) * 5);
+            this.ctx.stroke();
+        }
+    }
+
+    drawAreaBoundaries() {
+        // 특별한 영역이나 전환점에 미묘한 경계선 추가 (필요시)
+        const currentMap = this.getCurrentMap();
+
+        // 포털 주변에 미묘한 표시
+        currentMap.portals.forEach(portal => {
+            if (portal.x >= this.camera.x && portal.x < this.camera.x + this.camera.viewWidth &&
+                portal.y >= this.camera.y && portal.y < this.camera.y + this.camera.viewHeight) {
+
+                const screenX = (portal.x - this.camera.x) * this.tileSize;
+                const screenY = (portal.y - this.camera.y) * this.tileSize;
+
+                this.ctx.strokeStyle = 'rgba(231, 76, 60, 0.2)';
+                this.ctx.lineWidth = 2;
+                this.ctx.strokeRect(screenX - 10, screenY - 10, this.tileSize + 20, this.tileSize + 20);
+            }
+        });
     }
 
     drawOfficeItems() {
@@ -1207,7 +1310,7 @@ class Game {
     draw() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        this.drawTileMap();
+        this.drawFloor();
         this.drawOfficeItems();
         this.drawWalls();
 
