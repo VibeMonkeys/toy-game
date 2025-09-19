@@ -142,6 +142,38 @@ export class Renderer {
         this.drawOfficeItemType(camera, currentMap.officeItems.plants, '#228B22', '화분');
         this.drawOfficeItemType(camera, currentMap.officeItems.printers, '#A9A9A9', '프린터');
         this.drawOfficeItemType(camera, currentMap.officeItems.meetingTables, '#D2B48C', '회의테이블');
+        this.drawOfficeItemType(camera, currentMap.officeItems.elevatorDoors, '#C0C0C0', '엘리베이터문');
+    }
+
+    drawElevatorPanel(camera, currentMap) {
+        if (!currentMap || !currentMap.elevatorPanel) return;
+
+        const panel = currentMap.elevatorPanel;
+        if (!camera.isInView(panel.x, panel.y)) return;
+
+        const screenPos = camera.worldToScreen(panel.x, panel.y);
+        const screenX = screenPos.x;
+        const screenY = screenPos.y;
+
+        // 엘리베이터 패널 배경
+        this.ctx.fillStyle = '#FFD700';
+        this.ctx.fillRect(screenX, screenY, this.tileSize, this.tileSize);
+
+        // 엘리베이터 패널 테두리
+        this.ctx.strokeStyle = '#B8860B';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(screenX, screenY, this.tileSize, this.tileSize);
+
+        // 엘리베이터 아이콘
+        this.ctx.fillStyle = '#000000';
+        this.ctx.font = 'bold 16px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('🛗', screenX + this.tileSize/2, screenY + this.tileSize/2 + 5);
+
+        // 엘리베이터 텍스트
+        this.ctx.fillStyle = '#000000';
+        this.ctx.font = 'bold 12px Arial';
+        this.ctx.fillText('엘리베이터', screenX + this.tileSize/2, screenY + this.tileSize + 15);
     }
 
     drawOfficeItemType(camera, items, color, type) {
@@ -159,6 +191,8 @@ export class Renderer {
                     this.drawMonitor(screenPos.x, screenPos.y);
                 } else if (type === '의자') {
                     this.drawChair(screenPos.x, screenPos.y);
+                } else if (type === '엘리베이터문') {
+                    this.drawElevatorDoor(screenPos.x, screenPos.y);
                 } else {
                     this.ctx.fillRect(screenPos.x + 4, screenPos.y + 4, this.tileSize - 8, this.tileSize - 8);
                 }
@@ -199,6 +233,45 @@ export class Renderer {
 
         // 의자 좌석
         this.ctx.fillRect(screenX + 8, screenY + 16, 32, 16);
+    }
+
+    drawElevatorDoor(screenX, screenY) {
+        // 엘리베이터 문 배경
+        this.ctx.fillStyle = '#C0C0C0';
+        this.ctx.fillRect(screenX, screenY, this.tileSize, this.tileSize);
+
+        // 왼쪽 문
+        this.ctx.fillStyle = '#A0A0A0';
+        this.ctx.fillRect(screenX + 2, screenY + 4, this.tileSize/2 - 3, this.tileSize - 8);
+
+        // 오른쪽 문
+        this.ctx.fillRect(screenX + this.tileSize/2 + 1, screenY + 4, this.tileSize/2 - 3, this.tileSize - 8);
+
+        // 문 테두리
+        this.ctx.strokeStyle = '#808080';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(screenX + 2, screenY + 4, this.tileSize/2 - 3, this.tileSize - 8);
+        this.ctx.strokeRect(screenX + this.tileSize/2 + 1, screenY + 4, this.tileSize/2 - 3, this.tileSize - 8);
+
+        // 가운데 구분선
+        this.ctx.strokeStyle = '#606060';
+        this.ctx.lineWidth = 1;
+        this.ctx.beginPath();
+        this.ctx.moveTo(screenX + this.tileSize/2, screenY + 2);
+        this.ctx.lineTo(screenX + this.tileSize/2, screenY + this.tileSize - 2);
+        this.ctx.stroke();
+
+        // 버튼 패널
+        this.ctx.fillStyle = '#FFD700';
+        this.ctx.beginPath();
+        this.ctx.arc(screenX + this.tileSize - 8, screenY + 8, 3, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // 엘리베이터 아이콘
+        this.ctx.fillStyle = '#404040';
+        this.ctx.font = '12px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('🛗', screenX + this.tileSize/2, screenY + this.tileSize/2 + 4);
     }
 
     drawPortals(camera, currentMap) {
@@ -389,11 +462,40 @@ export class Renderer {
             'ceo': '#9b59b6'
         };
 
-        const characterColor = rankColors[npc.rank] || '#95a5a6';
+        // 퀘스트 NPC는 특별한 색상으로 표시
+        let characterColor = rankColors[npc.rank] || '#95a5a6';
+        if (npc.questGiver) {
+            characterColor = '#FFD700'; // 골드 색상
+        }
+
         this.drawPixelCharacter(npc.x, npc.y, 'down', false, characterColor, camera);
 
-        // NPC 이름 표시
         const screenPos = camera.worldToScreen(npc.x, npc.y);
+
+        // 퀘스트 NPC 위에 특별한 표시 (느낌표)
+        if (npc.questGiver) {
+            this.ctx.fillStyle = '#FFD700';
+            this.ctx.font = 'bold 16px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.strokeStyle = '#000000';
+            this.ctx.lineWidth = 2;
+
+            // 느낌표 배경 원
+            this.ctx.beginPath();
+            this.ctx.arc(screenPos.x, screenPos.y - 30, 10, 0, Math.PI * 2);
+            this.ctx.fillStyle = '#FFD700';
+            this.ctx.fill();
+            this.ctx.strokeStyle = '#000000';
+            this.ctx.lineWidth = 2;
+            this.ctx.stroke();
+
+            // 느낌표
+            this.ctx.fillStyle = '#000000';
+            this.ctx.font = 'bold 14px Arial';
+            this.ctx.fillText('!', screenPos.x, screenPos.y - 25);
+        }
+
+        // NPC 이름 표시
         this.ctx.fillStyle = '#FFFFFF';
         this.ctx.font = '12px Arial';
         this.ctx.textAlign = 'center';
