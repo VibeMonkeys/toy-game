@@ -2,9 +2,9 @@ class Game {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
-        this.tileSize = 32;
+        this.tileSize = 48;
         this.mapWidth = 25;
-        this.mapHeight = 18;
+        this.mapHeight = 16;
 
         this.currentMap = 'lobby';
         this.player = {
@@ -128,18 +128,35 @@ class Game {
             if (this.currentDialog) {
                 if (e.code === 'Space' || e.code === 'Enter') {
                     this.nextDialog();
+                    e.preventDefault();
+                    return;
+                }
+                if (e.code === 'Escape') {
+                    this.hideDialog();
+                    e.preventDefault();
+                    return;
                 }
                 return;
             }
 
             if (e.code === 'KeyI') {
                 this.showInventory = !this.showInventory;
+                e.preventDefault();
                 return;
             }
 
             if (e.code === 'KeyM') {
                 this.showMinimap = !this.showMinimap;
+                e.preventDefault();
                 return;
+            }
+
+            if (e.code === 'Escape') {
+                if (this.showInventory) {
+                    this.showInventory = false;
+                    e.preventDefault();
+                    return;
+                }
             }
 
             let newX = this.player.x;
@@ -362,12 +379,12 @@ class Game {
         this.ctx.restore();
 
         this.ctx.fillStyle = 'white';
-        this.ctx.font = '8px Arial';
+        this.ctx.font = '12px Arial';
         this.ctx.textAlign = 'center';
         this.ctx.strokeStyle = 'black';
-        this.ctx.lineWidth = 1;
-        this.ctx.strokeText(item.name, x, y + 20);
-        this.ctx.fillText(item.name, x, y + 20);
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeText(item.name, x, y + 30);
+        this.ctx.fillText(item.name, x, y + 30);
     }
 
     drawPortal(portal) {
@@ -378,19 +395,19 @@ class Game {
         this.ctx.fillRect(x + 8, y + 8, this.tileSize - 16, this.tileSize - 16);
 
         this.ctx.fillStyle = 'white';
-        this.ctx.font = '10px Arial';
+        this.ctx.font = '14px Arial';
         this.ctx.textAlign = 'center';
         this.ctx.strokeStyle = 'black';
-        this.ctx.lineWidth = 1;
+        this.ctx.lineWidth = 3;
         this.ctx.strokeText(
             portal.name,
             x + this.tileSize/2,
-            y - 5
+            y - 8
         );
         this.ctx.fillText(
             portal.name,
             x + this.tileSize/2,
-            y - 5
+            y - 8
         );
     }
 
@@ -398,19 +415,19 @@ class Game {
         this.drawPixelCharacter(npc.x, npc.y, 'down', false);
 
         this.ctx.fillStyle = 'white';
-        this.ctx.font = '10px Arial';
+        this.ctx.font = '14px Arial';
         this.ctx.textAlign = 'center';
         this.ctx.strokeStyle = 'black';
-        this.ctx.lineWidth = 2;
+        this.ctx.lineWidth = 3;
         this.ctx.strokeText(
             npc.name,
             npc.x * this.tileSize + this.tileSize/2,
-            npc.y * this.tileSize - 10
+            npc.y * this.tileSize - 15
         );
         this.ctx.fillText(
             npc.name,
             npc.x * this.tileSize + this.tileSize/2,
-            npc.y * this.tileSize - 10
+            npc.y * this.tileSize - 15
         );
     }
 
@@ -460,23 +477,27 @@ class Game {
     drawMinimap() {
         if (!this.showMinimap) return;
 
-        const minimapSize = 150;
+        const minimapSize = 200;
         const minimapX = this.canvas.width - minimapSize - 10;
         const minimapY = 10;
         const scale = minimapSize / (this.mapWidth * this.tileSize);
 
         this.ctx.save();
 
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        this.ctx.fillRect(minimapX - 5, minimapY - 5, minimapSize + 10, minimapSize + 40);
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        this.ctx.fillRect(minimapX - 10, minimapY - 10, minimapSize + 20, minimapSize + 60);
+
+        this.ctx.strokeStyle = '#3498DB';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(minimapX - 10, minimapY - 10, minimapSize + 20, minimapSize + 60);
 
         this.ctx.fillStyle = 'white';
-        this.ctx.font = '12px Arial';
+        this.ctx.font = '16px Arial';
         this.ctx.textAlign = 'center';
         this.ctx.fillText(
             this.getCurrentMap().name,
             minimapX + minimapSize/2,
-            minimapY - 10
+            minimapY - 15
         );
 
         this.ctx.translate(minimapX, minimapY);
@@ -521,8 +542,8 @@ class Game {
     drawInventory() {
         if (!this.showInventory) return;
 
-        const invWidth = 300;
-        const invHeight = 200;
+        const invWidth = 400;
+        const invHeight = 300;
         const invX = (this.canvas.width - invWidth) / 2;
         const invY = (this.canvas.height - invHeight) / 2;
 
@@ -534,38 +555,38 @@ class Game {
         this.ctx.strokeRect(invX, invY, invWidth, invHeight);
 
         this.ctx.fillStyle = 'white';
-        this.ctx.font = '16px Arial';
+        this.ctx.font = '20px Arial';
         this.ctx.textAlign = 'center';
-        this.ctx.fillText('인벤토리 (I키로 닫기)', invX + invWidth/2, invY + 25);
+        this.ctx.fillText('인벤토리 (I키로 닫기)', invX + invWidth/2, invY + 30);
 
         this.ctx.textAlign = 'left';
-        this.ctx.font = '12px Arial';
+        this.ctx.font = '16px Arial';
 
         if (this.inventory.length === 0) {
-            this.ctx.fillText('아이템이 없습니다.', invX + 20, invY + 60);
+            this.ctx.fillText('아이템이 없습니다.', invX + 25, invY + 80);
         } else {
             this.inventory.forEach((item, index) => {
                 this.ctx.fillText(
                     `${index + 1}. ${item.name} (${item.mapFound}에서 발견)`,
-                    invX + 20,
-                    invY + 60 + index * 20
+                    invX + 25,
+                    invY + 80 + index * 25
                 );
             });
         }
 
         this.ctx.fillText(
             `수집한 아이템: ${this.gameState.itemsCollected}/${this.gameState.totalItems}`,
-            invX + 20,
-            invY + invHeight - 20
+            invX + 25,
+            invY + invHeight - 30
         );
     }
 
     drawUI() {
         this.ctx.fillStyle = 'white';
-        this.ctx.font = '14px Arial';
+        this.ctx.font = '18px Arial';
         this.ctx.textAlign = 'left';
         this.ctx.strokeStyle = 'black';
-        this.ctx.lineWidth = 1;
+        this.ctx.lineWidth = 2;
 
         const uiTexts = [
             `현재 위치: ${this.getCurrentMap().name}`,
@@ -575,8 +596,8 @@ class Game {
         ];
 
         uiTexts.forEach((text, index) => {
-            this.ctx.strokeText(text, 10, 25 + index * 20);
-            this.ctx.fillText(text, 10, 25 + index * 20);
+            this.ctx.strokeText(text, 15, 35 + index * 25);
+            this.ctx.fillText(text, 15, 35 + index * 25);
         });
     }
 
@@ -612,19 +633,19 @@ class Game {
         this.drawPixelCharacter(this.player.x, this.player.y, this.player.direction, true);
 
         this.ctx.fillStyle = 'white';
-        this.ctx.font = '12px Arial';
+        this.ctx.font = '18px Arial';
         this.ctx.textAlign = 'center';
         this.ctx.strokeStyle = 'black';
-        this.ctx.lineWidth = 2;
+        this.ctx.lineWidth = 4;
         this.ctx.strokeText(
             '나',
             this.player.x * this.tileSize + this.tileSize/2,
-            this.player.y * this.tileSize - 10
+            this.player.y * this.tileSize - 15
         );
         this.ctx.fillText(
             '나',
             this.player.x * this.tileSize + this.tileSize/2,
-            this.player.y * this.tileSize - 10
+            this.player.y * this.tileSize - 15
         );
 
         this.drawUI();
