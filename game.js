@@ -34,6 +34,11 @@ class Game {
         this.showInventory = false;
         this.showMinimap = true;
 
+        this.nearbyNPC = null;
+        this.showInteractionHint = false;
+        this.itemNotification = null;
+        this.itemNotificationTimer = 0;
+
         this.initializeMaps();
         this.currentDialog = null;
         this.dialogIndex = 0;
@@ -58,24 +63,60 @@ class Game {
         return walls;
     }
 
+    generateOfficeItems() {
+        return {
+            desks: [
+                {x: 5, y: 5}, {x: 6, y: 5}, {x: 8, y: 5}, {x: 9, y: 5},
+                {x: 5, y: 8}, {x: 6, y: 8}, {x: 8, y: 8}, {x: 9, y: 8},
+                {x: 12, y: 5}, {x: 13, y: 5}, {x: 15, y: 5}, {x: 16, y: 5},
+                {x: 12, y: 8}, {x: 13, y: 8}, {x: 15, y: 8}, {x: 16, y: 8},
+                {x: 25, y: 10}, {x: 26, y: 10}, {x: 28, y: 10}, {x: 29, y: 10},
+                {x: 25, y: 13}, {x: 26, y: 13}, {x: 28, y: 13}, {x: 29, y: 13},
+                {x: 32, y: 15}, {x: 33, y: 15}, {x: 35, y: 15}, {x: 36, y: 15}
+            ],
+            chairs: [
+                {x: 5, y: 4}, {x: 6, y: 4}, {x: 8, y: 4}, {x: 9, y: 4},
+                {x: 5, y: 9}, {x: 6, y: 9}, {x: 8, y: 9}, {x: 9, y: 9},
+                {x: 12, y: 4}, {x: 13, y: 4}, {x: 15, y: 4}, {x: 16, y: 4},
+                {x: 12, y: 9}, {x: 13, y: 9}, {x: 15, y: 9}, {x: 16, y: 9},
+                {x: 25, y: 9}, {x: 26, y: 9}, {x: 28, y: 9}, {x: 29, y: 9},
+                {x: 25, y: 14}, {x: 26, y: 14}, {x: 28, y: 14}, {x: 29, y: 14},
+                {x: 32, y: 14}, {x: 33, y: 14}, {x: 35, y: 14}, {x: 36, y: 14}
+            ],
+            plants: [
+                {x: 3, y: 3}, {x: 18, y: 3}, {x: 22, y: 7}, {x: 37, y: 12}, {x: 2, y: 20}
+            ],
+            printers: [
+                {x: 19, y: 6}, {x: 31, y: 18}
+            ],
+            meetingTables: [
+                {x: 15, y: 15, width: 3, height: 2},
+                {x: 20, y: 20, width: 4, height: 3}
+            ]
+        };
+    }
+
     initializeMaps() {
+        const officeItems = this.generateOfficeItems();
+
         this.maps = {
             lobby: {
                 name: '로비',
-                background: '#2ECC71',
+                background: '#F5F5F0',
                 walls: this.generateWalls().concat([
-                    {x: 15, y: 10}, {x: 16, y: 10}, {x: 17, y: 10}, {x: 18, y: 10},
-                    {x: 15, y: 11}, {x: 18, y: 11},
-                    {x: 15, y: 12}, {x: 18, y: 12},
-                    {x: 15, y: 13}, {x: 16, y: 13}, {x: 17, y: 13}, {x: 18, y: 13}
+                    {x: 15, y: 15}, {x: 16, y: 15}, {x: 17, y: 15},
+                    {x: 15, y: 16}, {x: 17, y: 16},
+                    {x: 15, y: 17}, {x: 16, y: 17}, {x: 17, y: 17}
                 ]),
+                officeItems: officeItems,
                 npcs: [
-                    { x: 8, y: 8, type: 'employee', name: '김대리', dialog: ['안녕하세요! 26주년을 축하합니다!', '회의실에 첫 번째 단서가 있어요. 북쪽 문으로 가보세요!'] },
-                    { x: 25, y: 15, type: 'employee', name: '박대리', dialog: ['여기서 휴식을 취하세요!', '더 큰 세계를 탐험해보세요!'] }
+                    { x: 7, y: 7, type: 'employee', name: '김대리', dialog: ['안녕하세요! 26주년을 축하합니다!', '회의실에 첫 번째 단서가 있어요. 북쪽 문으로 가보세요!'] },
+                    { x: 27, y: 12, type: 'employee', name: '박대리', dialog: ['여기서 휴식을 취하세요!', '더 큰 세계를 탐험해보세요!'] },
+                    { x: 34, y: 16, type: 'employee', name: '이사원', dialog: ['이곳은 오픈 오피스예요!', '자유롭게 돌아다니며 동료들과 대화해보세요!'] }
                 ],
                 items: [
-                    { x: 6, y: 6, type: 'key', name: '로비 열쇠', collected: false },
-                    { x: 30, y: 20, type: 'key', name: '비밀 열쇠', collected: false }
+                    { x: 10, y: 6, type: 'key', name: '로비 열쇠', collected: false },
+                    { x: 30, y: 25, type: 'key', name: '비밀 열쇠', collected: false }
                 ],
                 portals: [
                     { x: 20, y: 1, targetMap: 'meeting_room', targetX: 20, targetY: 28, name: '회의실' }
@@ -83,11 +124,18 @@ class Game {
             },
             meeting_room: {
                 name: '회의실',
-                background: '#3498DB',
+                background: '#E8F4FD',
                 walls: this.generateWalls().concat([
                     {x: 8, y: 8}, {x: 9, y: 8}, {x: 11, y: 8}, {x: 12, y: 8}, {x: 13, y: 8}, {x: 14, y: 8}, {x: 15, y: 8}, {x: 16, y: 8},
                     {x: 8, y: 9}, {x: 16, y: 9}, {x: 8, y: 10}, {x: 16, y: 10}, {x: 8, y: 11}, {x: 9, y: 11}, {x: 15, y: 11}, {x: 16, y: 11}
                 ]),
+                officeItems: {
+                    meetingTables: [{x: 10, y: 9, width: 5, height: 2}],
+                    chairs: [{x: 9, y: 10}, {x: 10, y: 10}, {x: 11, y: 10}, {x: 12, y: 10}, {x: 13, y: 10}, {x: 14, y: 10}, {x: 15, y: 10}],
+                    desks: [],
+                    plants: [{x: 20, y: 5}, {x: 25, y: 15}],
+                    printers: []
+                },
                 npcs: [
                     { x: 12, y: 10, type: 'manager', name: '박과장', dialog: ['여기는 회의실입니다.', '다음 단서는 카페테리아에서 찾을 수 있어요!'] }
                 ],
@@ -101,8 +149,15 @@ class Game {
             },
             cafeteria: {
                 name: '카페테리아',
-                background: '#E67E22',
+                background: '#FFF8E1',
                 walls: this.generateWalls(),
+                officeItems: {
+                    meetingTables: [{x: 10, y: 10, width: 4, height: 3}, {x: 25, y: 8, width: 3, height: 2}],
+                    chairs: [{x: 9, y: 10}, {x: 10, y: 9}, {x: 13, y: 9}, {x: 14, y: 10}, {x: 24, y: 8}, {x: 25, y: 7}, {x: 27, y: 7}, {x: 28, y: 8}],
+                    desks: [],
+                    plants: [{x: 5, y: 5}, {x: 35, y: 10}],
+                    printers: [{x: 20, y: 15}]
+                },
                 npcs: [
                     { x: 15, y: 12, type: 'director', name: '이부장', dialog: ['카페테리아에 오신 걸 환영합니다!', '마지막 보물은 CEO실에 숨겨져 있답니다.'] }
                 ],
@@ -116,13 +171,20 @@ class Game {
             },
             ceo_office: {
                 name: 'CEO실',
-                background: '#9B59B6',
+                background: '#F3E5F5',
                 walls: this.generateWalls().concat([
                     {x: 18, y: 10}, {x: 19, y: 10}, {x: 20, y: 10}, {x: 21, y: 10}, {x: 22, y: 10},
                     {x: 18, y: 11}, {x: 22, y: 11}, {x: 18, y: 12}, {x: 22, y: 12}, {x: 18, y: 13}, {x: 19, y: 13}, {x: 21, y: 13}, {x: 22, y: 13}
                 ]),
+                officeItems: {
+                    desks: [{x: 19, y: 11}, {x: 20, y: 11}, {x: 21, y: 11}],
+                    chairs: [{x: 20, y: 13}],
+                    meetingTables: [],
+                    plants: [{x: 15, y: 8}, {x: 25, y: 8}, {x: 30, y: 20}],
+                    printers: []
+                },
                 npcs: [
-                    { x: 20, y: 12, type: 'ceo', name: 'CEO', dialog: ['축하합니다! 보물을 찾으셨네요!', '26주년 기념품을 받아가세요!'] }
+                    { x: 20, y: 15, type: 'ceo', name: 'CEO', dialog: ['축하합니다! 보물을 찾으셨네요!', '26주년 기념품을 받아가세요!'] }
                 ],
                 items: [
                     { x: 20, y: 11, type: 'treasure', name: '26주년 기념품', collected: false }
@@ -216,7 +278,7 @@ class Game {
                 this.player.animTimer = Date.now();
 
                 this.checkPortal();
-                this.checkNPCInteraction();
+                this.checkNearbyNPC();
                 this.checkItemCollection();
             }
         });
@@ -283,24 +345,36 @@ class Game {
                 mapFound: this.currentMap
             });
             this.gameState.itemsCollected++;
-            this.showDialog(`${item.name}을(를) 획득했습니다!`);
+            this.showItemNotification(`${item.name}을(를) 획득했습니다!`);
         }
     }
 
-    checkNPCInteraction() {
+    showItemNotification(text) {
+        this.itemNotification = text;
+        this.itemNotificationTimer = Date.now();
+    }
+
+    checkNearbyNPC() {
         const currentMap = this.getCurrentMap();
         const nearbyNPC = currentMap.npcs.find(npc =>
             Math.abs(npc.x - this.player.x) <= 1 &&
             Math.abs(npc.y - this.player.y) <= 1
         );
 
-        if (nearbyNPC && !this.currentDialog) {
-            this.startDialog(nearbyNPC);
+        if (nearbyNPC) {
+            this.nearbyNPC = nearbyNPC;
+            this.showInteractionHint = true;
+        } else {
+            this.nearbyNPC = null;
+            this.showInteractionHint = false;
         }
     }
 
     interactWithNPC() {
-        this.checkNPCInteraction();
+        if (this.nearbyNPC && !this.currentDialog) {
+            this.startDialog(this.nearbyNPC);
+            this.showInteractionHint = false;
+        }
     }
 
     startDialog(npc) {
@@ -504,6 +578,86 @@ class Game {
         }
     }
 
+    drawOfficeItems() {
+        const currentMap = this.getCurrentMap();
+        if (!currentMap.officeItems) return;
+
+        // 책상 그리기
+        currentMap.officeItems.desks.forEach(desk => {
+            if (desk.x < this.camera.x || desk.x >= this.camera.x + this.camera.viewWidth + 1 ||
+                desk.y < this.camera.y || desk.y >= this.camera.y + this.camera.viewHeight + 1) return;
+
+            const screenX = (desk.x - this.camera.x) * this.tileSize;
+            const screenY = (desk.y - this.camera.y) * this.tileSize;
+
+            this.ctx.fillStyle = '#8B4513';
+            this.ctx.fillRect(screenX + 4, screenY + 4, this.tileSize - 8, this.tileSize - 8);
+            this.ctx.fillStyle = '#A0522D';
+            this.ctx.fillRect(screenX + 6, screenY + 6, this.tileSize - 12, this.tileSize - 12);
+        });
+
+        // 의자 그리기
+        currentMap.officeItems.chairs.forEach(chair => {
+            if (chair.x < this.camera.x || chair.x >= this.camera.x + this.camera.viewWidth + 1 ||
+                chair.y < this.camera.y || chair.y >= this.camera.y + this.camera.viewHeight + 1) return;
+
+            const screenX = (chair.x - this.camera.x) * this.tileSize;
+            const screenY = (chair.y - this.camera.y) * this.tileSize;
+
+            this.ctx.fillStyle = '#34495E';
+            this.ctx.fillRect(screenX + 8, screenY + 8, this.tileSize - 16, this.tileSize - 16);
+            this.ctx.fillStyle = '#2C3E50';
+            this.ctx.fillRect(screenX + 10, screenY + 6, this.tileSize - 20, 8);
+        });
+
+        // 화분 그리기
+        currentMap.officeItems.plants.forEach(plant => {
+            if (plant.x < this.camera.x || plant.x >= this.camera.x + this.camera.viewWidth + 1 ||
+                plant.y < this.camera.y || plant.y >= this.camera.y + this.camera.viewHeight + 1) return;
+
+            const screenX = (plant.x - this.camera.x) * this.tileSize;
+            const screenY = (plant.y - this.camera.y) * this.tileSize;
+
+            this.ctx.fillStyle = '#8B4513';
+            this.ctx.fillRect(screenX + 10, screenY + 20, this.tileSize - 20, 12);
+            this.ctx.fillStyle = '#27AE60';
+            this.ctx.fillRect(screenX + 8, screenY + 8, this.tileSize - 16, 16);
+        });
+
+        // 프린터 그리기
+        currentMap.officeItems.printers.forEach(printer => {
+            if (printer.x < this.camera.x || printer.x >= this.camera.x + this.camera.viewWidth + 1 ||
+                printer.y < this.camera.y || printer.y >= this.camera.y + this.camera.viewHeight + 1) return;
+
+            const screenX = (printer.x - this.camera.x) * this.tileSize;
+            const screenY = (printer.y - this.camera.y) * this.tileSize;
+
+            this.ctx.fillStyle = '#95A5A6';
+            this.ctx.fillRect(screenX + 6, screenY + 8, this.tileSize - 12, this.tileSize - 16);
+            this.ctx.fillStyle = '#2C3E50';
+            this.ctx.fillRect(screenX + 8, screenY + 10, this.tileSize - 16, 4);
+        });
+
+        // 회의 테이블 그리기
+        currentMap.officeItems.meetingTables.forEach(table => {
+            const endX = table.x + table.width;
+            const endY = table.y + table.height;
+
+            if (endX < this.camera.x || table.x >= this.camera.x + this.camera.viewWidth + 1 ||
+                endY < this.camera.y || table.y >= this.camera.y + this.camera.viewHeight + 1) return;
+
+            const screenX = (table.x - this.camera.x) * this.tileSize;
+            const screenY = (table.y - this.camera.y) * this.tileSize;
+            const width = table.width * this.tileSize;
+            const height = table.height * this.tileSize;
+
+            this.ctx.fillStyle = '#8B4513';
+            this.ctx.fillRect(screenX, screenY, width, height);
+            this.ctx.fillStyle = '#A0522D';
+            this.ctx.fillRect(screenX + 4, screenY + 4, width - 8, height - 8);
+        });
+    }
+
     drawWalls() {
         const currentMap = this.getCurrentMap();
         currentMap.walls.forEach(wall => {
@@ -513,14 +667,14 @@ class Game {
             const screenX = (wall.x - this.camera.x) * this.tileSize;
             const screenY = (wall.y - this.camera.y) * this.tileSize;
 
-            this.ctx.fillStyle = '#8B4513';
+            this.ctx.fillStyle = '#34495E';
             this.ctx.fillRect(screenX, screenY, this.tileSize, this.tileSize);
 
-            this.ctx.fillStyle = '#A0522D';
+            this.ctx.fillStyle = '#2C3E50';
             this.ctx.fillRect(screenX + 2, screenY + 2, this.tileSize - 4, this.tileSize - 4);
 
-            this.ctx.strokeStyle = '#654321';
-            this.ctx.lineWidth = 2;
+            this.ctx.strokeStyle = '#1A252F';
+            this.ctx.lineWidth = 1;
             this.ctx.strokeRect(screenX, screenY, this.tileSize, this.tileSize);
         });
     }
@@ -637,6 +791,56 @@ class Game {
         );
     }
 
+    drawInteractionHint() {
+        if (!this.showInteractionHint || this.currentDialog) return;
+
+        const playerScreenX = (this.player.x - this.camera.x) * this.tileSize + this.tileSize/2;
+        const playerScreenY = (this.player.y - this.camera.y) * this.tileSize - 40;
+
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        this.ctx.fillRect(playerScreenX - 60, playerScreenY - 15, 120, 25);
+
+        this.ctx.strokeStyle = '#F39C12';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(playerScreenX - 60, playerScreenY - 15, 120, 25);
+
+        this.ctx.fillStyle = 'white';
+        this.ctx.font = '12px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('스페이스(말걸기)', playerScreenX, playerScreenY);
+    }
+
+    drawItemNotification() {
+        if (!this.itemNotification) return;
+
+        const elapsed = Date.now() - this.itemNotificationTimer;
+        if (elapsed > 3000) {
+            this.itemNotification = null;
+            return;
+        }
+
+        const centerX = this.canvas.width / 2;
+        const centerY = 100;
+        const alpha = elapsed < 2500 ? 1 : (3000 - elapsed) / 500;
+
+        this.ctx.save();
+        this.ctx.globalAlpha = alpha;
+
+        this.ctx.fillStyle = 'rgba(46, 204, 113, 0.9)';
+        this.ctx.fillRect(centerX - 150, centerY - 20, 300, 40);
+
+        this.ctx.strokeStyle = '#27AE60';
+        this.ctx.lineWidth = 3;
+        this.ctx.strokeRect(centerX - 150, centerY - 20, 300, 40);
+
+        this.ctx.fillStyle = 'white';
+        this.ctx.font = '16px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText(this.itemNotification, centerX, centerY + 5);
+
+        this.ctx.restore();
+    }
+
     drawUI() {
         this.ctx.fillStyle = 'white';
         this.ctx.font = '18px Arial';
@@ -648,7 +852,7 @@ class Game {
             `현재 위치: ${this.getCurrentMap().name}`,
             `아이템: ${this.gameState.itemsCollected}/${this.gameState.totalItems}`,
             `방문한 지역: ${this.gameState.visitedMaps.length}/4`,
-            'I: 인벤토리, M: 미니맵 토글'
+            'I: 인벤토리, M: 미니맵, 스페이스: 대화'
         ];
 
         uiTexts.forEach((text, index) => {
@@ -664,12 +868,18 @@ class Game {
                 this.player.isMoving = false;
             }
         }
+
+        // 아이템 알림 자동 제거
+        if (this.itemNotification && Date.now() - this.itemNotificationTimer > 3000) {
+            this.itemNotification = null;
+        }
     }
 
     draw() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
         this.drawTileMap();
+        this.drawOfficeItems();
         this.drawWalls();
 
         const currentMap = this.getCurrentMap();
@@ -699,6 +909,8 @@ class Game {
         this.ctx.strokeText('나', playerScreenX, playerScreenY);
         this.ctx.fillText('나', playerScreenX, playerScreenY);
 
+        this.drawInteractionHint();
+        this.drawItemNotification();
         this.drawUI();
         this.drawMinimap();
         this.drawInventory();
