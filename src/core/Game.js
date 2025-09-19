@@ -11,6 +11,7 @@ import { QuestUI } from '../ui/QuestUI.js';
 import { Minimap } from '../ui/Minimap.js';
 import { Inventory } from '../ui/Inventory.js';
 import { PauseMenu } from '../ui/PauseMenu.js';
+import { ElevatorUI } from '../ui/ElevatorUI.js';
 import { MapManager } from '../maps/MapManager.js';
 import { Camera } from '../maps/Camera.js';
 import { Renderer } from '../graphics/Renderer.js';
@@ -42,14 +43,17 @@ export class Game {
         this.minimap = new Minimap(this.canvas, this.ctx);
         this.inventory = new Inventory(this.canvas, this.ctx);
         this.pauseMenu = new PauseMenu(this.canvas, this.ctx, this.audioManager);
+        this.elevatorUI = new ElevatorUI(this.canvas, this.ctx, this.audioManager);
 
         // 다이얼로그 시스템
         this.currentDialog = null;
+        this.currentNPC = null;
         this.dialogIndex = 0;
 
         // 상호작용 시스템
         this.nearbyNPC = null;
         this.nearbyPortal = null;
+        this.nearbyElevator = null;
         this.showInteractionHint = false;
 
         // 게임 완료 체크
@@ -67,8 +71,11 @@ export class Game {
     }
 
     init() {
+        console.log('🚀 게임 초기화 시작...');
+
         // 로딩 화면 시작
         this.loadingScreen.show();
+        console.log('✅ 로딩 화면 초기화 완료');
 
         // 저장된 게임 확인 후 타이틀 옵션 설정
         const hasSavedGame = SaveSystem.checkSavedGame();
@@ -77,14 +84,18 @@ export class Game {
             ['새 게임 시작', '게임 정보'];
 
         this.titleScreen.setMenuOptions(titleOptions);
+        console.log('✅ 타이틀 화면 옵션 설정 완료');
 
         // 오디오 초기화
         this.audioManager.init();
+        console.log('✅ 오디오 매니저 초기화 완료');
 
         // 이벤트 리스너 설정
         this.setupEventListeners();
+        console.log('✅ 이벤트 리스너 설정 완료');
 
         // 게임 루프 시작
+        console.log('🔄 게임 루프 시작...');
         this.gameLoop();
     }
 
@@ -96,6 +107,8 @@ export class Game {
         this.canvas.addEventListener('mousemove', (event) => {
             if (this.gameMode === CONSTANTS.GAME_MODES.TITLE) {
                 this.titleScreen.handleMouseMove(event);
+            } else if (this.gameMode === CONSTANTS.GAME_MODES.PLAYING && this.elevatorUI.isVisible) {
+                this.elevatorUI.handleMouseMove(event);
             }
         });
 
@@ -105,6 +118,11 @@ export class Game {
                 const result = this.titleScreen.handleMouseClick(event);
                 if (result) {
                     this.handleTitleSelection(result);
+                }
+            } else if (this.gameMode === CONSTANTS.GAME_MODES.PLAYING && this.elevatorUI.isVisible) {
+                const elevatorResult = this.elevatorUI.handleMouseClick(event);
+                if (elevatorResult) {
+                    this.handleElevatorAction(elevatorResult);
                 }
             }
         });
@@ -180,6 +198,15 @@ export class Game {
         // 코나미 코드 체크
         this.checkKonamiCode(event);
 
+        // 엘리베이터 UI가 열려있을 때
+        if (this.elevatorUI.isVisible) {
+            const elevatorResult = this.elevatorUI.handleKeyDown(event);
+            if (elevatorResult) {
+                this.handleElevatorAction(elevatorResult);
+            }
+            return;
+        }
+
         // 일시정지 메뉴가 열려있을 때
         const pauseResult = this.pauseMenu.handleKeyDown(event);
         if (pauseResult) {
@@ -193,12 +220,28 @@ export class Game {
             return;
         }
 
-        // 다이얼로그가 열려있을 때
+        // 다이얼로그 처리
         if (this.currentDialog) {
             if (event.key === ' ' || event.key === 'Enter') {
-                this.nextDialog();
-                event.preventDefault();
+                this.continueDialog();
+                return;
             }
+            return; // 대화 중에는 다른 입력 무시
+        }
+
+        // UI 토글 기능들
+        if (event.key === 'i' || event.key === 'I') {
+            this.inventory.toggle();
+            return;
+        }
+
+        if (event.key === 'q' || event.key === 'Q') {
+            this.questSystem.toggleQuestUI();
+            return;
+        }
+
+        if (event.key === 'm' || event.key === 'M') {
+            this.minimap.toggle();
             return;
         }
 
@@ -212,6 +255,7 @@ export class Game {
             this.toggleDebugMode();
             return;
         }
+
 
         // 일반 게임 입력
         switch (event.key) {
@@ -228,7 +272,9 @@ export class Game {
                 this.movePlayer(1, 0);
                 break;
             case ' ':
-                this.interact();
+                if (!this.currentDialog) {
+                    this.interact();
+                }
                 break;
             case 's':
             case 'S':
@@ -321,6 +367,57 @@ export class Game {
         // this.showQuestUI = settings.showQuestUI;
     }
 
+    handleElevatorAction(action) {
+        if (typeof action === 'string') {
+            if (action === 'close') {
+                this.elevatorUI.hide();
+            }
+        } else if (action && action.action === 'move_to_floor') {
+            this.moveToFloor(action.targetFloor);
+        }
+    }
+
+    moveToFloor(targetFloor) {
+        let targetMapId = null;
+        let targetX = 20, targetY = 15;
+
+        // 층별 맵 매핑
+        switch (targetFloor) {
+            case 1:
+                targetMapId = CONSTANTS.MAPS.LOBBY;
+                targetX = 35;
+                targetY = 15;
+                break;
+            case 7:
+                targetMapId = CONSTANTS.MAPS.FLOOR_7_CORRIDOR;
+                targetX = 20;
+                targetY = 8;
+                break;
+            case 8:
+                targetMapId = CONSTANTS.MAPS.FLOOR_8_MAIN;
+                targetX = 20;
+                targetY = 29;
+                break;
+            case 9:
+                targetMapId = CONSTANTS.MAPS.FLOOR_9_CORRIDOR;
+                targetX = 20;
+                targetY = 8;
+                break;
+        }
+
+        if (targetMapId && this.mapManager.setCurrentMap(targetMapId)) {
+            this.player.setPosition(targetX, targetY);
+            this.camera.update(this.player.x, this.player.y);
+            this.gameState.visitMap(targetMapId);
+
+            // 층 이동 알림
+            const mapName = this.mapManager.getCurrentMap().name;
+            this.inventory.showItemNotification({
+                name: `${targetFloor}층 ${mapName}(으)로 이동했습니다!`
+            });
+        }
+    }
+
     movePlayer(dx, dy) {
         const newX = this.player.x + dx;
         const newY = this.player.y + dy;
@@ -358,6 +455,7 @@ export class Game {
         // 이동 후 주변 상호작용 요소 확인
         this.checkNearbyNPC();
         this.checkNearbyPortal();
+        this.checkNearbyElevator();
         this.player.stopMoving();
     }
 
@@ -401,13 +499,64 @@ export class Game {
         this.updateInteractionHint();
     }
 
+    checkNearbyElevator() {
+        // 엘리베이터 맵에서 패널 근처에 있는지 확인
+        const currentMap = this.mapManager.getCurrentMap();
+        if (currentMap && currentMap.elevatorPanel) {
+            const panel = currentMap.elevatorPanel;
+            const distance = Math.abs(panel.x - this.player.x) + Math.abs(panel.y - this.player.y);
+            this.nearbyElevator = distance <= 1 ? panel : null;
+        } else {
+            this.nearbyElevator = null;
+        }
+        this.updateInteractionHint();
+    }
+
     updateInteractionHint() {
-        this.showInteractionHint = this.nearbyNPC !== null || this.nearbyPortal !== null;
+        this.showInteractionHint = this.nearbyNPC !== null || this.nearbyPortal !== null || this.nearbyElevator !== null;
     }
 
     interact() {
         if (this.nearbyNPC) {
-            this.startDialog(this.nearbyNPC);
+            // 퀘스트 아이템 자동 제출 확인
+            const submission = this.questSystem.canSubmitToNPC(this.nearbyNPC.id, this.gameState.inventory);
+            if (submission.canSubmit) {
+                // 자동으로 아이템 제출 처리
+                const result = this.questSystem.submitItemsToNPC(
+                    this.nearbyNPC.id,
+                    this.gameState.inventory,
+                    this.gameState
+                );
+
+                if (result.success) {
+                    // 성공 대화 표시
+                    let itemText = '';
+                    if (result.quest.requiredItem) {
+                        itemText = `'${result.quest.requiredItem}'`;
+                    } else if (result.quest.requiredItems) {
+                        itemText = result.quest.requiredItems.map(item => `'${item}'`).join(', ');
+                    }
+
+                    this.currentDialog = [
+                        `${itemText}을(를) 가져오셨군요!`,
+                        `퀘스트 완료: ${result.quest.title}`,
+                        `감사합니다! '${result.quest.rewardItem}'을(를) 드립니다.`
+                    ];
+                    this.currentNPC = this.nearbyNPC;
+                    this.dialogIndex = 0;
+                    this.audioManager.playDialogOpen();
+                    this.showDialog();
+
+                    // 알림도 표시
+                    this.inventory.showItemNotification({ name: result.message });
+                } else {
+                    // 실패시 일반 대화
+                    this.startDialog(this.nearbyNPC);
+                }
+            } else {
+                // 일반 대화
+                this.startDialog(this.nearbyNPC);
+            }
 
             // 퀘스트 진행
             if (this.nearbyNPC.questTarget) {
@@ -418,9 +567,23 @@ export class Game {
                     this.checkGameCompletion();
                 }
             }
+        } else if (this.nearbyElevator) {
+            this.openElevator();
         } else if (this.nearbyPortal) {
             this.usePortal(this.nearbyPortal);
         }
+    }
+
+    openElevator() {
+        // 현재 층 계산
+        let currentFloor = 1;
+        const currentMapId = this.mapManager.getCurrentMapId();
+
+        if (currentMapId.includes('FLOOR_7')) currentFloor = 7;
+        else if (currentMapId.includes('FLOOR_8')) currentFloor = 8;
+        else if (currentMapId.includes('FLOOR_9')) currentFloor = 9;
+
+        this.elevatorUI.show(currentFloor);
     }
 
     checkGameCompletion() {
@@ -440,9 +603,19 @@ export class Game {
 
     startDialog(npc) {
         this.currentDialog = npc.dialog;
+        this.currentNPC = npc; // NPC 정보 저장
         this.dialogIndex = 0;
         this.audioManager.playDialogOpen();
         this.showDialog();
+    }
+
+
+    continueDialog() {
+        if (this.dialogIndex < this.currentDialog.length - 1) {
+            this.dialogIndex++;
+        } else {
+            this.closeDialog();
+        }
     }
 
     showDialog() {
@@ -460,6 +633,7 @@ export class Game {
 
     closeDialog() {
         this.currentDialog = null;
+        this.currentNPC = null; // NPC 정보 정리
         this.dialogIndex = 0;
         this.audioManager.playDialogClose();
         // HTML 조작 제거, Canvas에서 그려짐
@@ -495,15 +669,26 @@ export class Game {
     }
 
     startNewGame() {
-        // 초기 상태로 리셋
-        this.mapManager.setCurrentMap(CONSTANTS.MAPS.BUILDING_ENTRANCE);
-        this.player = new Player(20, 25);
+        console.log('🎮 새 게임 시작...');
+
+        // 초기 상태로 리셋 - 로비에서 시작 (엘리베이터 바로 앞)
+        const mapSet = this.mapManager.setCurrentMap(CONSTANTS.MAPS.LOBBY);
+        console.log('맵 설정 결과:', mapSet, '현재 맵:', this.mapManager.getCurrentMapId());
+
+        this.player = new Player(33, 15);
+        console.log('플레이어 생성:', this.player.x, this.player.y);
+
         this.gameState = new GameState();
         this.questSystem = new QuestSystem(this.audioManager);
 
         this.camera.update(this.player.x, this.player.y);
+        console.log('카메라 업데이트 완료');
+
         this.gameMode = CONSTANTS.GAME_MODES.PLAYING;
-        this.inventory.showItemNotification({ name: '새 게임을 시작합니다!' });
+        console.log('게임 모드 변경:', this.gameMode);
+
+        this.inventory.showItemNotification({ name: '휴넷 26주년 엘리베이터 게임을 시작합니다!' });
+        console.log('✅ 새 게임 시작 완료');
     }
 
     update() {
@@ -522,45 +707,66 @@ export class Game {
             this.titleScreen.update();
         } else if (this.gameMode === CONSTANTS.GAME_MODES.PLAYING) {
             this.animationSystem.updateCharacterAnimation(this.player);
+            this.elevatorUI.update();
         }
     }
 
     draw() {
-        this.renderer.clearScreen();
+        try {
+            this.renderer.clearScreen();
 
-        if (this.gameMode === CONSTANTS.GAME_MODES.LOADING) {
-            this.loadingScreen.draw();
-            return;
-        } else if (this.gameMode === CONSTANTS.GAME_MODES.CELEBRATION) {
-            this.celebrationScreen.draw();
-            return;
-        } else if (this.gameMode === CONSTANTS.GAME_MODES.TITLE) {
-            this.titleScreen.draw();
-            return;
+            // 게임 모드별 렌더링
+            if (this.gameMode === CONSTANTS.GAME_MODES.LOADING) {
+                this.loadingScreen.draw();
+                return;
+            } else if (this.gameMode === CONSTANTS.GAME_MODES.CELEBRATION) {
+                this.celebrationScreen.draw();
+                return;
+            } else if (this.gameMode === CONSTANTS.GAME_MODES.TITLE) {
+                this.titleScreen.draw();
+                return;
+            }
+        } catch (error) {
+            console.error('❌ Draw 메서드 오류 (첫 부분):', error);
+            console.log('현재 게임 모드:', this.gameMode);
         }
 
         if (this.gameMode === CONSTANTS.GAME_MODES.PLAYING) {
-            const currentMap = this.mapManager.getCurrentMap();
+            try {
+                const currentMap = this.mapManager.getCurrentMap();
 
-            // 월드 렌더링
-            this.renderer.drawFloor(this.camera, currentMap);
-            this.renderer.drawOfficeItems(this.camera, currentMap);
-            this.renderer.drawWalls(this.camera, currentMap);
-            this.renderer.drawPortals(this.camera, currentMap);
-            this.renderer.drawItems(this.camera, currentMap);
-            this.renderer.drawNPCs(this.camera, currentMap);
+                if (!currentMap) {
+                    console.error('현재 맵이 로딩되지 않았습니다:', this.mapManager.getCurrentMapId());
+                    return;
+                }
 
-            // 플레이어 렌더링 (애니메이션 위치 사용)
-            const animPos = this.player.getAnimatedPosition();
-            this.renderer.drawPixelCharacter(
-                animPos.x,
-                animPos.y,
-                this.player.direction,
-                true,
-                null,
-                this.camera,
-                animPos.bobOffset
-            );
+                // 월드 렌더링
+                this.renderer.drawFloor(this.camera, currentMap);
+                this.renderer.drawOfficeItems(this.camera, currentMap);
+                this.renderer.drawWalls(this.camera, currentMap);
+                this.renderer.drawPortals(this.camera, currentMap);
+                this.renderer.drawElevatorPanel(this.camera, currentMap);
+                this.renderer.drawItems(this.camera, currentMap);
+                this.renderer.drawNPCs(this.camera, currentMap);
+            } catch (error) {
+                console.error('❌ 월드 렌더링 오류:', error);
+            }
+
+            try {
+                // 플레이어 렌더링 (애니메이션 위치 사용)
+                const animPos = this.player.getAnimatedPosition();
+                this.renderer.drawPixelCharacter(
+                    animPos.x,
+                    animPos.y,
+                    this.player.direction,
+                    true,
+                    null,
+                    this.camera,
+                    animPos.bobOffset
+                );
+            } catch (error) {
+                console.error('❌ 플레이어 렌더링 오류:', error);
+            }
 
             // 플레이어 이름 표시
             const playerScreenPos = this.camera.worldToScreen(this.player.x, this.player.y);
@@ -593,6 +799,9 @@ export class Game {
             // 일시정지 메뉴 (최상위 레이어)
             this.pauseMenu.draw();
 
+            // 엘리베이터 UI (최상위 레이어)
+            this.elevatorUI.draw();
+
             // 디버그 정보 표시
             if (this.debugMode) {
                 this.drawDebugInfo();
@@ -612,6 +821,9 @@ export class Game {
         if (this.nearbyNPC) {
             message = `${this.nearbyNPC.name}과(와) 대화하기`;
             icon = '💬';
+        } else if (this.nearbyElevator) {
+            message = '엘리베이터 - 층 선택하기';
+            icon = '🛗';
         } else if (this.nearbyPortal) {
             message = `${this.nearbyPortal.name}(으)로 이동하기`;
             icon = '🚪';
@@ -724,7 +936,7 @@ export class Game {
         this.ctx.font = '14px Arial';
         this.ctx.textAlign = 'center';
 
-        let message = '방향키: 이동 | 스페이스: 상호작용 | S: 저장 | ESC: 메뉴';
+        let message = '방향키: 이동 | 스페이스: 상호작용 | I: 인벤토리 | Q: 퀘스트 | M: 미니맵 | S: 저장 | ESC: 메뉴';
 
         // 디버그 모드일 때 추가 안내
         if (this.debugMode) {
@@ -773,6 +985,22 @@ export class Game {
         this.ctx.lineWidth = 1;
         this.ctx.strokeRect(dialogX + 3, dialogY + 3, dialogWidth - 6, dialogHeight - 6);
 
+        // NPC 이름 표시
+        if (this.currentNPC) {
+            this.ctx.fillStyle = '#FFD700';
+            this.ctx.font = 'bold 16px Arial';
+            this.ctx.textAlign = 'left';
+            this.ctx.fillText(`💬 ${this.currentNPC.name}`, dialogX + 20, dialogY + 25);
+
+            // NPC 이름 아래 구분선
+            this.ctx.strokeStyle = 'rgba(255, 215, 0, 0.5)';
+            this.ctx.lineWidth = 1;
+            this.ctx.beginPath();
+            this.ctx.moveTo(dialogX + 20, dialogY + 35);
+            this.ctx.lineTo(dialogX + dialogWidth - 20, dialogY + 35);
+            this.ctx.stroke();
+        }
+
         // 대화 텍스트
         this.ctx.fillStyle = '#FFFFFF';
         this.ctx.font = 'bold 18px Arial';
@@ -783,8 +1011,11 @@ export class Game {
         const lineHeight = 25;
         const lines = this.wrapText(currentText, maxWidth);
 
+        // NPC 이름이 있으면 텍스트를 더 아래에 표시
+        const textStartY = this.currentNPC ? dialogY + 55 : dialogY + 35;
+
         lines.forEach((line, index) => {
-            this.ctx.fillText(line, dialogX + 20, dialogY + 35 + index * lineHeight);
+            this.ctx.fillText(line, dialogX + 20, textStartY + index * lineHeight);
         });
 
         // 진행 표시
@@ -808,6 +1039,7 @@ export class Game {
         this.ctx.fillStyle = `rgba(255, 215, 0, ${blinkAlpha})`;
         this.ctx.fillText(continueText, this.canvas.width / 2, dialogY + dialogHeight + 25);
     }
+
 
     wrapText(text, maxWidth) {
         const words = text.split(' ');
@@ -834,8 +1066,12 @@ export class Game {
     }
 
     gameLoop() {
-        this.update();
-        this.draw();
-        requestAnimationFrame(() => this.gameLoop());
+        try {
+            this.update();
+            this.draw();
+            requestAnimationFrame(() => this.gameLoop());
+        } catch (error) {
+            console.error('❌ 게임 루프 오류:', error);
+        }
     }
 };
