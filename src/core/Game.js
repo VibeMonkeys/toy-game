@@ -8,6 +8,7 @@ import { TitleScreen } from '../ui/TitleScreen.js';
 import { QuestUI } from '../ui/QuestUI.js';
 import { Minimap } from '../ui/Minimap.js';
 import { Inventory } from '../ui/Inventory.js';
+import { PauseMenu } from '../ui/PauseMenu.js';
 import { MapManager } from '../maps/MapManager.js';
 import { Camera } from '../maps/Camera.js';
 import { Renderer } from '../graphics/Renderer.js';
@@ -36,6 +37,7 @@ export class Game {
         this.questUI = new QuestUI(this.canvas, this.ctx);
         this.minimap = new Minimap(this.canvas, this.ctx);
         this.inventory = new Inventory(this.canvas, this.ctx);
+        this.pauseMenu = new PauseMenu(this.canvas, this.ctx, this.audioManager);
 
         // 다이얼로그 시스템
         this.currentDialog = null;
@@ -112,6 +114,19 @@ export class Game {
     }
 
     handleGameInput(event) {
+        // 일시정지 메뉴가 열려있을 때
+        const pauseResult = this.pauseMenu.handleKeyDown(event);
+        if (pauseResult) {
+            this.handlePauseMenuAction(pauseResult);
+            return;
+        }
+
+        // ESC 키로 일시정지 메뉴 열기
+        if (event.key === 'Escape') {
+            this.pauseMenu.show();
+            return;
+        }
+
         // 다이얼로그가 열려있을 때
         if (this.currentDialog) {
             if (event.key === ' ' || event.key === 'Enter') {
@@ -143,6 +158,42 @@ export class Game {
                 this.saveGame();
                 break;
         }
+    }
+
+    handlePauseMenuAction(action) {
+        switch (action) {
+            case 'resume':
+                // 게임 계속하기
+                this.applyPauseMenuSettings();
+                break;
+            case 'save':
+                this.saveGame();
+                this.pauseMenu.hide();
+                this.applyPauseMenuSettings();
+                break;
+            case 'title':
+                // 타이틀로 돌아가기
+                this.gameMode = CONSTANTS.GAME_MODES.TITLE;
+                this.pauseMenu.hide();
+                break;
+            case 'quit':
+                // 게임 종료 (브라우저에서는 탭 닫기 안내)
+                if (confirm('정말로 게임을 종료하시겠습니까?')) {
+                    window.close() || alert('브라우저 탭을 닫아주세요.');
+                }
+                break;
+        }
+    }
+
+    applyPauseMenuSettings() {
+        const settings = this.pauseMenu.getSettings();
+
+        // 오디오 설정 적용
+        this.audioManager.setSoundEnabled(settings.soundEnabled);
+
+        // UI 표시 설정 (향후 구현 가능)
+        // this.showMinimap = settings.showMinimap;
+        // this.showQuestUI = settings.showQuestUI;
     }
 
     movePlayer(dx, dy) {
@@ -346,6 +397,9 @@ export class Game {
             this.questUI.draw(this.questSystem);
             this.minimap.draw(this.player, this.mapManager.getCurrentMapId(), this.mapManager.maps, this.gameState);
             this.inventory.draw(this.gameState);
+
+            // 일시정지 메뉴 (최상위 레이어)
+            this.pauseMenu.draw();
         }
     }
 

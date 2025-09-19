@@ -3,6 +3,7 @@ export class AudioManager {
         this.audioContext = null;
         this.sounds = new Map();
         this.initialized = false;
+        this.soundEnabled = true;
     }
 
     init() {
@@ -16,8 +17,12 @@ export class AudioManager {
         }
     }
 
+    setSoundEnabled(enabled) {
+        this.soundEnabled = enabled;
+    }
+
     playBeep(frequency = 440, duration = 200) {
-        if (!this.audioContext) return;
+        if (!this.audioContext || !this.soundEnabled) return;
 
         try {
             const oscillator = this.audioContext.createOscillator();
