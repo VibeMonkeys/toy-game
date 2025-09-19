@@ -247,11 +247,26 @@ export class Renderer {
         this.ctx.lineWidth = 2;
         this.ctx.strokeRect(screenX + 4, screenY + 4, this.tileSize - 8, this.tileSize - 8);
 
-        // 손잡이
+        // 포털 표시 (빛나는 효과)
+        this.ctx.fillStyle = 'rgba(255, 215, 0, 0.3)';
+        this.ctx.fillRect(screenX, screenY, this.tileSize, this.tileSize);
+
+        // 문 손잡이
         this.ctx.fillStyle = '#FFD700';
         this.ctx.beginPath();
-        this.ctx.arc(screenX + this.tileSize - 12, screenY + this.tileSize/2, 3, 0, Math.PI * 2);
+        this.ctx.arc(screenX + this.tileSize - 8, screenY + this.tileSize/2, 3, 0, Math.PI * 2);
         this.ctx.fill();
+
+        // 포털 이름 표시
+        if (portal.name) {
+            this.ctx.fillStyle = 'white';
+            this.ctx.font = '12px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.strokeStyle = 'black';
+            this.ctx.lineWidth = 3;
+            this.ctx.strokeText(portal.name, screenX + this.tileSize/2, screenY - 5);
+            this.ctx.fillText(portal.name, screenX + this.tileSize/2, screenY - 5);
+        }
     }
 
     drawItems(camera, currentMap) {
@@ -304,10 +319,10 @@ export class Renderer {
         this.ctx.fillText(item.name, centerX, screenY - 5);
     }
 
-    drawPixelCharacter(x, y, direction, isPlayer = false, customColor = null, camera) {
+    drawPixelCharacter(x, y, direction, isPlayer = false, customColor = null, camera, bobOffset = 0) {
         const screenPos = camera.worldToScreen(x, y);
         const screenX = screenPos.x + this.tileSize/2;
-        const screenY = screenPos.y + this.tileSize/2;
+        const screenY = screenPos.y + this.tileSize/2 + (bobOffset || 0);
 
         // 캐릭터 색상
         let characterColor = customColor || (isPlayer ? '#0000FF' : '#FF0000');

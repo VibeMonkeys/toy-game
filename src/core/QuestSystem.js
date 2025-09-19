@@ -1,7 +1,8 @@
 import { CONSTANTS } from '../utils/Constants.js';
 
 export class QuestSystem {
-    constructor() {
+    constructor(audioManager = null) {
+        this.audioManager = audioManager;
         this.currentQuest = 0;
         this.showQuestUI = true;
         this.quests = [
@@ -63,9 +64,27 @@ export class QuestSystem {
             quest.completed = true;
             quest.progress = quest.maxProgress;
 
+            // Play quest complete sound
+            if (this.audioManager) {
+                this.audioManager.playQuestComplete();
+            }
+
             // Move to next quest if current
             if (quest.id === this.currentQuest && this.currentQuest < this.quests.length - 1) {
                 this.currentQuest++;
+
+                // Play level up sound when advancing to next quest
+                if (this.audioManager) {
+                    setTimeout(() => this.audioManager.playLevelUp(), 800);
+                }
+            }
+
+            // Check if all quests are completed
+            if (this.currentQuest >= this.quests.length - 1 && quest.id === this.quests.length - 1) {
+                // Play game complete sound
+                if (this.audioManager) {
+                    setTimeout(() => this.audioManager.playGameComplete(), 1500);
+                }
             }
 
             return true;
@@ -102,5 +121,9 @@ export class QuestSystem {
         if (data.quests) {
             this.quests = data.quests.map(q => ({ ...q }));
         }
+    }
+
+    areAllQuestsCompleted() {
+        return this.quests.every(quest => quest.completed);
     }
 };

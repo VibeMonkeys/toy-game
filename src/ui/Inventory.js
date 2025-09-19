@@ -70,24 +70,46 @@ export class Inventory {
         if (!this.itemNotification || this.notificationTimer <= 0) return;
 
         const alpha = Math.min(1, this.notificationTimer / 60);
-        const notifY = this.y - 60;
+
+        // 화면 중앙 상단에 큰 알림창 표시
+        const notifWidth = 500;
+        const notifHeight = 80;
+        const notifX = (this.canvas.width - notifWidth) / 2;
+        const notifY = 100;
+
+        // 알림 배경 (그림자 효과)
+        this.ctx.fillStyle = `rgba(0, 0, 0, ${alpha * 0.4})`;
+        this.ctx.fillRect(notifX + 4, notifY + 4, notifWidth, notifHeight);
 
         // 알림 배경
-        this.ctx.fillStyle = `rgba(0, 0, 0, ${alpha * 0.8})`;
-        this.ctx.fillRect(this.x, notifY, this.width, 40);
+        this.ctx.fillStyle = `rgba(20, 20, 50, ${alpha * 0.95})`;
+        this.ctx.fillRect(notifX, notifY, notifWidth, notifHeight);
 
-        this.ctx.strokeStyle = `rgba(255, 255, 0, ${alpha})`;
-        this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(this.x, notifY, this.width, 40);
+        // 알림 테두리 (황금색)
+        this.ctx.strokeStyle = `rgba(255, 215, 0, ${alpha})`;
+        this.ctx.lineWidth = 3;
+        this.ctx.strokeRect(notifX, notifY, notifWidth, notifHeight);
+
+        // 반짝이는 효과
+        const sparkleAlpha = (Math.sin(Date.now() * 0.01) + 1) * 0.5 * alpha;
+        this.ctx.strokeStyle = `rgba(255, 255, 255, ${sparkleAlpha * 0.8})`;
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeRect(notifX + 2, notifY + 2, notifWidth - 4, notifHeight - 4);
 
         // 알림 텍스트
-        this.ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
-        this.ctx.font = 'bold 14px Arial';
+        this.ctx.fillStyle = `rgba(255, 215, 0, ${alpha})`;
+        this.ctx.font = 'bold 20px Arial';
         this.ctx.textAlign = 'center';
-        this.ctx.fillText('아이템 획득!', this.x + this.width/2, notifY + 15);
+        this.ctx.strokeStyle = `rgba(0, 0, 0, ${alpha * 0.8})`;
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeText('📢 알림', this.canvas.width / 2, notifY + 30);
+        this.ctx.fillText('📢 알림', this.canvas.width / 2, notifY + 30);
 
-        this.ctx.font = '12px Arial';
-        this.ctx.fillText(this.itemNotification.name, this.x + this.width/2, notifY + 32);
+        // 메시지 텍스트
+        this.ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+        this.ctx.font = 'bold 16px Arial';
+        this.ctx.strokeText(this.itemNotification.name, this.canvas.width / 2, notifY + 55);
+        this.ctx.fillText(this.itemNotification.name, this.canvas.width / 2, notifY + 55);
 
         this.notificationTimer--;
     }

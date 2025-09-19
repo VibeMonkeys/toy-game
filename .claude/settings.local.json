@@ -7,7 +7,12 @@
       "Bash(git remote add:*)",
       "Bash(git push:*)",
       "Bash(git pull:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(mkdir:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(xargs:*)",
+      "Bash(python3:*)"
     ],
     "deny": [],
     "ask": []

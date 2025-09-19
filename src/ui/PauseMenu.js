@@ -57,11 +57,11 @@ export class PauseMenu {
                 return 'resume';
             case 'ArrowUp':
                 this.menuIndex = (this.menuIndex - 1 + this.menuOptions.length) % this.menuOptions.length;
-                this.audioManager?.playMenuMove();
+                this.audioManager?.playUIHover();
                 break;
             case 'ArrowDown':
                 this.menuIndex = (this.menuIndex + 1) % this.menuOptions.length;
-                this.audioManager?.playMenuMove();
+                this.audioManager?.playUIHover();
                 break;
             case 'Enter':
                 return this.selectCurrentOption();
@@ -85,11 +85,11 @@ export class PauseMenu {
                 break;
             case 'ArrowUp':
                 this.settingsIndex = (this.settingsIndex - 1 + settingsOptions.length) % settingsOptions.length;
-                this.audioManager?.playMenuMove();
+                this.audioManager?.playUIHover();
                 break;
             case 'ArrowDown':
                 this.settingsIndex = (this.settingsIndex + 1) % settingsOptions.length;
-                this.audioManager?.playMenuMove();
+                this.audioManager?.playUIHover();
                 break;
             case 'Enter':
                 const selected = settingsOptions[this.settingsIndex];
@@ -106,7 +106,7 @@ export class PauseMenu {
 
     selectCurrentOption() {
         const selectedOption = this.menuOptions[this.menuIndex];
-        this.audioManager?.playMenuSelect();
+        this.audioManager?.playUIClick();
 
         switch (selectedOption) {
             case '게임 계속하기':

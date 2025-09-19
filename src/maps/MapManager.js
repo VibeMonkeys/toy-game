@@ -93,6 +93,19 @@ export class MapManager {
         return null;
     }
 
+    getNearbyPortal(x, y, range = 1) {
+        const currentMap = this.getCurrentMap();
+        if (!currentMap || !currentMap.portals) return null;
+
+        for (let portal of currentMap.portals) {
+            const distance = Math.abs(portal.x - x) + Math.abs(portal.y - y);
+            if (distance <= range) {
+                return portal;
+            }
+        }
+        return null;
+    }
+
     collectItem(x, y) {
         const item = this.findItemAt(x, y);
         if (item) {

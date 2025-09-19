@@ -4,9 +4,11 @@ export const CONSTANTS = {
     MAP_HEIGHT: 30,
 
     GAME_MODES: {
+        LOADING: 'loading',
         TITLE: 'title',
         PLAYING: 'playing',
-        PAUSED: 'paused'
+        PAUSED: 'paused',
+        CELEBRATION: 'celebration'
     },
 
     DIRECTIONS: {
