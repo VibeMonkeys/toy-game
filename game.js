@@ -31,6 +31,58 @@ class Game {
             completedQuests: []
         };
 
+        this.questSystem = {
+            currentQuest: 0,
+            showQuestUI: true,
+            quests: [
+                {
+                    id: 0,
+                    title: "회사 탐험 시작",
+                    description: "김대리와 대화하여 첫 번째 단서를 얻으세요",
+                    target: "talk_to_kim",
+                    completed: false,
+                    progress: 0,
+                    maxProgress: 1
+                },
+                {
+                    id: 1,
+                    title: "회의실 조사",
+                    description: "회의실로 이동하여 박과장과 대화하세요",
+                    target: "talk_to_park",
+                    completed: false,
+                    progress: 0,
+                    maxProgress: 1
+                },
+                {
+                    id: 2,
+                    title: "카페테리아 방문",
+                    description: "카페테리아에서 이부장과 대화하세요",
+                    target: "talk_to_lee",
+                    completed: false,
+                    progress: 0,
+                    maxProgress: 1
+                },
+                {
+                    id: 3,
+                    title: "CEO와의 만남",
+                    description: "CEO실에서 CEO와 대화하여 보물을 찾으세요",
+                    target: "talk_to_ceo",
+                    completed: false,
+                    progress: 0,
+                    maxProgress: 1
+                },
+                {
+                    id: 4,
+                    title: "보물 수집",
+                    description: "모든 아이템을 수집하세요",
+                    target: "collect_all_items",
+                    completed: false,
+                    progress: 0,
+                    maxProgress: 4
+                }
+            ]
+        };
+
         this.showInventory = false;
         this.showMinimap = true;
 
@@ -39,12 +91,122 @@ class Game {
         this.itemNotification = null;
         this.itemNotificationTimer = 0;
 
+        this.audioContext = null;
+        this.soundEnabled = true;
+        this.initializeAudio();
+
         this.initializeMaps();
         this.currentDialog = null;
         this.dialogIndex = 0;
 
         this.setupEventListeners();
         this.gameLoop();
+    }
+
+    initializeAudio() {
+        try {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        } catch (error) {
+            console.warn('Web Audio API not supported:', error);
+            this.soundEnabled = false;
+        }
+    }
+
+    playSound(type, frequency = 440, duration = 200, volume = 0.1) {
+        if (!this.soundEnabled || !this.audioContext) return;
+
+        try {
+            const oscillator = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(this.audioContext.destination);
+
+            gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(volume, this.audioContext.currentTime + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + duration / 1000);
+
+            switch(type) {
+                case 'step':
+                    oscillator.frequency.setValueAtTime(200, this.audioContext.currentTime);
+                    oscillator.type = 'square';
+                    break;
+                case 'item':
+                    oscillator.frequency.setValueAtTime(800, this.audioContext.currentTime);
+                    oscillator.frequency.exponentialRampToValueAtTime(1200, this.audioContext.currentTime + 0.1);
+                    oscillator.type = 'sine';
+                    break;
+                case 'dialog':
+                    oscillator.frequency.setValueAtTime(300, this.audioContext.currentTime);
+                    oscillator.type = 'triangle';
+                    break;
+                case 'portal':
+                    oscillator.frequency.setValueAtTime(400, this.audioContext.currentTime);
+                    oscillator.frequency.exponentialRampToValueAtTime(600, this.audioContext.currentTime + 0.2);
+                    oscillator.type = 'sawtooth';
+                    break;
+            }
+
+            oscillator.start(this.audioContext.currentTime);
+            oscillator.stop(this.audioContext.currentTime + duration / 1000);
+        } catch (error) {
+            console.warn('Error playing sound:', error);
+        }
+    }
+
+    updateQuest(target, npcName = null) {
+        const currentQuest = this.questSystem.quests[this.questSystem.currentQuest];
+        if (!currentQuest || currentQuest.completed) return;
+
+        let questCompleted = false;
+
+        switch(target) {
+            case 'talk_to_kim':
+                if (currentQuest.target === 'talk_to_kim' && npcName === '김대리') {
+                    currentQuest.progress = 1;
+                    questCompleted = true;
+                }
+                break;
+            case 'talk_to_park':
+                if (currentQuest.target === 'talk_to_park' && npcName === '박과장') {
+                    currentQuest.progress = 1;
+                    questCompleted = true;
+                }
+                break;
+            case 'talk_to_lee':
+                if (currentQuest.target === 'talk_to_lee' && npcName === '이부장') {
+                    currentQuest.progress = 1;
+                    questCompleted = true;
+                }
+                break;
+            case 'talk_to_ceo':
+                if (currentQuest.target === 'talk_to_ceo' && npcName === 'CEO') {
+                    currentQuest.progress = 1;
+                    questCompleted = true;
+                }
+                break;
+            case 'collect_item':
+                const collectQuest = this.questSystem.quests.find(q => q.target === 'collect_all_items');
+                if (collectQuest) {
+                    collectQuest.progress = this.gameState.itemsCollected;
+                    if (collectQuest.progress >= collectQuest.maxProgress) {
+                        collectQuest.completed = true;
+                        this.showItemNotification('모든 아이템 수집 완료!');
+                    }
+                }
+                break;
+        }
+
+        if (questCompleted) {
+            currentQuest.completed = true;
+            this.showItemNotification(`퀘스트 완료: ${currentQuest.title}`);
+            this.playSound('item', 1000, 500, 0.2);
+
+            // 다음 퀘스트로 이동
+            if (this.questSystem.currentQuest < this.questSystem.quests.length - 1) {
+                this.questSystem.currentQuest++;
+            }
+        }
     }
 
     generateWalls() {
@@ -213,7 +375,7 @@ class Game {
         // 게임 관련 키들의 기본 동작을 방지
         document.addEventListener('keydown', (e) => {
             // 게임에서 사용하는 키들의 기본 동작 방지
-            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyI', 'KeyM', 'Escape', 'Enter'].includes(e.code)) {
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyI', 'KeyM', 'KeyQ', 'Escape', 'Enter'].includes(e.code)) {
                 e.preventDefault();
             }
             if (this.currentDialog) {
@@ -235,6 +397,11 @@ class Game {
 
             if (e.code === 'KeyM') {
                 this.showMinimap = !this.showMinimap;
+                return;
+            }
+
+            if (e.code === 'KeyQ') {
+                this.questSystem.showQuestUI = !this.questSystem.showQuestUI;
                 return;
             }
 
@@ -276,6 +443,8 @@ class Game {
                 this.player.y = newY;
                 this.player.isMoving = true;
                 this.player.animTimer = Date.now();
+
+                this.playSound('step', 200, 100, 0.05);
 
                 this.checkPortal();
                 this.checkNearbyNPC();
@@ -321,6 +490,7 @@ class Game {
         const portal = currentMap.portals.find(p => p.x === this.player.x && p.y === this.player.y);
 
         if (portal) {
+            this.playSound('portal', 400, 400, 0.12);
             this.currentMap = portal.targetMap;
             this.player.x = portal.targetX;
             this.player.y = portal.targetY;
@@ -345,7 +515,9 @@ class Game {
                 mapFound: this.currentMap
             });
             this.gameState.itemsCollected++;
+            this.playSound('item', 800, 300, 0.15);
             this.showItemNotification(`${item.name}을(를) 획득했습니다!`);
+            this.updateQuest('collect_item');
         }
     }
 
@@ -380,7 +552,24 @@ class Game {
     startDialog(npc) {
         this.currentDialog = npc.dialog;
         this.dialogIndex = 0;
+        this.playSound('dialog', 300, 200, 0.1);
         this.showDialog(npc.name + ': ' + this.currentDialog[this.dialogIndex]);
+
+        // 퀘스트 업데이트
+        switch(npc.name) {
+            case '김대리':
+                this.updateQuest('talk_to_kim', npc.name);
+                break;
+            case '박과장':
+                this.updateQuest('talk_to_park', npc.name);
+                break;
+            case '이부장':
+                this.updateQuest('talk_to_lee', npc.name);
+                break;
+            case 'CEO':
+                this.updateQuest('talk_to_ceo', npc.name);
+                break;
+        }
     }
 
     nextDialog() {
@@ -413,45 +602,82 @@ class Game {
         this.ctx.save();
         this.ctx.translate(screenX, screenY);
 
+        // 애니메이션 계산
+        let bobOffset = 0;
+        let legOffset = 0;
+        if (isPlayer && this.player.isMoving) {
+            const animTime = (Date.now() - this.player.animTimer) / 100;
+            bobOffset = Math.sin(animTime * 8) * 1;
+            legOffset = Math.sin(animTime * 8) * 2;
+        }
+
+        // 몸 위치 조정
+        this.ctx.translate(0, bobOffset);
+
         if (isPlayer) {
             this.ctx.fillStyle = '#4A90E2';
         } else {
             this.ctx.fillStyle = '#8E44AD';
         }
 
+        // 몸통
         this.ctx.fillRect(-6, -8, 12, 8);
 
+        // 머리
         this.ctx.fillStyle = '#F4D1AE';
         this.ctx.fillRect(-4, -12, 8, 6);
 
+        // 눈
         this.ctx.fillStyle = '#2C3E50';
         this.ctx.fillRect(-3, -11, 2, 2);
         this.ctx.fillRect(1, -11, 2, 2);
 
+        // 입
         this.ctx.fillStyle = '#34495E';
         this.ctx.fillRect(-2, -7, 4, 1);
 
+        // 셔츠/옷
         this.ctx.fillStyle = isPlayer ? '#3498DB' : '#9B59B6';
         this.ctx.fillRect(-5, 0, 10, 8);
 
+        // 다리 (애니메이션 적용)
         this.ctx.fillStyle = '#2C3E50';
-        this.ctx.fillRect(-3, 8, 2, 6);
-        this.ctx.fillRect(1, 8, 2, 6);
+        if (isPlayer && this.player.isMoving) {
+            // 걸을 때 다리 애니메이션
+            this.ctx.fillRect(-3, 8 - legOffset, 2, 6 + legOffset);
+            this.ctx.fillRect(1, 8 + legOffset, 2, 6 - legOffset);
+        } else {
+            // 정지 상태
+            this.ctx.fillRect(-3, 8, 2, 6);
+            this.ctx.fillRect(1, 8, 2, 6);
+        }
 
+        // 신발
         this.ctx.fillStyle = '#34495E';
-        this.ctx.fillRect(-4, 13, 3, 2);
-        this.ctx.fillRect(1, 13, 3, 2);
+        if (isPlayer && this.player.isMoving) {
+            this.ctx.fillRect(-4, 13 - legOffset, 3, 2);
+            this.ctx.fillRect(1, 13 + legOffset, 3, 2);
+        } else {
+            this.ctx.fillRect(-4, 13, 3, 2);
+            this.ctx.fillRect(1, 13, 3, 2);
+        }
 
+        // 팔 (방향에 따라)
+        this.ctx.fillStyle = '#F4D1AE';
         if (direction === 'left') {
-            this.ctx.fillStyle = '#F4D1AE';
             this.ctx.fillRect(-7, -4, 3, 6);
         } else if (direction === 'right') {
-            this.ctx.fillStyle = '#F4D1AE';
             this.ctx.fillRect(4, -4, 3, 6);
         } else {
-            this.ctx.fillStyle = '#F4D1AE';
-            this.ctx.fillRect(-7, -4, 3, 6);
-            this.ctx.fillRect(4, -4, 3, 6);
+            // 걸을 때 팔 흔들림
+            if (isPlayer && this.player.isMoving) {
+                const armSwing = Math.sin((Date.now() - this.player.animTimer) / 100 * 8) * 1;
+                this.ctx.fillRect(-7, -4 + armSwing, 3, 6);
+                this.ctx.fillRect(4, -4 - armSwing, 3, 6);
+            } else {
+                this.ctx.fillRect(-7, -4, 3, 6);
+                this.ctx.fillRect(4, -4, 3, 6);
+            }
         }
 
         this.ctx.restore();
@@ -465,8 +691,17 @@ class Game {
         const screenX = (item.x - this.camera.x) * this.tileSize + this.tileSize / 2;
         const screenY = (item.y - this.camera.y) * this.tileSize + this.tileSize / 2;
 
+        // 반짝임 효과
+        const sparkleTime = Date.now() / 200;
+        const sparkleIntensity = (Math.sin(sparkleTime) + 1) / 2;
+        const bobEffect = Math.sin(Date.now() / 300) * 2;
+
         this.ctx.save();
-        this.ctx.translate(screenX, screenY);
+        this.ctx.translate(screenX, screenY + bobEffect);
+
+        // 글로우 효과
+        this.ctx.shadowColor = 'rgba(255, 255, 255, ' + (sparkleIntensity * 0.8) + ')';
+        this.ctx.shadowBlur = 8 + sparkleIntensity * 4;
 
         switch(item.type) {
             case 'key':
@@ -495,15 +730,30 @@ class Game {
                 break;
         }
 
+        // 반짝이 입자 효과
+        if (sparkleIntensity > 0.7) {
+            this.ctx.shadowColor = 'transparent';
+            this.ctx.shadowBlur = 0;
+            this.ctx.fillStyle = 'rgba(255, 255, 255, ' + sparkleIntensity + ')';
+
+            for (let i = 0; i < 3; i++) {
+                const angle = (Date.now() / 100 + i * 120) * Math.PI / 180;
+                const sparkleX = Math.cos(angle) * 12;
+                const sparkleY = Math.sin(angle) * 12;
+                this.ctx.fillRect(sparkleX - 1, sparkleY - 1, 2, 2);
+            }
+        }
+
         this.ctx.restore();
 
-        this.ctx.fillStyle = 'white';
+        // 아이템 이름 (반짝임 효과 포함)
+        this.ctx.fillStyle = 'rgba(255, 255, 255, ' + (0.8 + sparkleIntensity * 0.2) + ')';
         this.ctx.font = '12px Arial';
         this.ctx.textAlign = 'center';
-        this.ctx.strokeStyle = 'black';
+        this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
         this.ctx.lineWidth = 2;
-        this.ctx.strokeText(item.name, screenX, screenY + 30);
-        this.ctx.fillText(item.name, screenX, screenY + 30);
+        this.ctx.strokeText(item.name, screenX, screenY + 30 + bobEffect);
+        this.ctx.fillText(item.name, screenX, screenY + 30 + bobEffect);
     }
 
     drawPortal(portal) {
@@ -791,6 +1041,85 @@ class Game {
         );
     }
 
+    drawQuestUI() {
+        if (!this.questSystem.showQuestUI) return;
+
+        const questWidth = 400;
+        const questHeight = 200;
+        const questX = 10;
+        const questY = 10;
+
+        // 배경
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        this.ctx.fillRect(questX, questY, questWidth, questHeight);
+
+        // 테두리
+        this.ctx.strokeStyle = '#3498DB';
+        this.ctx.lineWidth = 3;
+        this.ctx.strokeRect(questX, questY, questWidth, questHeight);
+
+        // 제목
+        this.ctx.fillStyle = 'white';
+        this.ctx.font = 'bold 18px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('퀘스트 (Q키로 닫기)', questX + questWidth/2, questY + 25);
+
+        // 현재 퀘스트
+        const currentQuest = this.questSystem.quests[this.questSystem.currentQuest];
+        if (currentQuest && !currentQuest.completed) {
+            this.ctx.textAlign = 'left';
+            this.ctx.font = 'bold 16px Arial';
+            this.ctx.fillStyle = '#F39C12';
+            this.ctx.fillText('현재 목표:', questX + 15, questY + 55);
+
+            this.ctx.font = '14px Arial';
+            this.ctx.fillStyle = 'white';
+            this.ctx.fillText(currentQuest.title, questX + 15, questY + 80);
+
+            this.ctx.font = '12px Arial';
+            this.ctx.fillStyle = '#BDC3C7';
+            this.ctx.fillText(currentQuest.description, questX + 15, questY + 100);
+
+            // 진행률 바
+            const progressBarWidth = 350;
+            const progressBarHeight = 8;
+            const progressBarX = questX + 15;
+            const progressBarY = questY + 115;
+
+            // 배경 바
+            this.ctx.fillStyle = '#34495E';
+            this.ctx.fillRect(progressBarX, progressBarY, progressBarWidth, progressBarHeight);
+
+            // 진행률 바
+            const progress = currentQuest.progress / currentQuest.maxProgress;
+            this.ctx.fillStyle = '#2ECC71';
+            this.ctx.fillRect(progressBarX, progressBarY, progressBarWidth * progress, progressBarHeight);
+
+            // 진행률 텍스트
+            this.ctx.fillStyle = 'white';
+            this.ctx.font = '12px Arial';
+            this.ctx.textAlign = 'right';
+            this.ctx.fillText(`${currentQuest.progress}/${currentQuest.maxProgress}`, questX + questWidth - 15, progressBarY + progressBarHeight + 12);
+        } else {
+            // 모든 퀘스트 완료
+            this.ctx.textAlign = 'center';
+            this.ctx.font = 'bold 16px Arial';
+            this.ctx.fillStyle = '#2ECC71';
+            this.ctx.fillText('모든 퀘스트 완료!', questX + questWidth/2, questY + 80);
+
+            this.ctx.font = '14px Arial';
+            this.ctx.fillStyle = '#BDC3C7';
+            this.ctx.fillText('축하합니다! 26주년 기념 보물찾기를 완료했습니다!', questX + questWidth/2, questY + 110);
+        }
+
+        // 완료된 퀘스트 수
+        const completedQuests = this.questSystem.quests.filter(q => q.completed).length;
+        this.ctx.textAlign = 'center';
+        this.ctx.font = '12px Arial';
+        this.ctx.fillStyle = '#95A5A6';
+        this.ctx.fillText(`완료된 퀘스트: ${completedQuests}/${this.questSystem.quests.length}`, questX + questWidth/2, questY + questHeight - 15);
+    }
+
     drawInteractionHint() {
         if (!this.showInteractionHint || this.currentDialog) return;
 
@@ -852,7 +1181,7 @@ class Game {
             `현재 위치: ${this.getCurrentMap().name}`,
             `아이템: ${this.gameState.itemsCollected}/${this.gameState.totalItems}`,
             `방문한 지역: ${this.gameState.visitedMaps.length}/4`,
-            'I: 인벤토리, M: 미니맵, 스페이스: 대화'
+            'I: 인벤토리, M: 미니맵, Q: 퀘스트, 스페이스: 대화'
         ];
 
         uiTexts.forEach((text, index) => {
@@ -914,6 +1243,7 @@ class Game {
         this.drawUI();
         this.drawMinimap();
         this.drawInventory();
+        this.drawQuestUI();
     }
 
     gameLoop() {
