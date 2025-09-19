@@ -30,24 +30,18 @@
         </div>
     </div>
     <script type="module">
-        try {
-            const { Game } = await import('./src/core/Game.js');
+        import { Game } from './src/core/Game.js';
 
-            window.addEventListener('load', () => {
-                try {
-                    const game = new Game();
-                    console.log('휴넷 26주년 기념 게임이 시작되었습니다!');
-                } catch (error) {
-                    console.error('게임 초기화 실패:', error);
-                    document.getElementById('gameContainer').innerHTML =
-                        '<h2>게임 로딩 중 오류가 발생했습니다.</h2><p>브라우저를 새로고침해주세요.</p>';
-                }
-            });
-        } catch (error) {
-            console.error('모듈 로딩 실패:', error);
-            document.getElementById('gameContainer').innerHTML =
-                '<h2>게임 모듈 로딩 실패</h2><p>최신 브라우저를 사용해주세요.</p>';
-        }
+        window.addEventListener('load', () => {
+            try {
+                const game = new Game();
+                console.log('휴넷 26주년 기념 게임이 시작되었습니다!');
+            } catch (error) {
+                console.error('게임 초기화 실패:', error);
+                document.getElementById('gameContainer').innerHTML =
+                    '<h2>게임 로딩 중 오류가 발생했습니다.</h2><p>브라우저를 새로고침해주세요.</p>';
+            }
+        });
     </script>
 
     <!-- 구형 브라우저를 위한 폴백 -->
