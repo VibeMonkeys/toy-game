@@ -8,9 +8,28 @@ export class Inventory {
         this.y = this.canvas.height - this.height - 20;
         this.itemNotification = null;
         this.notificationTimer = 0;
+        this.isVisible = false;
+    }
+
+    toggle() {
+        this.isVisible = !this.isVisible;
+    }
+
+    show() {
+        this.isVisible = true;
+    }
+
+    hide() {
+        this.isVisible = false;
     }
 
     draw(gameState) {
+        // 인벤토리가 보이지 않으면 아이템 알림만 표시
+        if (!this.isVisible) {
+            this.drawItemNotification();
+            return;
+        }
+
         // 인벤토리 배경
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         this.ctx.fillRect(this.x, this.y, this.width, this.height);
