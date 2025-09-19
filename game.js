@@ -4,7 +4,7 @@ class Game {
         this.ctx = this.canvas.getContext('2d');
         this.tileSize = 48;
         this.mapWidth = 25;
-        this.mapHeight = 16;
+        this.mapHeight = 18;
 
         this.currentMap = 'lobby';
         this.player = {
@@ -477,7 +477,7 @@ class Game {
     drawMinimap() {
         if (!this.showMinimap) return;
 
-        const minimapSize = 200;
+        const minimapSize = 150;
         const minimapX = this.canvas.width - minimapSize - 10;
         const minimapY = 10;
         const scale = minimapSize / (this.mapWidth * this.tileSize);
@@ -542,8 +542,8 @@ class Game {
     drawInventory() {
         if (!this.showInventory) return;
 
-        const invWidth = 400;
-        const invHeight = 300;
+        const invWidth = 350;
+        const invHeight = 250;
         const invX = (this.canvas.width - invWidth) / 2;
         const invY = (this.canvas.height - invHeight) / 2;
 
