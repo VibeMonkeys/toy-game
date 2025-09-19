@@ -12,7 +12,11 @@
       "Bash(lsof:*)",
       "Bash(xargs kill:*)",
       "Bash(xargs:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(find:*)",
+      "Bash(node:*)",
+      "Bash(file:*)",
+      "Bash(pkill:*)"
     ],
     "deny": [],
     "ask": []

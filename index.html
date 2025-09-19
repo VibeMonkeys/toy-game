@@ -23,18 +23,41 @@
         <canvas id="gameCanvas" width="1200" height="700"></canvas>
     </div>
     <script type="module">
-        import { Game } from './src/core/Game.js';
+        console.log('모듈 스크립트 시작');
 
-        window.addEventListener('load', () => {
+        async function loadGame() {
             try {
-                const game = new Game();
-                console.log('휴넷 26주년 기념 게임이 시작되었습니다!');
+                console.log('Game.js import 시도...');
+                const { Game } = await import('./src/core/Game.js');
+                console.log('Game.js import 성공');
+
+                function initializeGame() {
+                    try {
+                        console.log('게임 초기화 시작...');
+                        const game = new Game();
+                        console.log('✅ 휴넷 26주년 기념 게임이 시작되었습니다!');
+                    } catch (error) {
+                        console.error('❌ 게임 초기화 실패:', error);
+                        document.getElementById('gameContainer').innerHTML =
+                            `<h2>게임 로딩 중 오류가 발생했습니다.</h2><p>오류: ${error.message}</p><p>브라우저 콘솔을 확인해주세요.</p>`;
+                    }
+                }
+
+                // 페이지가 이미 로드되었는지 확인
+                if (document.readyState === 'loading') {
+                    window.addEventListener('load', initializeGame);
+                } else {
+                    // 이미 로드된 경우 바로 실행
+                    initializeGame();
+                }
             } catch (error) {
-                console.error('게임 초기화 실패:', error);
+                console.error('❌ 모듈 import 실패:', error);
                 document.getElementById('gameContainer').innerHTML =
-                    '<h2>게임 로딩 중 오류가 발생했습니다.</h2><p>브라우저를 새로고침해주세요.</p>';
+                    `<h2>모듈 로딩 실패</h2><p>오류: ${error.message}</p><p>브라우저가 ES6 모듈을 지원하지 않거나 파일 경로에 문제가 있습니다.</p>`;
             }
-        });
+        }
+
+        loadGame();
     </script>
 
     <!-- 구형 브라우저를 위한 폴백 -->
