@@ -148,16 +148,19 @@ class Game {
     }
 
     setupEventListeners() {
+        // 게임 관련 키들의 기본 동작을 방지
         document.addEventListener('keydown', (e) => {
+            // 게임에서 사용하는 키들의 기본 동작 방지
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyI', 'KeyM', 'Escape', 'Enter'].includes(e.code)) {
+                e.preventDefault();
+            }
             if (this.currentDialog) {
                 if (e.code === 'Space' || e.code === 'Enter') {
                     this.nextDialog();
-                    e.preventDefault();
                     return;
                 }
                 if (e.code === 'Escape') {
                     this.hideDialog();
-                    e.preventDefault();
                     return;
                 }
                 return;
@@ -165,20 +168,17 @@ class Game {
 
             if (e.code === 'KeyI') {
                 this.showInventory = !this.showInventory;
-                e.preventDefault();
                 return;
             }
 
             if (e.code === 'KeyM') {
                 this.showMinimap = !this.showMinimap;
-                e.preventDefault();
                 return;
             }
 
             if (e.code === 'Escape') {
                 if (this.showInventory) {
                     this.showInventory = false;
-                    e.preventDefault();
                     return;
                 }
             }
@@ -224,6 +224,25 @@ class Game {
         document.getElementById('dialogNext').addEventListener('click', () => {
             this.nextDialog();
         });
+
+        // 캔버스 클릭 시 포커스 설정
+        this.canvas.addEventListener('click', () => {
+            this.canvas.focus();
+        });
+
+        // 캔버스를 포커스 가능하게 설정
+        this.canvas.setAttribute('tabindex', '0');
+        this.canvas.focus();
+
+        // 마우스 휠 스크롤 방지 (게임 영역에서)
+        this.canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+        }, { passive: false });
+
+        // 터치 스크롤 방지 (모바일)
+        this.canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+        }, { passive: false });
     }
 
     canMoveTo(x, y) {
