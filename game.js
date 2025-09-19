@@ -1042,12 +1042,16 @@ class Game {
 
         this.ctx.save();
 
+        // 필요한 높이만 계산 (제목 + 미니맵 + 여백)
+        const titleHeight = 25;
+        const totalHeight = minimapSize + titleHeight;
+
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-        this.ctx.fillRect(minimapX - 10, minimapY - 10, minimapSize + 20, minimapSize + 60);
+        this.ctx.fillRect(minimapX - 10, minimapY - 20, minimapSize + 20, totalHeight + 20);
 
         this.ctx.strokeStyle = '#3498DB';
         this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(minimapX - 10, minimapY - 10, minimapSize + 20, minimapSize + 60);
+        this.ctx.strokeRect(minimapX - 10, minimapY - 20, minimapSize + 20, totalHeight + 20);
 
         this.ctx.fillStyle = 'white';
         this.ctx.font = '16px Arial';
@@ -1055,7 +1059,7 @@ class Game {
         this.ctx.fillText(
             this.getCurrentMap().name,
             minimapX + minimapSize/2,
-            minimapY - 15
+            minimapY - 5
         );
 
         this.ctx.translate(minimapX, minimapY);
