@@ -2,9 +2,21 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>26주년 창립 기념 게임</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        html {
+            overflow: hidden;
+            height: 100%;
+        }
+        body {
+            overflow: hidden;
+            height: 100%;
+            position: fixed;
+            width: 100%;
+        }
+    </style>
 </head>
 <body>
     <div id="gameContainer">
@@ -17,6 +29,32 @@
             <p>방향키로 이동하세요</p>
         </div>
     </div>
-    <script src="game.js"></script>
+    <script type="module">
+        try {
+            const { Game } = await import('./src/core/Game.js');
+
+            window.addEventListener('load', () => {
+                try {
+                    const game = new Game();
+                    console.log('휴넷 26주년 기념 게임이 시작되었습니다!');
+                } catch (error) {
+                    console.error('게임 초기화 실패:', error);
+                    document.getElementById('gameContainer').innerHTML =
+                        '<h2>게임 로딩 중 오류가 발생했습니다.</h2><p>브라우저를 새로고침해주세요.</p>';
+                }
+            });
+        } catch (error) {
+            console.error('모듈 로딩 실패:', error);
+            document.getElementById('gameContainer').innerHTML =
+                '<h2>게임 모듈 로딩 실패</h2><p>최신 브라우저를 사용해주세요.</p>';
+        }
+    </script>
+
+    <!-- 구형 브라우저를 위한 폴백 -->
+    <script nomodule>
+        document.getElementById('gameContainer').innerHTML =
+            '<h2>브라우저 호환성 문제</h2><p>ES6 모듈을 지원하는 최신 브라우저가 필요합니다.</p>' +
+            '<p>Chrome 61+, Firefox 60+, Safari 10.1+, Edge 16+</p>';
+    </script>
 </body>
 </html>
