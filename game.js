@@ -3,8 +3,15 @@ class Game {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
         this.tileSize = 48;
-        this.mapWidth = 25;
-        this.mapHeight = 18;
+        this.mapWidth = 40;
+        this.mapHeight = 30;
+
+        this.camera = {
+            x: 0,
+            y: 0,
+            viewWidth: Math.floor(this.canvas.width / this.tileSize),
+            viewHeight: Math.floor(this.canvas.height / this.tileSize)
+        };
 
         this.currentMap = 'lobby';
         this.player = {
@@ -35,36 +42,52 @@ class Game {
         this.gameLoop();
     }
 
+    generateWalls() {
+        const walls = [];
+
+        for (let x = 0; x < this.mapWidth; x++) {
+            walls.push({x: x, y: 0});
+            walls.push({x: x, y: this.mapHeight - 1});
+        }
+
+        for (let y = 0; y < this.mapHeight; y++) {
+            walls.push({x: 0, y: y});
+            walls.push({x: this.mapWidth - 1, y: y});
+        }
+
+        return walls;
+    }
+
     initializeMaps() {
         this.maps = {
             lobby: {
                 name: '로비',
                 background: '#2ECC71',
-                walls: [
-                    {x: 0, y: 0}, {x: 1, y: 0}, {x: 2, y: 0}, {x: 3, y: 0}, {x: 4, y: 0}, {x: 5, y: 0}, {x: 6, y: 0}, {x: 7, y: 0}, {x: 8, y: 0}, {x: 9, y: 0}, {x: 10, y: 0}, {x: 11, y: 0}, {x: 13, y: 0}, {x: 14, y: 0}, {x: 15, y: 0}, {x: 16, y: 0}, {x: 17, y: 0}, {x: 18, y: 0}, {x: 19, y: 0}, {x: 20, y: 0}, {x: 21, y: 0}, {x: 22, y: 0}, {x: 23, y: 0}, {x: 24, y: 0},
-                    {x: 0, y: 1}, {x: 24, y: 1}, {x: 0, y: 2}, {x: 24, y: 2}, {x: 0, y: 3}, {x: 24, y: 3}, {x: 0, y: 4}, {x: 24, y: 4}, {x: 0, y: 5}, {x: 24, y: 5}, {x: 0, y: 6}, {x: 24, y: 6}, {x: 0, y: 7}, {x: 24, y: 7}, {x: 0, y: 8}, {x: 24, y: 8}, {x: 0, y: 9}, {x: 24, y: 9}, {x: 0, y: 10}, {x: 24, y: 10}, {x: 0, y: 11}, {x: 24, y: 11}, {x: 0, y: 12}, {x: 24, y: 12}, {x: 0, y: 13}, {x: 24, y: 13}, {x: 0, y: 14}, {x: 24, y: 14}, {x: 0, y: 15}, {x: 24, y: 15}, {x: 0, y: 16}, {x: 24, y: 16},
-                    {x: 0, y: 17}, {x: 1, y: 17}, {x: 2, y: 17}, {x: 3, y: 17}, {x: 4, y: 17}, {x: 5, y: 17}, {x: 6, y: 17}, {x: 7, y: 17}, {x: 8, y: 17}, {x: 9, y: 17}, {x: 10, y: 17}, {x: 11, y: 17}, {x: 12, y: 17}, {x: 13, y: 17}, {x: 14, y: 17}, {x: 15, y: 17}, {x: 16, y: 17}, {x: 17, y: 17}, {x: 18, y: 17}, {x: 19, y: 17}, {x: 20, y: 17}, {x: 21, y: 17}, {x: 22, y: 17}, {x: 23, y: 17}, {x: 24, y: 17}
-                ],
+                walls: this.generateWalls().concat([
+                    {x: 15, y: 10}, {x: 16, y: 10}, {x: 17, y: 10}, {x: 18, y: 10},
+                    {x: 15, y: 11}, {x: 18, y: 11},
+                    {x: 15, y: 12}, {x: 18, y: 12},
+                    {x: 15, y: 13}, {x: 16, y: 13}, {x: 17, y: 13}, {x: 18, y: 13}
+                ]),
                 npcs: [
-                    { x: 8, y: 8, type: 'employee', name: '김대리', dialog: ['안녕하세요! 26주년을 축하합니다!', '회의실에 첫 번째 단서가 있어요. 북쪽 문으로 가보세요!'] }
+                    { x: 8, y: 8, type: 'employee', name: '김대리', dialog: ['안녕하세요! 26주년을 축하합니다!', '회의실에 첫 번째 단서가 있어요. 북쪽 문으로 가보세요!'] },
+                    { x: 25, y: 15, type: 'employee', name: '박대리', dialog: ['여기서 휴식을 취하세요!', '더 큰 세계를 탐험해보세요!'] }
                 ],
                 items: [
-                    { x: 6, y: 6, type: 'key', name: '로비 열쇠', collected: false }
+                    { x: 6, y: 6, type: 'key', name: '로비 열쇠', collected: false },
+                    { x: 30, y: 20, type: 'key', name: '비밀 열쇠', collected: false }
                 ],
                 portals: [
-                    { x: 12, y: 0, targetMap: 'meeting_room', targetX: 12, targetY: 16, name: '회의실' }
+                    { x: 20, y: 1, targetMap: 'meeting_room', targetX: 20, targetY: 28, name: '회의실' }
                 ]
             },
             meeting_room: {
                 name: '회의실',
                 background: '#3498DB',
-                walls: [
-                    {x: 0, y: 0}, {x: 1, y: 0}, {x: 2, y: 0}, {x: 3, y: 0}, {x: 4, y: 0}, {x: 5, y: 0}, {x: 6, y: 0}, {x: 7, y: 0}, {x: 8, y: 0}, {x: 9, y: 0}, {x: 10, y: 0}, {x: 11, y: 0}, {x: 13, y: 0}, {x: 14, y: 0}, {x: 15, y: 0}, {x: 16, y: 0}, {x: 17, y: 0}, {x: 18, y: 0}, {x: 19, y: 0}, {x: 20, y: 0}, {x: 21, y: 0}, {x: 22, y: 0}, {x: 23, y: 0}, {x: 24, y: 0},
-                    {x: 0, y: 1}, {x: 24, y: 1}, {x: 0, y: 2}, {x: 24, y: 2}, {x: 0, y: 3}, {x: 24, y: 3}, {x: 0, y: 4}, {x: 24, y: 4}, {x: 0, y: 5}, {x: 24, y: 5}, {x: 0, y: 6}, {x: 24, y: 6}, {x: 0, y: 7}, {x: 24, y: 7}, {x: 0, y: 8}, {x: 24, y: 8}, {x: 0, y: 9}, {x: 24, y: 9}, {x: 0, y: 10}, {x: 24, y: 10}, {x: 0, y: 11}, {x: 24, y: 11}, {x: 0, y: 12}, {x: 24, y: 12}, {x: 0, y: 13}, {x: 24, y: 13}, {x: 0, y: 14}, {x: 24, y: 14}, {x: 0, y: 15}, {x: 24, y: 15}, {x: 0, y: 16}, {x: 24, y: 16},
-                    {x: 0, y: 17}, {x: 1, y: 17}, {x: 2, y: 17}, {x: 3, y: 17}, {x: 4, y: 17}, {x: 5, y: 17}, {x: 6, y: 17}, {x: 7, y: 17}, {x: 8, y: 17}, {x: 9, y: 17}, {x: 10, y: 17}, {x: 11, y: 17}, {x: 13, y: 17}, {x: 14, y: 17}, {x: 15, y: 17}, {x: 16, y: 17}, {x: 17, y: 17}, {x: 18, y: 17}, {x: 19, y: 17}, {x: 20, y: 17}, {x: 21, y: 17}, {x: 22, y: 17}, {x: 23, y: 17}, {x: 24, y: 17},
+                walls: this.generateWalls().concat([
                     {x: 8, y: 8}, {x: 9, y: 8}, {x: 11, y: 8}, {x: 12, y: 8}, {x: 13, y: 8}, {x: 14, y: 8}, {x: 15, y: 8}, {x: 16, y: 8},
                     {x: 8, y: 9}, {x: 16, y: 9}, {x: 8, y: 10}, {x: 16, y: 10}, {x: 8, y: 11}, {x: 9, y: 11}, {x: 15, y: 11}, {x: 16, y: 11}
-                ],
+                ]),
                 npcs: [
                     { x: 12, y: 10, type: 'manager', name: '박과장', dialog: ['여기는 회의실입니다.', '다음 단서는 카페테리아에서 찾을 수 있어요!'] }
                 ],
@@ -72,18 +95,14 @@ class Game {
                     { x: 10, y: 10, type: 'document', name: '회의록', collected: false }
                 ],
                 portals: [
-                    { x: 12, y: 17, targetMap: 'lobby', targetX: 12, targetY: 1, name: '로비' },
-                    { x: 22, y: 8, targetMap: 'cafeteria', targetX: 2, targetY: 8, name: '카페테리아' }
+                    { x: 20, y: 29, targetMap: 'lobby', targetX: 20, targetY: 1, name: '로비' },
+                    { x: 38, y: 15, targetMap: 'cafeteria', targetX: 2, targetY: 15, name: '카페테리아' }
                 ]
             },
             cafeteria: {
                 name: '카페테리아',
                 background: '#E67E22',
-                walls: [
-                    {x: 0, y: 0}, {x: 1, y: 0}, {x: 2, y: 0}, {x: 3, y: 0}, {x: 4, y: 0}, {x: 5, y: 0}, {x: 6, y: 0}, {x: 7, y: 0}, {x: 8, y: 0}, {x: 9, y: 0}, {x: 10, y: 0}, {x: 11, y: 0}, {x: 12, y: 0}, {x: 13, y: 0}, {x: 14, y: 0}, {x: 15, y: 0}, {x: 16, y: 0}, {x: 17, y: 0}, {x: 18, y: 0}, {x: 19, y: 0}, {x: 20, y: 0}, {x: 21, y: 0}, {x: 22, y: 0}, {x: 23, y: 0}, {x: 24, y: 0},
-                    {x: 0, y: 1}, {x: 24, y: 1}, {x: 0, y: 2}, {x: 24, y: 2}, {x: 0, y: 3}, {x: 24, y: 3}, {x: 0, y: 4}, {x: 24, y: 4}, {x: 0, y: 5}, {x: 24, y: 5}, {x: 0, y: 6}, {x: 24, y: 6}, {x: 0, y: 7}, {x: 24, y: 7}, {x: 0, y: 8}, {x: 24, y: 8}, {x: 0, y: 9}, {x: 24, y: 9}, {x: 0, y: 10}, {x: 24, y: 10}, {x: 0, y: 11}, {x: 24, y: 11}, {x: 0, y: 12}, {x: 24, y: 12}, {x: 0, y: 13}, {x: 24, y: 13}, {x: 0, y: 14}, {x: 24, y: 14}, {x: 0, y: 15}, {x: 24, y: 15}, {x: 0, y: 16}, {x: 24, y: 16},
-                    {x: 0, y: 17}, {x: 1, y: 17}, {x: 2, y: 17}, {x: 3, y: 17}, {x: 4, y: 17}, {x: 5, y: 17}, {x: 6, y: 17}, {x: 7, y: 17}, {x: 8, y: 17}, {x: 9, y: 17}, {x: 10, y: 17}, {x: 11, y: 17}, {x: 12, y: 17}, {x: 13, y: 17}, {x: 14, y: 17}, {x: 15, y: 17}, {x: 16, y: 17}, {x: 17, y: 17}, {x: 18, y: 17}, {x: 19, y: 17}, {x: 20, y: 17}, {x: 21, y: 17}, {x: 22, y: 17}, {x: 23, y: 17}, {x: 24, y: 17}
-                ],
+                walls: this.generateWalls(),
                 npcs: [
                     { x: 15, y: 12, type: 'director', name: '이부장', dialog: ['카페테리아에 오신 걸 환영합니다!', '마지막 보물은 CEO실에 숨겨져 있답니다.'] }
                 ],
@@ -91,29 +110,26 @@ class Game {
                     { x: 20, y: 5, type: 'coffee', name: '특별한 커피', collected: false }
                 ],
                 portals: [
-                    { x: 2, y: 8, targetMap: 'meeting_room', targetX: 22, targetY: 8, name: '회의실' },
-                    { x: 22, y: 12, targetMap: 'ceo_office', targetX: 2, targetY: 12, name: 'CEO실' }
+                    { x: 2, y: 15, targetMap: 'meeting_room', targetX: 38, targetY: 15, name: '회의실' },
+                    { x: 38, y: 15, targetMap: 'ceo_office', targetX: 2, targetY: 15, name: 'CEO실' }
                 ]
             },
             ceo_office: {
                 name: 'CEO실',
                 background: '#9B59B6',
-                walls: [
-                    {x: 0, y: 0}, {x: 1, y: 0}, {x: 2, y: 0}, {x: 3, y: 0}, {x: 4, y: 0}, {x: 5, y: 0}, {x: 6, y: 0}, {x: 7, y: 0}, {x: 8, y: 0}, {x: 9, y: 0}, {x: 10, y: 0}, {x: 11, y: 0}, {x: 12, y: 0}, {x: 13, y: 0}, {x: 14, y: 0}, {x: 15, y: 0}, {x: 16, y: 0}, {x: 17, y: 0}, {x: 18, y: 0}, {x: 19, y: 0}, {x: 20, y: 0}, {x: 21, y: 0}, {x: 22, y: 0}, {x: 23, y: 0}, {x: 24, y: 0},
-                    {x: 0, y: 1}, {x: 24, y: 1}, {x: 0, y: 2}, {x: 24, y: 2}, {x: 0, y: 3}, {x: 24, y: 3}, {x: 0, y: 4}, {x: 24, y: 4}, {x: 0, y: 5}, {x: 24, y: 5}, {x: 0, y: 6}, {x: 24, y: 6}, {x: 0, y: 7}, {x: 24, y: 7}, {x: 0, y: 8}, {x: 24, y: 8}, {x: 0, y: 9}, {x: 24, y: 9}, {x: 0, y: 10}, {x: 24, y: 10}, {x: 0, y: 11}, {x: 24, y: 11}, {x: 0, y: 12}, {x: 24, y: 12}, {x: 0, y: 13}, {x: 24, y: 13}, {x: 0, y: 14}, {x: 24, y: 14}, {x: 0, y: 15}, {x: 24, y: 15}, {x: 0, y: 16}, {x: 24, y: 16},
-                    {x: 0, y: 17}, {x: 1, y: 17}, {x: 2, y: 17}, {x: 3, y: 17}, {x: 4, y: 17}, {x: 5, y: 17}, {x: 6, y: 17}, {x: 7, y: 17}, {x: 8, y: 17}, {x: 9, y: 17}, {x: 10, y: 17}, {x: 11, y: 17}, {x: 13, y: 17}, {x: 14, y: 17}, {x: 15, y: 17}, {x: 16, y: 17}, {x: 17, y: 17}, {x: 18, y: 17}, {x: 19, y: 17}, {x: 20, y: 17}, {x: 21, y: 17}, {x: 22, y: 17}, {x: 23, y: 17}, {x: 24, y: 17},
-                    {x: 18, y: 3}, {x: 19, y: 3}, {x: 20, y: 3}, {x: 21, y: 3}, {x: 22, y: 3},
-                    {x: 18, y: 4}, {x: 22, y: 4}, {x: 18, y: 5}, {x: 22, y: 5}, {x: 18, y: 6}, {x: 19, y: 6}, {x: 21, y: 6}, {x: 22, y: 6}
-                ],
+                walls: this.generateWalls().concat([
+                    {x: 18, y: 10}, {x: 19, y: 10}, {x: 20, y: 10}, {x: 21, y: 10}, {x: 22, y: 10},
+                    {x: 18, y: 11}, {x: 22, y: 11}, {x: 18, y: 12}, {x: 22, y: 12}, {x: 18, y: 13}, {x: 19, y: 13}, {x: 21, y: 13}, {x: 22, y: 13}
+                ]),
                 npcs: [
-                    { x: 20, y: 5, type: 'ceo', name: 'CEO', dialog: ['축하합니다! 보물을 찾으셨네요!', '26주년 기념품을 받아가세요!'] }
+                    { x: 20, y: 12, type: 'ceo', name: 'CEO', dialog: ['축하합니다! 보물을 찾으셨네요!', '26주년 기념품을 받아가세요!'] }
                 ],
                 items: [
-                    { x: 20, y: 4, type: 'treasure', name: '26주년 기념품', collected: false }
+                    { x: 20, y: 11, type: 'treasure', name: '26주년 기념품', collected: false }
                 ],
                 portals: [
-                    { x: 2, y: 12, targetMap: 'cafeteria', targetX: 22, targetY: 12, name: '카페테리아' },
-                    { x: 12, y: 17, targetMap: 'lobby', targetX: 12, targetY: 1, name: '로비' }
+                    { x: 2, y: 15, targetMap: 'cafeteria', targetX: 38, targetY: 15, name: '카페테리아' },
+                    { x: 20, y: 29, targetMap: 'lobby', targetX: 20, targetY: 1, name: '로비' }
                 ]
             }
         };
@@ -121,6 +137,14 @@ class Game {
 
     getCurrentMap() {
         return this.maps[this.currentMap];
+    }
+
+    updateCamera() {
+        this.camera.x = this.player.x - Math.floor(this.camera.viewWidth / 2);
+        this.camera.y = this.player.y - Math.floor(this.camera.viewHeight / 2);
+
+        this.camera.x = Math.max(0, Math.min(this.camera.x, this.mapWidth - this.camera.viewWidth));
+        this.camera.y = Math.max(0, Math.min(this.camera.y, this.mapHeight - this.camera.viewHeight));
     }
 
     setupEventListeners() {
@@ -290,11 +314,11 @@ class Game {
     }
 
     drawPixelCharacter(x, y, direction, isPlayer = false) {
-        const centerX = x * this.tileSize + this.tileSize / 2;
-        const centerY = y * this.tileSize + this.tileSize / 2;
+        const screenX = (x - this.camera.x) * this.tileSize + this.tileSize / 2;
+        const screenY = (y - this.camera.y) * this.tileSize + this.tileSize / 2;
 
         this.ctx.save();
-        this.ctx.translate(centerX, centerY);
+        this.ctx.translate(screenX, screenY);
 
         if (isPlayer) {
             this.ctx.fillStyle = '#4A90E2';
@@ -342,12 +366,14 @@ class Game {
 
     drawItem(item) {
         if (item.collected) return;
+        if (item.x < this.camera.x || item.x >= this.camera.x + this.camera.viewWidth + 1 ||
+            item.y < this.camera.y || item.y >= this.camera.y + this.camera.viewHeight + 1) return;
 
-        const x = item.x * this.tileSize + this.tileSize / 2;
-        const y = item.y * this.tileSize + this.tileSize / 2;
+        const screenX = (item.x - this.camera.x) * this.tileSize + this.tileSize / 2;
+        const screenY = (item.y - this.camera.y) * this.tileSize + this.tileSize / 2;
 
         this.ctx.save();
-        this.ctx.translate(x, y);
+        this.ctx.translate(screenX, screenY);
 
         switch(item.type) {
             case 'key':
@@ -383,16 +409,19 @@ class Game {
         this.ctx.textAlign = 'center';
         this.ctx.strokeStyle = 'black';
         this.ctx.lineWidth = 2;
-        this.ctx.strokeText(item.name, x, y + 30);
-        this.ctx.fillText(item.name, x, y + 30);
+        this.ctx.strokeText(item.name, screenX, screenY + 30);
+        this.ctx.fillText(item.name, screenX, screenY + 30);
     }
 
     drawPortal(portal) {
-        const x = portal.x * this.tileSize;
-        const y = portal.y * this.tileSize;
+        if (portal.x < this.camera.x || portal.x >= this.camera.x + this.camera.viewWidth + 1 ||
+            portal.y < this.camera.y || portal.y >= this.camera.y + this.camera.viewHeight + 1) return;
+
+        const screenX = (portal.x - this.camera.x) * this.tileSize;
+        const screenY = (portal.y - this.camera.y) * this.tileSize;
 
         this.ctx.fillStyle = '#E74C3C';
-        this.ctx.fillRect(x + 8, y + 8, this.tileSize - 16, this.tileSize - 16);
+        this.ctx.fillRect(screenX + 8, screenY + 8, this.tileSize - 16, this.tileSize - 16);
 
         this.ctx.fillStyle = 'white';
         this.ctx.font = '14px Arial';
@@ -401,57 +430,57 @@ class Game {
         this.ctx.lineWidth = 3;
         this.ctx.strokeText(
             portal.name,
-            x + this.tileSize/2,
-            y - 8
+            screenX + this.tileSize/2,
+            screenY - 8
         );
         this.ctx.fillText(
             portal.name,
-            x + this.tileSize/2,
-            y - 8
+            screenX + this.tileSize/2,
+            screenY - 8
         );
     }
 
     drawNPC(npc) {
+        if (npc.x < this.camera.x || npc.x >= this.camera.x + this.camera.viewWidth + 1 ||
+            npc.y < this.camera.y || npc.y >= this.camera.y + this.camera.viewHeight + 1) return;
+
         this.drawPixelCharacter(npc.x, npc.y, 'down', false);
+
+        const screenX = (npc.x - this.camera.x) * this.tileSize + this.tileSize/2;
+        const screenY = (npc.y - this.camera.y) * this.tileSize - 15;
 
         this.ctx.fillStyle = 'white';
         this.ctx.font = '14px Arial';
         this.ctx.textAlign = 'center';
         this.ctx.strokeStyle = 'black';
         this.ctx.lineWidth = 3;
-        this.ctx.strokeText(
-            npc.name,
-            npc.x * this.tileSize + this.tileSize/2,
-            npc.y * this.tileSize - 15
-        );
-        this.ctx.fillText(
-            npc.name,
-            npc.x * this.tileSize + this.tileSize/2,
-            npc.y * this.tileSize - 15
-        );
+        this.ctx.strokeText(npc.name, screenX, screenY);
+        this.ctx.fillText(npc.name, screenX, screenY);
     }
 
     drawTileMap() {
         const currentMap = this.getCurrentMap();
 
-        for (let y = 0; y < this.mapHeight; y++) {
-            for (let x = 0; x < this.mapWidth; x++) {
-                const tileX = x * this.tileSize;
-                const tileY = y * this.tileSize;
+        for (let y = this.camera.y; y < this.camera.y + this.camera.viewHeight + 1; y++) {
+            for (let x = this.camera.x; x < this.camera.x + this.camera.viewWidth + 1; x++) {
+                if (x < 0 || x >= this.mapWidth || y < 0 || y >= this.mapHeight) continue;
+
+                const screenX = (x - this.camera.x) * this.tileSize;
+                const screenY = (y - this.camera.y) * this.tileSize;
 
                 this.ctx.fillStyle = currentMap.background;
-                this.ctx.fillRect(tileX, tileY, this.tileSize, this.tileSize);
+                this.ctx.fillRect(screenX, screenY, this.tileSize, this.tileSize);
 
                 if ((x + y) % 2 === 0) {
                     this.ctx.globalAlpha = 0.1;
                     this.ctx.fillStyle = '#000000';
-                    this.ctx.fillRect(tileX, tileY, this.tileSize, this.tileSize);
+                    this.ctx.fillRect(screenX, screenY, this.tileSize, this.tileSize);
                     this.ctx.globalAlpha = 1.0;
                 }
 
                 this.ctx.strokeStyle = 'rgba(0,0,0,0.1)';
                 this.ctx.lineWidth = 1;
-                this.ctx.strokeRect(tileX, tileY, this.tileSize, this.tileSize);
+                this.ctx.strokeRect(screenX, screenY, this.tileSize, this.tileSize);
             }
         }
     }
@@ -459,18 +488,21 @@ class Game {
     drawWalls() {
         const currentMap = this.getCurrentMap();
         currentMap.walls.forEach(wall => {
-            const x = wall.x * this.tileSize;
-            const y = wall.y * this.tileSize;
+            if (wall.x < this.camera.x || wall.x >= this.camera.x + this.camera.viewWidth + 1 ||
+                wall.y < this.camera.y || wall.y >= this.camera.y + this.camera.viewHeight + 1) return;
+
+            const screenX = (wall.x - this.camera.x) * this.tileSize;
+            const screenY = (wall.y - this.camera.y) * this.tileSize;
 
             this.ctx.fillStyle = '#8B4513';
-            this.ctx.fillRect(x, y, this.tileSize, this.tileSize);
+            this.ctx.fillRect(screenX, screenY, this.tileSize, this.tileSize);
 
             this.ctx.fillStyle = '#A0522D';
-            this.ctx.fillRect(x + 2, y + 2, this.tileSize - 4, this.tileSize - 4);
+            this.ctx.fillRect(screenX + 2, screenY + 2, this.tileSize - 4, this.tileSize - 4);
 
             this.ctx.strokeStyle = '#654321';
             this.ctx.lineWidth = 2;
-            this.ctx.strokeRect(x, y, this.tileSize, this.tileSize);
+            this.ctx.strokeRect(screenX, screenY, this.tileSize, this.tileSize);
         });
     }
 
@@ -480,7 +512,7 @@ class Game {
         const minimapSize = 150;
         const minimapX = this.canvas.width - minimapSize - 10;
         const minimapY = 10;
-        const scale = minimapSize / (this.mapWidth * this.tileSize);
+        const scale = minimapSize / (this.mapWidth * 4);
 
         this.ctx.save();
 
@@ -503,38 +535,43 @@ class Game {
         this.ctx.translate(minimapX, minimapY);
         this.ctx.scale(scale, scale);
 
-        this.drawTileMap();
-        this.drawWalls();
-
         const currentMap = this.getCurrentMap();
 
-        currentMap.portals.forEach(portal => {
-            this.ctx.fillStyle = '#E74C3C';
-            this.ctx.fillRect(
-                portal.x * this.tileSize,
-                portal.y * this.tileSize,
-                this.tileSize,
-                this.tileSize
-            );
+        this.ctx.fillStyle = currentMap.background;
+        this.ctx.fillRect(0, 0, this.mapWidth * 4, this.mapHeight * 4);
+
+        this.ctx.fillStyle = '#8B4513';
+        currentMap.walls.forEach(wall => {
+            this.ctx.fillRect(wall.x * 4, wall.y * 4, 4, 4);
         });
 
+        this.ctx.fillStyle = '#E74C3C';
+        currentMap.portals.forEach(portal => {
+            this.ctx.fillRect(portal.x * 4, portal.y * 4, 4, 4);
+        });
+
+        this.ctx.fillStyle = '#9B59B6';
         currentMap.npcs.forEach(npc => {
-            this.ctx.fillStyle = '#9B59B6';
-            this.ctx.fillRect(
-                npc.x * this.tileSize,
-                npc.y * this.tileSize,
-                this.tileSize,
-                this.tileSize
-            );
+            this.ctx.fillRect(npc.x * 4, npc.y * 4, 4, 4);
+        });
+
+        this.ctx.fillStyle = '#F1C40F';
+        currentMap.items.forEach(item => {
+            if (!item.collected) {
+                this.ctx.fillRect(item.x * 4, item.y * 4, 4, 4);
+            }
         });
 
         this.ctx.fillStyle = '#3498DB';
-        this.ctx.fillRect(
-            this.player.x * this.tileSize,
-            this.player.y * this.tileSize,
-            this.tileSize,
-            this.tileSize
-        );
+        this.ctx.fillRect(this.player.x * 4, this.player.y * 4, 6, 6);
+
+        this.ctx.strokeStyle = '#FFFFFF';
+        this.ctx.lineWidth = 1;
+        const viewX = this.camera.x * 4;
+        const viewY = this.camera.y * 4;
+        const viewW = this.camera.viewWidth * 4;
+        const viewH = this.camera.viewHeight * 4;
+        this.ctx.strokeRect(viewX, viewY, viewW, viewH);
 
         this.ctx.restore();
     }
@@ -632,21 +669,16 @@ class Game {
 
         this.drawPixelCharacter(this.player.x, this.player.y, this.player.direction, true);
 
+        const playerScreenX = (this.player.x - this.camera.x) * this.tileSize + this.tileSize/2;
+        const playerScreenY = (this.player.y - this.camera.y) * this.tileSize - 15;
+
         this.ctx.fillStyle = 'white';
         this.ctx.font = '18px Arial';
         this.ctx.textAlign = 'center';
         this.ctx.strokeStyle = 'black';
         this.ctx.lineWidth = 4;
-        this.ctx.strokeText(
-            '나',
-            this.player.x * this.tileSize + this.tileSize/2,
-            this.player.y * this.tileSize - 15
-        );
-        this.ctx.fillText(
-            '나',
-            this.player.x * this.tileSize + this.tileSize/2,
-            this.player.y * this.tileSize - 15
-        );
+        this.ctx.strokeText('나', playerScreenX, playerScreenY);
+        this.ctx.fillText('나', playerScreenX, playerScreenY);
 
         this.drawUI();
         this.drawMinimap();
@@ -655,6 +687,7 @@ class Game {
 
     gameLoop() {
         this.updateAnimation();
+        this.updateCamera();
         this.draw();
         requestAnimationFrame(() => this.gameLoop());
     }
