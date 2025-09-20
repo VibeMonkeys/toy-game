@@ -547,10 +547,14 @@ export class Game {
                 return;
             }
 
-            // 퀘스트 아이템 자동 제출 확인
+            // 메인 퀘스트 아이템 자동 제출 확인
             const submission = this.questSystem.canSubmitToNPC(this.nearbyNPC.id, this.gameState.inventory);
+
+            // 서브 퀘스트 아이템 자동 제출 확인
+            const subSubmission = this.questSystem.canSubmitToSubQuestGiver(this.nearbyNPC.id, this.gameState.inventory);
+
             if (submission.canSubmit) {
-                // 자동으로 아이템 제출 처리
+                // 메인 퀘스트 자동으로 아이템 제출 처리
                 const result = this.questSystem.submitItemsToNPC(
                     this.nearbyNPC.id,
                     this.gameState.inventory,
@@ -568,8 +572,41 @@ export class Game {
 
                     this.currentDialog = [
                         `${itemText}을(를) 가져오셨군요!`,
-                        `퀘스트 완료: ${result.quest.title}`,
+                        `메인 퀘스트 완료: ${result.quest.title}`,
                         `감사합니다! '${result.quest.rewardItem}'을(를) 드립니다.`
+                    ];
+                    this.currentNPC = this.nearbyNPC;
+                    this.dialogIndex = 0;
+                    this.audioManager.playDialogOpen();
+                    this.showDialog();
+
+                    // 알림도 표시
+                    this.inventory.showItemNotification({ name: result.message });
+                } else {
+                    // 실패시 일반 대화
+                    this.startDialog(this.nearbyNPC);
+                }
+            } else if (subSubmission.canSubmit) {
+                // 서브 퀘스트 자동으로 아이템 제출 처리
+                const result = this.questSystem.submitItemsToSubQuestGiver(
+                    this.nearbyNPC.id,
+                    this.gameState.inventory,
+                    this.gameState
+                );
+
+                if (result.success) {
+                    // 성공 대화 표시
+                    let itemText = '';
+                    if (result.quest.requiredItem) {
+                        itemText = `'${result.quest.requiredItem}'`;
+                    }
+
+                    this.currentDialog = [
+                        itemText ? `${itemText}을(를) 가져오셨군요!` : '도와주셔서 감사합니다!',
+                        `서브 퀘스트 완료: ${result.quest.title}`,
+                        result.quest.rewardItem ?
+                            `감사합니다! '${result.quest.rewardItem}'을(를) 드립니다.` :
+                            '좋은 경험이 되셨기를 바랍니다!'
                     ];
                     this.currentNPC = this.nearbyNPC;
                     this.dialogIndex = 0;
@@ -777,7 +814,7 @@ export class Game {
                 this.renderer.drawPortals(this.camera, currentMap);
                 this.renderer.drawElevatorPanel(this.camera, currentMap);
                 this.renderer.drawItems(this.camera, currentMap);
-                this.renderer.drawNPCs(this.camera, currentMap);
+                this.renderer.drawNPCs(this.camera, currentMap, this.questSystem);
             } catch (error) {
                 console.error('❌ 월드 렌더링 오류:', error);
             }

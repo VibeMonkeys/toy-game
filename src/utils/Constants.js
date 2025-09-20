@@ -28,7 +28,29 @@ export const CONSTANTS = {
         EXPLORE_OFFICE_2: 'explore_office_2',
         FIND_HIDDEN_DOCUMENT: 'find_hidden_document',
         HELP_INTERN: 'help_intern',
-        COMPLETE_MEETING_TASK: 'complete_meeting_task'
+        COMPLETE_MEETING_TASK: 'complete_meeting_task',
+
+        // 새로운 서브 퀘스트들
+        DELIVER_PACKAGE: 'deliver_package',
+        HELP_VISITOR: 'help_visitor',
+        COFFEE_DELIVERY: 'coffee_delivery',
+        LUNCH_ORDER: 'lunch_order',
+        TRAINING_ASSIST: 'training_assist',
+        REPAIR_PRINTER: 'repair_printer',
+        FIND_LOST_ITEM: 'find_lost_item',
+        MEETING_SETUP: 'meeting_setup',
+        EMPLOYEE_INTRODUCTION: 'employee_introduction',
+        STRESS_RELIEF: 'stress_relief',
+        SECURITY_CHECK: 'security_check',
+        EXERCISE_BUDDY: 'exercise_buddy',
+        PHONE_MESSAGE: 'phone_message',
+        MEDITATION_GUIDE: 'meditation_guide',
+        ARCADE_CHAMPION: 'arcade_champion',
+        CLEANING_HELP: 'cleaning_help',
+        JOB_INTERVIEW_PREP: 'job_interview_prep',
+        EXECUTIVE_BRIEFING: 'executive_briefing',
+        LEGAL_DOCUMENT: 'legal_document',
+        FINANCIAL_REPORT: 'financial_report'
     },
 
     MAPS: {

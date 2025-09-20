@@ -441,7 +441,7 @@ export class Renderer {
         this.ctx.fill();
     }
 
-    drawNPCs(camera, currentMap) {
+    drawNPCs(camera, currentMap, questSystem = null) {
         if (!currentMap || !currentMap.npcs) return;
 
         for (let i = 0; i < currentMap.npcs.length; i++) {
@@ -472,8 +472,8 @@ export class Renderer {
 
         const screenPos = camera.worldToScreen(npc.x, npc.y);
 
-        // 퀘스트 NPC 위에 특별한 표시 (느낌표)
-        if (npc.questGiver) {
+        // 퀘스트 NPC 위에 특별한 표시 (느낌표) - 완료되지 않은 퀘스트만
+        if (npc.questGiver && questSystem && !this.isNPCQuestCompleted(npc, questSystem)) {
             this.ctx.fillStyle = '#FFD700';
             this.ctx.font = 'bold 16px Arial';
             this.ctx.textAlign = 'center';
@@ -507,5 +507,19 @@ export class Renderer {
 
         this.ctx.strokeText(npc.name, nameX, nameY);
         this.ctx.fillText(npc.name, nameX, nameY);
+    }
+
+    isNPCQuestCompleted(npc, questSystem) {
+        if (!npc.questGiver || !questSystem) return false;
+
+        // NPC의 questId를 사용하여 해당 퀘스트가 완료되었는지 확인
+        if (typeof npc.questId === 'number') {
+            const quest = questSystem.quests[npc.questId];
+            return quest ? quest.completed : false;
+        }
+
+        // questId가 없는 경우, NPC ID를 사용하여 questGiver로 찾기
+        const quest = questSystem.quests.find(q => q.questGiver === npc.id);
+        return quest ? quest.completed : false;
     }
 };
