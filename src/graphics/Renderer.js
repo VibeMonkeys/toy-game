@@ -447,26 +447,14 @@ export class Renderer {
         for (let i = 0; i < currentMap.npcs.length; i++) {
             const npc = currentMap.npcs[i];
             if (camera.isInView(npc.x, npc.y)) {
-                this.drawNPC(npc, i, camera);
+                this.drawNPC(npc, i, camera, questSystem);
             }
         }
     }
 
-    drawNPC(npc, index, camera) {
-        // NPC 색상 (직급별)
-        const rankColors = {
-            'employee': '#3498db',
-            'senior': '#2ecc71',
-            'manager': '#f39c12',
-            'director': '#e74c3c',
-            'ceo': '#9b59b6'
-        };
-
-        // 퀘스트 NPC는 특별한 색상으로 표시
-        let characterColor = rankColors[npc.rank] || '#95a5a6';
-        if (npc.questGiver) {
-            characterColor = '#FFD700'; // 골드 색상
-        }
+    drawNPC(npc, index, camera, questSystem = null) {
+        // 모든 NPC는 검은옷을 입은 단순한 형태
+        const characterColor = '#000000'; // 검은색 옷
 
         this.drawPixelCharacter(npc.x, npc.y, 'down', false, characterColor, camera);
 
@@ -482,7 +470,7 @@ export class Renderer {
 
             // 느낌표 배경 원
             this.ctx.beginPath();
-            this.ctx.arc(screenPos.x, screenPos.y - 30, 10, 0, Math.PI * 2);
+            this.ctx.arc(screenPos.x + this.tileSize/2, screenPos.y - 20, 10, 0, Math.PI * 2);
             this.ctx.fillStyle = '#FFD700';
             this.ctx.fill();
             this.ctx.strokeStyle = '#000000';
@@ -492,18 +480,18 @@ export class Renderer {
             // 느낌표
             this.ctx.fillStyle = '#000000';
             this.ctx.font = 'bold 14px Arial';
-            this.ctx.fillText('!', screenPos.x, screenPos.y - 25);
+            this.ctx.fillText('!', screenPos.x + this.tileSize/2, screenPos.y - 15);
         }
 
-        // NPC 이름 표시
+        // NPC 이름 항상 표시
         this.ctx.fillStyle = '#FFFFFF';
-        this.ctx.font = '12px Arial';
+        this.ctx.font = 'bold 12px Arial';
         this.ctx.textAlign = 'center';
         this.ctx.strokeStyle = '#000000';
-        this.ctx.lineWidth = 3;
+        this.ctx.lineWidth = 2;
 
         const nameX = screenPos.x + this.tileSize/2;
-        const nameY = screenPos.y - 10;
+        const nameY = screenPos.y - 5;
 
         this.ctx.strokeText(npc.name, nameX, nameY);
         this.ctx.fillText(npc.name, nameX, nameY);
