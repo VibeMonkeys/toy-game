@@ -12,6 +12,7 @@ import { Minimap } from '../ui/Minimap.js';
 import { Inventory } from '../ui/Inventory.js';
 import { PauseMenu } from '../ui/PauseMenu.js';
 import { ElevatorUI } from '../ui/ElevatorUI.js';
+import { MiniGameSystem } from '../ui/MiniGameSystem.js';
 import { MapManager } from '../maps/MapManager.js';
 import { Camera } from '../maps/Camera.js';
 import { Renderer } from '../graphics/Renderer.js';
@@ -44,6 +45,7 @@ export class Game {
         this.inventory = new Inventory(this.canvas, this.ctx);
         this.pauseMenu = new PauseMenu(this.canvas, this.ctx, this.audioManager);
         this.elevatorUI = new ElevatorUI(this.canvas, this.ctx, this.audioManager);
+        this.miniGameSystem = new MiniGameSystem(this.canvas, this.ctx, this.audioManager);
 
         // 다이얼로그 시스템
         this.currentDialog = null;
@@ -119,10 +121,17 @@ export class Game {
                 if (result) {
                     this.handleTitleSelection(result);
                 }
-            } else if (this.gameMode === CONSTANTS.GAME_MODES.PLAYING && this.elevatorUI.isVisible) {
-                const elevatorResult = this.elevatorUI.handleMouseClick(event);
-                if (elevatorResult) {
-                    this.handleElevatorAction(elevatorResult);
+            } else if (this.gameMode === CONSTANTS.GAME_MODES.PLAYING) {
+                if (this.miniGameSystem.isVisible) {
+                    const gameResult = this.miniGameSystem.handleMouseClick(event);
+                    if (gameResult === 'close') {
+                        this.miniGameSystem.hide();
+                    }
+                } else if (this.elevatorUI.isVisible) {
+                    const elevatorResult = this.elevatorUI.handleMouseClick(event);
+                    if (elevatorResult) {
+                        this.handleElevatorAction(elevatorResult);
+                    }
                 }
             }
         });
@@ -197,6 +206,15 @@ export class Game {
     handleGameInput(event) {
         // 코나미 코드 체크
         this.checkKonamiCode(event);
+
+        // 미니게임이 열려있을 때
+        if (this.miniGameSystem.isVisible) {
+            const gameResult = this.miniGameSystem.handleKeyDown(event);
+            if (gameResult === 'close') {
+                this.miniGameSystem.hide();
+            }
+            return;
+        }
 
         // 엘리베이터 UI가 열려있을 때
         if (this.elevatorUI.isVisible) {
@@ -403,6 +421,11 @@ export class Game {
                 targetX = 20;
                 targetY = 8;
                 break;
+            case 'R':
+                targetMapId = CONSTANTS.MAPS.ROOFTOP;
+                targetX = 19;
+                targetY = 27;
+                break;
         }
 
         if (targetMapId && this.mapManager.setCurrentMap(targetMapId)) {
@@ -518,6 +541,12 @@ export class Game {
 
     interact() {
         if (this.nearbyNPC) {
+            // 특별한 액션이 있는 NPC 체크
+            if (this.nearbyNPC.specialAction === 'arcade') {
+                this.miniGameSystem.show();
+                return;
+            }
+
             // 퀘스트 아이템 자동 제출 확인
             const submission = this.questSystem.canSubmitToNPC(this.nearbyNPC.id, this.gameState.inventory);
             if (submission.canSubmit) {
@@ -579,10 +608,10 @@ export class Game {
         let currentFloor = 1;
         const currentMapId = this.mapManager.getCurrentMapId();
 
-        if (currentMapId.includes('FLOOR_7')) currentFloor = 7;
-        else if (currentMapId.includes('FLOOR_8')) currentFloor = 8;
-        else if (currentMapId.includes('FLOOR_9')) currentFloor = 9;
-
+        if (currentMapId.includes('floor_7')) currentFloor = 7;
+        else if (currentMapId.includes('floor_8')) currentFloor = 8;
+        else if (currentMapId.includes('floor_9')) currentFloor = 9;
+        else if (currentMapId.includes('rooftop')) currentFloor = 'R';
         this.elevatorUI.show(currentFloor);
     }
 
@@ -708,6 +737,7 @@ export class Game {
         } else if (this.gameMode === CONSTANTS.GAME_MODES.PLAYING) {
             this.animationSystem.updateCharacterAnimation(this.player);
             this.elevatorUI.update();
+            this.miniGameSystem.update();
         }
     }
 
@@ -801,6 +831,9 @@ export class Game {
 
             // 엘리베이터 UI (최상위 레이어)
             this.elevatorUI.draw();
+
+            // 미니게임 시스템 (최상위 레이어)
+            this.miniGameSystem.draw();
 
             // 디버그 정보 표시
             if (this.debugMode) {

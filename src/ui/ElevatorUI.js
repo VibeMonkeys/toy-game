@@ -11,28 +11,52 @@ export class ElevatorUI {
         this.selectedFloor = 1;
         this.availableFloors = [];
 
-        // 간단한 팝업 크기
-        this.width = 400;
-        this.height = 250;
-        this.x = (canvas.width - this.width) / 2;
-        this.y = canvas.height - this.height - 50; // 하단에 위치
-
         // 버튼 설정
-        this.buttonWidth = 80;
+        this.buttonWidth = 70;
         this.buttonHeight = 50;
-        this.buttonSpacing = 20;
+        this.buttonSpacing = 15;
+
+        // 동적 크기 계산 (나중에 calculateDimensions에서 설정됨)
+        this.width = 0;
+        this.height = 0;
+        this.x = 0;
+        this.y = 0;
     }
 
     show(currentFloor = 1) {
         this.isVisible = true;
         this.currentFloor = currentFloor;
 
-        // 현재 층을 제외한 이동 가능한 층들만 표시
-        this.availableFloors = CONSTANTS.ELEVATOR_FLOORS.filter(floor => floor !== currentFloor);
-        this.selectedFloor = this.availableFloors[0] || currentFloor;
+        // 모든 층을 표시 (현재 층 포함)
+        this.availableFloors = [...CONSTANTS.ELEVATOR_FLOORS];
+
+        // 현재 층이 아닌 첫 번째 층을 선택
+        this.selectedFloor = this.availableFloors.find(floor => floor !== currentFloor) || this.availableFloors[0];
+
+        // 화면에 맞게 UI 크기 계산
+        this.calculateDimensions();
 
         if (this.audioManager) {
             this.audioManager.playUIClick();
+        }
+    }
+
+    calculateDimensions() {
+        // 버튼 개수에 따른 너비 계산
+        const totalButtonWidth = this.availableFloors.length * this.buttonWidth +
+                                (this.availableFloors.length - 1) * this.buttonSpacing;
+
+        // 패딩을 포함한 전체 너비
+        this.width = Math.max(400, totalButtonWidth + 100);
+        this.height = 250;
+
+        // 화면을 벗어나지 않도록 위치 조정
+        this.x = Math.max(20, (this.canvas.width - this.width) / 2);
+        this.y = Math.max(20, this.canvas.height - this.height - 50);
+
+        // 화면 우측을 벗어나는 경우 조정
+        if (this.x + this.width > this.canvas.width - 20) {
+            this.x = this.canvas.width - this.width - 20;
         }
     }
 
@@ -47,6 +71,11 @@ export class ElevatorUI {
             const floor = parseInt(event.key);
             if (this.availableFloors.includes(floor)) {
                 this.selectedFloor = floor;
+                return this.selectFloor();
+            }
+        } else if (event.key.toLowerCase() === 'r') {
+            if (this.availableFloors.includes('R')) {
+                this.selectedFloor = 'R';
                 return this.selectFloor();
             }
         }
@@ -94,10 +123,14 @@ export class ElevatorUI {
         const mouseX = event.clientX - rect.left;
         const mouseY = event.clientY - rect.top;
 
-        // 버튼 클릭 확인
+        // 버튼 클릭 확인 (새로운 중앙 정렬된 위치 기준)
+        const totalButtonWidth = this.availableFloors.length * this.buttonWidth +
+                                (this.availableFloors.length - 1) * this.buttonSpacing;
+        const startX = this.x + (this.width - totalButtonWidth) / 2;
+
         for (let index = 0; index < this.availableFloors.length; index++) {
             const floor = this.availableFloors[index];
-            const buttonX = this.x + 50 + index * (this.buttonWidth + this.buttonSpacing);
+            const buttonX = startX + index * (this.buttonWidth + this.buttonSpacing);
             const buttonY = this.y + 100;
 
             if (mouseX >= buttonX && mouseX <= buttonX + this.buttonWidth &&
@@ -125,6 +158,14 @@ export class ElevatorUI {
     }
 
     selectFloor() {
+        // 현재 층과 같은 층을 선택했을 때는 아무것도 하지 않음
+        if (this.selectedFloor === this.currentFloor) {
+            if (this.audioManager) {
+                this.audioManager.playMenuMove(); // 에러 사운드 대신 일반 메뉴 사운드
+            }
+            return null;
+        }
+
         if (this.audioManager) {
             this.audioManager.playPortalSound();
         }
@@ -177,34 +218,68 @@ export class ElevatorUI {
 
         this.ctx.fillStyle = '#FFFFFF';
         this.ctx.font = '16px Arial';
-        this.ctx.fillText(`현재 위치: ${this.currentFloor}층`, this.x + this.width / 2, this.y + 70);
+        const currentFloorText = this.currentFloor === 'R' ? '현재 위치: 옥상' : `현재 위치: ${this.currentFloor}층`;
+        this.ctx.fillText(currentFloorText, this.x + this.width / 2, this.y + 70);
     }
 
     drawFloorButtons() {
+        // 버튼들이 중앙에 오도록 시작 위치 계산
+        const totalButtonWidth = this.availableFloors.length * this.buttonWidth +
+                                (this.availableFloors.length - 1) * this.buttonSpacing;
+        const startX = this.x + (this.width - totalButtonWidth) / 2;
+
         this.availableFloors.forEach((floor, index) => {
-            const buttonX = this.x + 50 + index * (this.buttonWidth + this.buttonSpacing);
+            const buttonX = startX + index * (this.buttonWidth + this.buttonSpacing);
             const buttonY = this.y + 100;
             const isSelected = floor === this.selectedFloor;
+            const isCurrent = floor === this.currentFloor;
 
             // 버튼 배경
-            if (isSelected) {
+            if (isCurrent) {
+                // 현재 층 - 비활성화 상태
+                this.ctx.fillStyle = 'rgba(60, 60, 60, 0.6)';
+            } else if (isSelected) {
+                // 선택된 층
                 this.ctx.fillStyle = '#FFD700';
             } else {
+                // 일반 층
                 this.ctx.fillStyle = 'rgba(100, 100, 100, 0.8)';
             }
 
             this.ctx.fillRect(buttonX, buttonY, this.buttonWidth, this.buttonHeight);
 
             // 버튼 테두리
-            this.ctx.strokeStyle = isSelected ? '#FF6B35' : '#CCCCCC';
+            if (isCurrent) {
+                this.ctx.strokeStyle = '#888888';
+            } else if (isSelected) {
+                this.ctx.strokeStyle = '#FF6B35';
+            } else {
+                this.ctx.strokeStyle = '#CCCCCC';
+            }
             this.ctx.lineWidth = 2;
             this.ctx.strokeRect(buttonX, buttonY, this.buttonWidth, this.buttonHeight);
 
+            // 현재 층 표시
+            if (isCurrent) {
+                this.ctx.fillStyle = '#00FF00';
+                this.ctx.font = 'bold 12px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText('현재', buttonX + this.buttonWidth / 2, buttonY - 5);
+            }
+
             // 버튼 텍스트
-            this.ctx.fillStyle = isSelected ? '#000000' : '#FFFFFF';
-            this.ctx.font = 'bold 20px Arial';
+            if (isCurrent) {
+                this.ctx.fillStyle = '#AAAAAA';
+            } else if (isSelected) {
+                this.ctx.fillStyle = '#000000';
+            } else {
+                this.ctx.fillStyle = '#FFFFFF';
+            }
+
+            this.ctx.font = 'bold 16px Arial';
             this.ctx.textAlign = 'center';
-            this.ctx.fillText(`${floor}F`, buttonX + this.buttonWidth / 2, buttonY + this.buttonHeight / 2 + 7);
+            const floorText = floor === 'R' ? '옥상' : `${floor}F`;
+            this.ctx.fillText(floorText, buttonX + this.buttonWidth / 2, buttonY + this.buttonHeight / 2 + 5);
         });
     }
 
@@ -214,6 +289,6 @@ export class ElevatorUI {
         this.ctx.fillStyle = '#FFFFFF';
         this.ctx.font = '14px Arial';
         this.ctx.textAlign = 'center';
-        this.ctx.fillText('←→: 선택 | Enter/Space: 이동 | 숫자키: 직접 선택 | ESC: 닫기', this.x + this.width / 2, instructionY);
+        this.ctx.fillText('←→: 선택 | Enter/Space: 이동 | 숫자키/R키: 직접 선택 | ESC: 닫기', this.x + this.width / 2, instructionY);
     }
 }

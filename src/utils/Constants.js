@@ -35,6 +35,15 @@ export const CONSTANTS = {
         // 1층
         LOBBY: 'lobby',
 
+        // 1층 카페/음식점들
+        STARBUCKS: 'starbucks',
+        MAMMOTH_COFFEE: 'mammoth_coffee',
+        KOOK_BAB_92: 'kook_bab_92',
+        TIM_HORTONS: 'tim_hortons',
+
+        // 옥상층 (R층)
+        ROOFTOP: 'rooftop',
+
         // 7층 - 2개 사무실
         FLOOR_7_OFFICE_1: 'floor_7_office_1',
         FLOOR_7_OFFICE_2: 'floor_7_office_2',
@@ -57,8 +66,9 @@ export const CONSTANTS = {
         FIRST: 1,
         SEVENTH: 7,
         EIGHTH: 8,
-        NINTH: 9
+        NINTH: 9,
+        ROOFTOP: 'R'
     },
 
-    ELEVATOR_FLOORS: [1, 7, 8, 9]
+    ELEVATOR_FLOORS: [1, 7, 8, 9, 'R']
 };
