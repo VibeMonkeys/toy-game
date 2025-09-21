@@ -15,6 +15,14 @@ export class Minimap {
         this.isVisible = !this.isVisible;
     }
 
+    hide() {
+        this.isVisible = false;
+    }
+
+    show() {
+        this.isVisible = true;
+    }
+
     draw(player, currentMapId, mapData, gameState) {
         if (!this.isVisible) return;
 
@@ -211,9 +219,14 @@ export class Minimap {
         const mapNames = {
             [CONSTANTS.MAPS.LOBBY]: '1층 로비',
             [CONSTANTS.MAPS.FLOOR_7_CORRIDOR]: '7층 복도',
-            [CONSTANTS.MAPS.FLOOR_7_OFFICE_1]: '7층 사무실 1',
-            [CONSTANTS.MAPS.FLOOR_7_OFFICE_2]: '7층 사무실 2',
-            [CONSTANTS.MAPS.FLOOR_8_MAIN]: '8층 메인홀',
+            [CONSTANTS.MAPS.FLOOR_7_709_AFFILIATES]: '709호 계열사',
+            [CONSTANTS.MAPS.FLOOR_7_710_MAIN_IT]: '710호 본사 IT',
+            [CONSTANTS.MAPS.FLOOR_8_CORRIDOR]: '8층 복도',
+            [CONSTANTS.MAPS.FLOOR_8_IT_DIVISION]: 'IT본부',
+            [CONSTANTS.MAPS.FLOOR_8_HR_OFFICE]: '인경실',
+            [CONSTANTS.MAPS.FLOOR_8_AI_RESEARCH]: '인공지능연구소',
+            [CONSTANTS.MAPS.FLOOR_8_EDUCATION_SERVICE]: '교육서비스본부',
+            [CONSTANTS.MAPS.FLOOR_8_SALES_SUPPORT]: '영업+교육지원본부',
             [CONSTANTS.MAPS.FLOOR_9_CORRIDOR]: '9층 복도',
             [CONSTANTS.MAPS.FLOOR_9_CEO_OFFICE]: '9층 CEO실',
             [CONSTANTS.MAPS.MEETING_ROOM]: '회의실',
