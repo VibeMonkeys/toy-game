@@ -98,7 +98,7 @@ export class MapData {
                         id: 'cleaning_staff',
                         name: '청소 아주머니',
                         x: 25, y: 12,
-                        dialog: ['매일 이 넓은 건물을 청소하기 힘들어요.', '직원분들이 깨끗하게 써주시면 좋겠어요.', '26주년이라니, 정말 오래된 회사네요!'],
+                        dialog: ['오늘은 26주년 기념일이니까 특별히 더 깨끗하게 청소했어요!', '26년 동안 이 회사가 얼마나 발전했는지 보면 신기해요.', '처음 입사했을 때는 직원이 5명뿐이었는데... 이제는 정말 큰 회사가 됐네요!'],
                         questGiver: true,
                         questId: 115
                     },
@@ -106,7 +106,7 @@ export class MapData {
                         id: 'delivery_person',
                         name: '택배 기사',
                         x: 28, y: 25,
-                        dialog: ['휴넷에 택배 배달 왔어요!', '이 건물에는 패키지가 정말 많이 와요.', '7층 김대리님 택배인데... 어디 계실까요?'],
+                        dialog: ['26주년 축하 선물 배달 왔어요!', '이 회사 직원들이 정말 친절해서 배달하기 좋아요.', '아, 그런데 오늘은 26주년 파티 때문에 모든 게 특별하네요!'],
                         questGiver: true,
                         questId: 100
                     },
@@ -114,7 +114,7 @@ export class MapData {
                         id: 'job_applicant',
                         name: '면접 지원자',
                         x: 12, y: 23,
-                        dialog: ['오늘 휴넷 면접이에요!', '너무 긴장돼서 일찍 왔어요.', '이런 큰 회사에서 일할 수 있을까요?'],
+                        dialog: ['26주년 기념일에 면접이라니, 정말 특별한 날이네요!', '휴넷이 26년간 성장한 모습을 보니 저도 이 회사의 일원이 되고 싶어요.', '면접관님들도 오늘은 기분이 좋으실 것 같아요!'],
                         questGiver: true,
                         questId: 108
                     },
@@ -122,12 +122,16 @@ export class MapData {
                         id: 'maintenance_worker',
                         name: '시설 관리자',
                         x: 6, y: 8,
-                        dialog: ['건물 시설 점검하러 왔어요.', '26년 된 건물이라 관리가 중요해요.', '엘리베이터 점검도 주기적으로 해야죠.'],
+                        dialog: ['26주년 기념일이니까 모든 시설을 완벽하게 점검했어요!', '이 건물도 휴넷과 함께 26년을 버텨왔네요.', '오늘은 특별한 날이니까 엘리베이터도 더 부드럽게 작동할 거예요!'],
                         questGiver: true,
                         questId: 105
                     }
                 ],
-                items: [],
+                items: [
+                    { x: 18, y: 12, type: 'quest', name: '프린터 수리 도구', icon: '🔧' },
+                    { x: 4, y: 15, type: 'quest', name: '따뜻한 차', icon: '🍵' },
+                    { x: 32, y: 18, type: 'quest', name: '청소 도구 세트', icon: '🧹' }
+                ],
                 portals: [
                     {
                         name: '스타벅스',
@@ -181,7 +185,7 @@ export class MapData {
                         id: 'kim_deputy',
                         name: '김대리',
                         x: 12, y: 10,
-                        dialog: ['안녕하세요! 저는 김대리입니다.', '7층 사무실들을 모두 탐험해보세요.', '중요한 문서들이 숨겨져 있을 거예요!'],
+                        dialog: ['26주년 축하합니다! 저는 김대리예요.', '오늘은 특별한 날이니까 숨겨둔 26년 역사 자료를 찾아보세요!', '휴넷의 첫 시작이 바로 이 7층에서였다는 거 아시나요?'],
                         questGiver: true,
                         questId: 0
                     },
@@ -244,65 +248,113 @@ export class MapData {
                 ],
                 items: [
                     { x: 15, y: 15, type: 'treasure', name: '7층 업무 보고서' },
-                    { x: 5, y: 25, type: 'quest', name: '명찰', icon: '🎫' },
-                    { x: 35, y: 5, type: 'quest', name: '택배 상자', icon: '📦' }
+                    { x: 5, y: 25, type: 'quest', name: '윤씨 명찰', icon: '🎫' },
+                    { x: 35, y: 5, type: 'quest', name: '택배 상자', icon: '📦' },
+                    { x: 8, y: 8, type: 'quest', name: '프로젝터 장비', icon: '📽️' },
+                    { x: 25, y: 20, type: 'quest', name: '개발 현황 데이터', icon: '💾' }
                 ],
                 portals: [
-                    { x: 5, y: 10, targetMap: CONSTANTS.MAPS.FLOOR_7_OFFICE_1, targetX: 35, targetY: 15, name: '사무실 1' },
-                    { x: 35, y: 20, targetMap: CONSTANTS.MAPS.FLOOR_7_OFFICE_2, targetX: 5, targetY: 15, name: '사무실 2' }
+                    { x: 5, y: 10, targetMap: CONSTANTS.MAPS.FLOOR_7_709_AFFILIATES, targetX: 35, targetY: 15, name: '709호 계열사' },
+                    { x: 35, y: 20, targetMap: CONSTANTS.MAPS.FLOOR_7_710_MAIN_IT, targetX: 5, targetY: 15, name: '710호 본사 IT' }
                 ],
                 elevatorPanel: { x: 20, y: 8 }
             },
-            [CONSTANTS.MAPS.FLOOR_7_OFFICE_1]: {
-                name: '7층 사무실 1',
+            [CONSTANTS.MAPS.FLOOR_7_709_AFFILIATES]: {
+                name: '709호 계열사',
                 background: '#F0F8FF',
                 walls: this.generateWalls(),
                 officeItems: {
                     ...officeItems,
                     desks: [
-                        {x: 10, y: 10}, {x: 20, y: 10}, {x: 10, y: 20}, {x: 20, y: 20}
+                        {x: 10, y: 10}, {x: 20, y: 10}, {x: 30, y: 10},
+                        {x: 10, y: 15}, {x: 20, y: 15}, {x: 30, y: 15},
+                        {x: 10, y: 20}, {x: 20, y: 20}, {x: 30, y: 20}
                     ],
                     chairs: [
-                        {x: 11, y: 10}, {x: 21, y: 10}, {x: 11, y: 20}, {x: 21, y: 20}
+                        {x: 11, y: 10}, {x: 21, y: 10}, {x: 31, y: 10},
+                        {x: 11, y: 15}, {x: 21, y: 15}, {x: 31, y: 15},
+                        {x: 11, y: 20}, {x: 21, y: 20}, {x: 31, y: 20}
                     ],
                     computers: [
-                        {x: 10, y: 9}, {x: 20, y: 9}, {x: 10, y: 19}, {x: 20, y: 19}
+                        {x: 10, y: 9}, {x: 20, y: 9}, {x: 30, y: 9},
+                        {x: 10, y: 14}, {x: 20, y: 14}, {x: 30, y: 14},
+                        {x: 10, y: 19}, {x: 20, y: 19}, {x: 30, y: 19}
                     ]
                 },
-                npcs: [],
+                npcs: [
+                    {
+                        id: 'affiliate_manager',
+                        name: '계열사 관리자',
+                        x: 15, y: 12,
+                        dialog: ['계열사 업무를 담당하고 있습니다.', '휴넷 그룹의 다양한 계열사들과 협업하고 있어요.'],
+                        questGiver: false,
+                        questId: null
+                    }
+                ],
                 items: [
-                    { x: 15, y: 15, type: 'treasure', name: '중요한 문서' }
+                    { x: 15, y: 15, type: 'treasure', name: '중요한 문서' },
+                    { x: 25, y: 12, type: 'treasure', name: '창립 스토리북' }
                 ],
                 portals: [
                     { x: 35, y: 15, targetMap: CONSTANTS.MAPS.FLOOR_7_CORRIDOR, targetX: 5, targetY: 10, name: '복도로' }
                 ]
             },
-            [CONSTANTS.MAPS.FLOOR_7_OFFICE_2]: {
-                name: '7층 사무실 2',
+            [CONSTANTS.MAPS.FLOOR_7_710_MAIN_IT]: {
+                name: '710호 본사 IT',
                 background: '#F0F0F0',
                 walls: this.generateWalls(),
                 officeItems: {
                     ...officeItems,
                     desks: [
-                        {x: 15, y: 10}, {x: 25, y: 10}, {x: 15, y: 20}, {x: 25, y: 20}
+                        {x: 8, y: 8}, {x: 15, y: 8}, {x: 22, y: 8}, {x: 29, y: 8},
+                        {x: 8, y: 13}, {x: 15, y: 13}, {x: 22, y: 13}, {x: 29, y: 13},
+                        {x: 8, y: 18}, {x: 15, y: 18}, {x: 22, y: 18}, {x: 29, y: 18},
+                        {x: 8, y: 23}, {x: 15, y: 23}, {x: 22, y: 23}, {x: 29, y: 23}
                     ],
                     chairs: [
-                        {x: 16, y: 10}, {x: 26, y: 10}, {x: 16, y: 20}, {x: 26, y: 20}
+                        {x: 9, y: 8}, {x: 16, y: 8}, {x: 23, y: 8}, {x: 30, y: 8},
+                        {x: 9, y: 13}, {x: 16, y: 13}, {x: 23, y: 13}, {x: 30, y: 13},
+                        {x: 9, y: 18}, {x: 16, y: 18}, {x: 23, y: 18}, {x: 30, y: 18},
+                        {x: 9, y: 23}, {x: 16, y: 23}, {x: 23, y: 23}, {x: 30, y: 23}
+                    ],
+                    computers: [
+                        {x: 8, y: 7}, {x: 15, y: 7}, {x: 22, y: 7}, {x: 29, y: 7},
+                        {x: 8, y: 12}, {x: 15, y: 12}, {x: 22, y: 12}, {x: 29, y: 12},
+                        {x: 8, y: 17}, {x: 15, y: 17}, {x: 22, y: 17}, {x: 29, y: 17},
+                        {x: 8, y: 22}, {x: 15, y: 22}, {x: 22, y: 22}, {x: 29, y: 22}
                     ],
                     printers: [
-                        {x: 30, y: 15}
+                        {x: 33, y: 10}, {x: 33, y: 20}
                     ]
                 },
-                npcs: [],
+                npcs: [
+                    {
+                        id: 'it_developer',
+                        name: 'IT 개발자',
+                        x: 12, y: 10,
+                        dialog: ['휴넷의 IT 시스템을 개발하고 있습니다.', '26주년 기념 게임도 저희가 만들고 있어요!'],
+                        questGiver: false,
+                        questId: null
+                    },
+                    {
+                        id: 'it_manager',
+                        name: 'IT 팀장',
+                        x: 25, y: 15,
+                        dialog: ['본사 IT 업무를 총괄하고 있습니다.', '기술 혁신으로 휴넷의 미래를 만들어가고 있어요.'],
+                        questGiver: false,
+                        questId: null
+                    }
+                ],
                 items: [
-                    { x: 20, y: 15, type: 'treasure', name: '프로젝트 파일' }
+                    { x: 20, y: 15, type: 'treasure', name: '프로젝트 파일' },
+                    { x: 12, y: 25, type: 'treasure', name: '개발팀 메시지' }
                 ],
                 portals: [
                     { x: 5, y: 15, targetMap: CONSTANTS.MAPS.FLOOR_7_CORRIDOR, targetX: 35, targetY: 20, name: '복도로' }
                 ]
             },
-            [CONSTANTS.MAPS.FLOOR_8_MAIN]: {
-                name: '8층 메인홀 & 카페테리아',
+            [CONSTANTS.MAPS.FLOOR_8_CORRIDOR]: {
+                name: '8층 복도',
                 background: '#E6E6FA',
                 walls: this.generateWalls(),
                 officeItems: {
@@ -310,92 +362,262 @@ export class MapData {
                     elevatorDoors: [
                         {x: 18, y: 28}, {x: 19, y: 28}, {x: 20, y: 28}, {x: 21, y: 28}, {x: 22, y: 28}
                     ],
-                    meetingTables: [
-                        {x: 8, y: 8}, {x: 32, y: 8}, {x: 8, y: 22}, {x: 32, y: 22}, {x: 20, y: 15}
+                    plants: [
+                        {x: 5, y: 5}, {x: 35, y: 5}, {x: 5, y: 25}, {x: 35, y: 25},
+                        {x: 10, y: 15}, {x: 30, y: 15}
+                    ],
+                    desks: [
+                        {x: 8, y: 10}, {x: 32, y: 10}, {x: 8, y: 20}, {x: 32, y: 20}
                     ],
                     chairs: [
-                        {x: 7, y: 8}, {x: 9, y: 8}, {x: 31, y: 8}, {x: 33, y: 8},
-                        {x: 7, y: 22}, {x: 9, y: 22}, {x: 31, y: 22}, {x: 33, y: 22},
-                        {x: 19, y: 15}, {x: 21, y: 15}
-                    ],
-                    plants: [
-                        {x: 5, y: 5}, {x: 35, y: 5}, {x: 5, y: 25}, {x: 35, y: 25}
+                        {x: 9, y: 10}, {x: 33, y: 10}, {x: 9, y: 20}, {x: 33, y: 20}
                     ]
                 },
                 npcs: [
                     {
-                        id: 'manager_lee',
-                        name: '팀장 이씨',
-                        x: 20, y: 12,
-                        dialog: ['8층 회의실에 오신 것을 환영합니다!', '중요한 회의 자료들이 여기저기 흩어져 있어요.', '모두 모아주시면 도움이 될 것 같아요!'],
-                        questGiver: true,
-                        questId: 3
-                    },
+                        id: 'floor_coordinator',
+                        name: '8층 안내원',
+                        x: 20, y: 15,
+                        dialog: ['8층 각 본부로 안내해드릴게요!', '왼쪽에 IT본부와 인경실, 오른쪽에 다른 본부들이 있어요.'],
+                        questGiver: false,
+                        questId: null
+                    }
+                ],
+                items: [
+                    { x: 12, y: 15, type: 'treasure', name: '회의록' },
+                    { x: 28, y: 18, type: 'treasure', name: '프레젠테이션 자료' }
+                ],
+                portals: [
+                    { x: 5, y: 8, targetMap: CONSTANTS.MAPS.FLOOR_8_IT_DIVISION, targetX: 35, targetY: 15, name: 'IT본부' },
+                    { x: 5, y: 15, targetMap: CONSTANTS.MAPS.FLOOR_8_HR_OFFICE, targetX: 35, targetY: 15, name: '인경실' },
+                    { x: 5, y: 22, targetMap: CONSTANTS.MAPS.FLOOR_8_AI_RESEARCH, targetX: 35, targetY: 15, name: '인공지능연구소' },
+                    { x: 35, y: 8, targetMap: CONSTANTS.MAPS.FLOOR_8_EDUCATION_SERVICE, targetX: 5, targetY: 15, name: '교육서비스본부' },
+                    { x: 35, y: 22, targetMap: CONSTANTS.MAPS.FLOOR_8_SALES_SUPPORT, targetX: 5, targetY: 15, name: '영업+교육지원본부' }
+                ],
+                elevatorPanel: { x: 20, y: 29 }
+            },
+            [CONSTANTS.MAPS.FLOOR_8_IT_DIVISION]: {
+                name: 'IT본부',
+                background: '#F0F0FF',
+                walls: this.generateWalls(),
+                officeItems: {
+                    ...officeItems,
+                    desks: [
+                        {x: 8, y: 8}, {x: 15, y: 8}, {x: 22, y: 8}, {x: 29, y: 8},
+                        {x: 8, y: 13}, {x: 15, y: 13}, {x: 22, y: 13}, {x: 29, y: 13},
+                        {x: 8, y: 18}, {x: 15, y: 18}, {x: 22, y: 18}, {x: 29, y: 18},
+                        {x: 8, y: 23}, {x: 15, y: 23}, {x: 22, y: 23}, {x: 29, y: 23}
+                    ],
+                    chairs: [
+                        {x: 9, y: 8}, {x: 16, y: 8}, {x: 23, y: 8}, {x: 30, y: 8},
+                        {x: 9, y: 13}, {x: 16, y: 13}, {x: 23, y: 13}, {x: 30, y: 13},
+                        {x: 9, y: 18}, {x: 16, y: 18}, {x: 23, y: 18}, {x: 30, y: 18},
+                        {x: 9, y: 23}, {x: 16, y: 23}, {x: 23, y: 23}, {x: 30, y: 23}
+                    ],
+                    computers: [
+                        {x: 8, y: 7}, {x: 15, y: 7}, {x: 22, y: 7}, {x: 29, y: 7},
+                        {x: 8, y: 12}, {x: 15, y: 12}, {x: 22, y: 12}, {x: 29, y: 12},
+                        {x: 8, y: 17}, {x: 15, y: 17}, {x: 22, y: 17}, {x: 29, y: 17},
+                        {x: 8, y: 22}, {x: 15, y: 22}, {x: 22, y: 22}, {x: 29, y: 22}
+                    ],
+                    printers: [
+                        {x: 33, y: 10}, {x: 33, y: 20}
+                    ]
+                },
+                npcs: [
                     {
-                        id: 'staff_choi',
-                        name: '직원 최씨',
-                        x: 10, y: 10,
-                        dialog: ['카페테리아에서 휴식을 취해보세요.', '회의 자료가 테이블 위에 남아있을 거예요.'],
+                        id: 'it_division_head',
+                        name: 'IT본부장',
+                        x: 20, y: 10,
+                        dialog: ['IT본부에 오신 걸 환영합니다!', '휴넷의 모든 기술 혁신이 여기서 시작됩니다.'],
                         questGiver: false,
                         questId: null
                     },
                     {
-                        id: 'secretary_park',
-                        name: '비서 박씨',
-                        x: 30, y: 20,
-                        dialog: ['안녕하세요! 프레젠테이션 준비가 한창이에요.', '자료를 찾고 계신다면 저쪽 테이블을 확인해보세요.'],
+                        id: 'senior_developer',
+                        name: '선임 개발자',
+                        x: 12, y: 15,
+                        dialog: ['새로운 플랫폼 개발에 한창이에요.', '26주년을 맞아 기술적 도약을 준비하고 있습니다.'],
+                        questGiver: false,
+                        questId: null
+                    }
+                ],
+                items: [
+                    { x: 25, y: 15, type: 'treasure', name: '기획팀 메시지' }
+                ],
+                portals: [
+                    { x: 35, y: 15, targetMap: CONSTANTS.MAPS.FLOOR_8_CORRIDOR, targetX: 5, targetY: 8, name: '복도로' }
+                ]
+            },
+            [CONSTANTS.MAPS.FLOOR_8_HR_OFFICE]: {
+                name: '인경실',
+                background: '#FFF0F0',
+                walls: this.generateWalls(),
+                officeItems: {
+                    ...officeItems,
+                    desks: [
+                        {x: 15, y: 12}, {x: 25, y: 12},
+                        {x: 15, y: 18}, {x: 25, y: 18}
+                    ],
+                    chairs: [
+                        {x: 16, y: 12}, {x: 26, y: 12},
+                        {x: 16, y: 18}, {x: 26, y: 18}
+                    ],
+                    computers: [
+                        {x: 15, y: 11}, {x: 25, y: 11},
+                        {x: 15, y: 17}, {x: 25, y: 17}
+                    ]
+                },
+                npcs: [
+                    {
+                        id: 'hr_manager',
+                        name: '인사 팀장',
+                        x: 20, y: 15,
+                        dialog: ['인사팀에서 직원 복지를 담당하고 있어요.', '26주년을 맞아 특별한 이벤트를 준비했답니다!'],
+                        questGiver: false,
+                        questId: null
+                    }
+                ],
+                items: [
+                    { x: 20, y: 20, type: 'treasure', name: '인사팀 메시지' }
+                ],
+                portals: [
+                    { x: 35, y: 15, targetMap: CONSTANTS.MAPS.FLOOR_8_CORRIDOR, targetX: 5, targetY: 15, name: '복도로' }
+                ]
+            },
+            [CONSTANTS.MAPS.FLOOR_8_AI_RESEARCH]: {
+                name: '인공지능연구소',
+                background: '#F0FFF0',
+                walls: this.generateWalls(),
+                officeItems: {
+                    ...officeItems,
+                    desks: [
+                        {x: 12, y: 10}, {x: 28, y: 10},
+                        {x: 12, y: 20}, {x: 28, y: 20}
+                    ],
+                    chairs: [
+                        {x: 13, y: 10}, {x: 29, y: 10},
+                        {x: 13, y: 20}, {x: 29, y: 20}
+                    ],
+                    computers: [
+                        {x: 12, y: 9}, {x: 28, y: 9},
+                        {x: 12, y: 19}, {x: 28, y: 19}
+                    ]
+                },
+                npcs: [
+                    {
+                        id: 'ai_researcher',
+                        name: 'AI 연구원',
+                        x: 20, y: 15,
+                        dialog: ['인공지능 기술 연구에 몰두하고 있어요.', '미래 교육의 새로운 패러다임을 만들어가고 있습니다.'],
+                        questGiver: false,
+                        questId: null
+                    }
+                ],
+                items: [],
+                portals: [
+                    { x: 35, y: 15, targetMap: CONSTANTS.MAPS.FLOOR_8_CORRIDOR, targetX: 5, targetY: 22, name: '복도로' }
+                ]
+            },
+            [CONSTANTS.MAPS.FLOOR_8_EDUCATION_SERVICE]: {
+                name: '교육서비스본부',
+                background: '#FFFFF0',
+                walls: this.generateWalls(),
+                officeItems: {
+                    ...officeItems,
+                    desks: [
+                        {x: 8, y: 8}, {x: 18, y: 8}, {x: 28, y: 8},
+                        {x: 8, y: 13}, {x: 18, y: 13}, {x: 28, y: 13},
+                        {x: 8, y: 18}, {x: 18, y: 18}, {x: 28, y: 18},
+                        {x: 8, y: 23}, {x: 18, y: 23}, {x: 28, y: 23}
+                    ],
+                    chairs: [
+                        {x: 9, y: 8}, {x: 19, y: 8}, {x: 29, y: 8},
+                        {x: 9, y: 13}, {x: 19, y: 13}, {x: 29, y: 13},
+                        {x: 9, y: 18}, {x: 19, y: 18}, {x: 29, y: 18},
+                        {x: 9, y: 23}, {x: 19, y: 23}, {x: 29, y: 23}
+                    ],
+                    computers: [
+                        {x: 8, y: 7}, {x: 18, y: 7}, {x: 28, y: 7},
+                        {x: 8, y: 12}, {x: 18, y: 12}, {x: 28, y: 12},
+                        {x: 8, y: 17}, {x: 18, y: 17}, {x: 28, y: 17},
+                        {x: 8, y: 22}, {x: 18, y: 22}, {x: 28, y: 22}
+                    ]
+                },
+                npcs: [
+                    {
+                        id: 'education_director',
+                        name: '교육서비스 본부장',
+                        x: 18, y: 12,
+                        dialog: ['교육서비스를 통해 많은 분들에게 도움을 드리고 있어요.', '26년간 쌓아온 교육 노하우가 우리의 자산입니다.'],
                         questGiver: false,
                         questId: null
                     },
                     {
-                        id: 'presenter',
-                        name: '발표자 김선임',
-                        x: 15, y: 8,
-                        dialog: ['오늘 중요한 프레젠테이션이 있어요.', '자료 준비에 몇 시간을 썼네요.', '성공적인 발표가 되길 바라요!'],
-                        questGiver: true,
-                        questId: 107
-                    },
-                    {
-                        id: 'meeting_attendee_1',
-                        name: '회의 참석자 조과장',
-                        x: 25, y: 18,
-                        dialog: ['회의 시간이 거의 다 됐네요.', '오늘 안건이 중요해서 긴장돼요.', '팀장님 발표 잘 들어야겠어요.'],
-                        questGiver: false,
-                        questId: null
-                    },
-                    {
-                        id: 'cafeteria_worker',
-                        name: '카페테리아 직원',
-                        x: 35, y: 10,
-                        dialog: ['오늘 점심 메뉴는 불고기덮밥이에요!', '직원분들이 맛있게 드셔주셔서 보람있어요.', '식사 시간에 또 오세요!'],
-                        questGiver: false,
-                        questId: null
-                    },
-                    {
-                        id: 'lunch_employee',
-                        name: '점심 먹는 직원',
-                        x: 6, y: 20,
-                        dialog: ['카페테리아 음식이 맛있어요.', '회의 전에 든든하게 먹어야죠.', '오후에도 힘내서 일해야겠어요!'],
-                        questGiver: true,
-                        questId: 103
-                    },
-                    {
-                        id: 'training_coordinator',
+                        id: 'training_coordinator_2',
                         name: '교육 담당자 한대리',
-                        x: 12, y: 25,
+                        x: 12, y: 20,
                         dialog: ['휴넷 교육 프로그램을 담당하고 있어요.', '26주년 기념 이벤트도 교육의 일환이죠.', '게임을 통해 회사를 알아가세요!'],
                         questGiver: true,
                         questId: 104
                     }
                 ],
                 items: [
-                    { x: 12, y: 15, type: 'treasure', name: '회의록' },
-                    { x: 28, y: 18, type: 'treasure', name: '프레젠테이션 자료' },
-                    { x: 5, y: 15, type: 'quest', name: '교육 자료', icon: '📚' },
-                    { x: 35, y: 25, type: 'quest', name: '회의실 열쇠', icon: '🔑' }
+                    { x: 25, y: 15, type: 'treasure', name: '미래 비전서' }
                 ],
-                portals: [],
-                elevatorPanel: { x: 20, y: 29 }
+                portals: [
+                    { x: 5, y: 15, targetMap: CONSTANTS.MAPS.FLOOR_8_CORRIDOR, targetX: 35, targetY: 8, name: '복도로' }
+                ]
+            },
+            [CONSTANTS.MAPS.FLOOR_8_SALES_SUPPORT]: {
+                name: '영업+교육지원본부',
+                background: '#F0F8FF',
+                walls: this.generateWalls(),
+                officeItems: {
+                    ...officeItems,
+                    desks: [
+                        {x: 8, y: 8}, {x: 16, y: 8}, {x: 24, y: 8}, {x: 32, y: 8},
+                        {x: 8, y: 13}, {x: 16, y: 13}, {x: 24, y: 13}, {x: 32, y: 13},
+                        {x: 8, y: 18}, {x: 16, y: 18}, {x: 24, y: 18}, {x: 32, y: 18},
+                        {x: 8, y: 23}, {x: 16, y: 23}, {x: 24, y: 23}, {x: 32, y: 23}
+                    ],
+                    chairs: [
+                        {x: 9, y: 8}, {x: 17, y: 8}, {x: 25, y: 8}, {x: 33, y: 8},
+                        {x: 9, y: 13}, {x: 17, y: 13}, {x: 25, y: 13}, {x: 33, y: 13},
+                        {x: 9, y: 18}, {x: 17, y: 18}, {x: 25, y: 18}, {x: 33, y: 18},
+                        {x: 9, y: 23}, {x: 17, y: 23}, {x: 25, y: 23}, {x: 33, y: 23}
+                    ],
+                    computers: [
+                        {x: 8, y: 7}, {x: 16, y: 7}, {x: 24, y: 7}, {x: 32, y: 7},
+                        {x: 8, y: 12}, {x: 16, y: 12}, {x: 24, y: 12}, {x: 32, y: 12},
+                        {x: 8, y: 17}, {x: 16, y: 17}, {x: 24, y: 17}, {x: 32, y: 17},
+                        {x: 8, y: 22}, {x: 16, y: 22}, {x: 24, y: 22}, {x: 32, y: 22}
+                    ]
+                },
+                npcs: [
+                    {
+                        id: 'sales_manager',
+                        name: '영업팀장',
+                        x: 15, y: 12,
+                        dialog: ['영업과 교육지원을 담당하고 있습니다.', '고객분들께 더 나은 서비스를 제공하기 위해 노력하고 있어요.'],
+                        questGiver: false,
+                        questId: null
+                    },
+                    {
+                        id: 'support_staff',
+                        name: '교육지원 담당자',
+                        x: 25, y: 18,
+                        dialog: ['교육 운영을 지원하는 업무를 하고 있어요.', '원활한 교육 진행을 위해 최선을 다하고 있습니다.'],
+                        questGiver: false,
+                        questId: null
+                    }
+                ],
+                items: [
+                    { x: 20, y: 15, type: 'treasure', name: '영업팀 메시지' }
+                ],
+                portals: [
+                    { x: 5, y: 15, targetMap: CONSTANTS.MAPS.FLOOR_8_CORRIDOR, targetX: 35, targetY: 22, name: '복도로' }
+                ]
             },
             [CONSTANTS.MAPS.FLOOR_9_CORRIDOR]: {
                 name: '9층 복도',
@@ -415,7 +637,7 @@ export class MapData {
                         id: 'secretary_jung',
                         name: '비서 정씨',
                         x: 25, y: 15,
-                        dialog: ['CEO님이 기다리고 계십니다.', 'CEO실은 저쪽입니다.', '모든 준비가 완료되면 CEO님께 보고드리세요.'],
+                        dialog: ['오늘은 정말 특별한 26주년 기념일이에요!', 'CEO님도 26년 전 창립 당시의 추억을 많이 얘기하고 계세요.', '준비가 다 되시면 CEO님께 26주년의 의미를 전해드리세요!'],
                         questGiver: true,
                         questId: 4
                     },
@@ -454,9 +676,12 @@ export class MapData {
                 ],
                 items: [
                     { x: 15, y: 15, type: 'treasure', name: '9층 기밀 문서' },
-                    { x: 35, y: 10, type: 'quest', name: '임원 브리핑 자료', icon: '📋' },
-                    { x: 5, y: 25, type: 'quest', name: '법무 계약서', icon: '📄' },
-                    { x: 25, y: 25, type: 'quest', name: '재무 보고서', icon: '📊' }
+                    { x: 35, y: 10, type: 'quest', name: '전략 브리핑 패키지', icon: '📋' },
+                    { x: 5, y: 25, type: 'quest', name: '법무 검토 완료서', icon: '📄' },
+                    { x: 25, y: 25, type: 'quest', name: '26주년 재무 분석 리포트', icon: '📊' },
+                    { x: 8, y: 8, type: 'quest', name: '조용한 음악', icon: '🎼' },
+                    { x: 30, y: 15, type: 'quest', name: '휴식용 쿠션', icon: '🛏️' },
+                    { x: 18, y: 22, type: 'quest', name: '전체 매출 및 수익 데이터', icon: '💹' }
                 ],
                 portals: [
                     { x: 35, y: 15, targetMap: CONSTANTS.MAPS.FLOOR_9_CEO_OFFICE, targetX: 5, targetY: 15, name: 'CEO실' }
@@ -487,7 +712,7 @@ export class MapData {
                         id: 'ceo_kim',
                         name: 'CEO 김대표',
                         x: 20, y: 18,
-                        dialog: ['휴넷에 오신 것을 환영합니다!', '26주년을 함께 축하해주셔서 감사합니다.', '모든 퀘스트를 완료하셨군요! 정말 수고하셨습니다.', '앞으로도 휴넷과 함께해주세요!'],
+                        dialog: ['26주년 축하합니다! 휴넷의 CEO 김대표입니다.', '26년 전, 작은 사무실에서 꿈을 키우던 때가 엊그제 같네요.', '오늘 여러분과 함께 이 특별한 순간을 나눌 수 있어서 정말 행복합니다!', '휴넷의 다음 26년도 여러분과 함께 만들어가고 싶습니다!'],
                         questGiver: true,
                         questId: 5
                     }
@@ -542,7 +767,7 @@ export class MapData {
                     }
                 ],
                 items: [
-                    { x: 28, y: 10, type: 'food', name: '아메리카노', icon: '☕' },
+                    { x: 28, y: 10, type: 'food', name: '특제 아메리카노', icon: '☕' },
                     { x: 28, y: 12, type: 'food', name: '카페라떼', icon: '🥛' }
                 ],
                 portals: [
@@ -643,7 +868,7 @@ export class MapData {
                     }
                 ],
                 items: [
-                    { x: 30, y: 8, type: 'food', name: '돼지국밥', icon: '🍲' },
+                    { x: 30, y: 8, type: 'food', name: '선호 메뉴 조사서', icon: '📝' },
                     { x: 30, y: 10, type: 'food', name: '김치', icon: '🥬' },
                     { x: 30, y: 12, type: 'food', name: '공기밥', icon: '🍚' }
                 ],
@@ -802,9 +1027,12 @@ export class MapData {
                 items: [
                     { x: 6, y: 14, type: 'health', name: '신선한 공기', icon: '🌬️' },
                     { x: 32, y: 14, type: 'item', name: '재떨이', icon: '🚬' },
-                    { x: 16, y: 24, type: 'quest', name: '보안 체크리스트', icon: '📝' },
-                    { x: 24, y: 8, type: 'quest', name: '운동 장비', icon: '🏋️' },
-                    { x: 4, y: 4, type: 'quest', name: '전화 메모', icon: '📞' }
+                    { x: 16, y: 24, type: 'quest', name: '보안 감사 리포트', icon: '📝' },
+                    { x: 24, y: 8, type: 'quest', name: '운동 프로그램 완주증', icon: '🏋️' },
+                    { x: 4, y: 4, type: 'quest', name: '메시지 전달 확인서', icon: '📞' },
+                    { x: 8, y: 20, type: 'quest', name: '명상 가이드 자격증', icon: '🧘' },
+                    { x: 28, y: 12, type: 'quest', name: '게임 챔피언 트로피', icon: '🏆' },
+                    { x: 35, y: 18, type: 'quest', name: '스트레스 해소 키트', icon: '💆' }
                 ],
                 portals: [],
                 elevatorPanel: { x: 19, y: 28 }

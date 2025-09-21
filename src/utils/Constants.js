@@ -6,9 +6,11 @@ export const CONSTANTS = {
     GAME_MODES: {
         LOADING: 'loading',
         TITLE: 'title',
+        INTRO: 'intro',
         PLAYING: 'playing',
         PAUSED: 'paused',
-        CELEBRATION: 'celebration'
+        CELEBRATION: 'celebration',
+        CERTIFICATE: 'certificate'
     },
 
     DIRECTIONS: {
@@ -23,6 +25,9 @@ export const CONSTANTS = {
         TALK_TO_PARK: 'talk_to_park',
         TALK_TO_LEE: 'talk_to_lee',
         TALK_TO_CEO: 'talk_to_ceo',
+        COLLECT_26TH_ITEMS: 'collect_26th_items',
+        DISCOVER_HISTORY: 'discover_history',
+        COLLECT_MESSAGES: 'collect_messages',
         COLLECT_ALL_ITEMS: 'collect_all_items',
         EXPLORE_OFFICE_1: 'explore_office_1',
         EXPLORE_OFFICE_2: 'explore_office_2',
@@ -66,12 +71,20 @@ export const CONSTANTS = {
         // 옥상층 (R층)
         ROOFTOP: 'rooftop',
 
-        // 7층 - 2개 사무실
-        FLOOR_7_OFFICE_1: 'floor_7_office_1',
-        FLOOR_7_OFFICE_2: 'floor_7_office_2',
+        // 7층 - 709호 (계열사), 710호 (본사 IT)
+        FLOOR_7_709_AFFILIATES: 'floor_7_709_affiliates',  // 709호 계열사
+        FLOOR_7_710_MAIN_IT: 'floor_7_710_main_it',        // 710호 본사 IT
         FLOOR_7_CORRIDOR: 'floor_7_corridor',
 
-        // 8층 - 전체 (기존 회의실, 카페테리아 개념)
+        // 8층 - 6개 본부
+        FLOOR_8_IT_DIVISION: 'floor_8_it_division',              // IT본부 (큰 맵)
+        FLOOR_8_HR_OFFICE: 'floor_8_hr_office',                  // 인경실 (작은 맵)
+        FLOOR_8_AI_RESEARCH: 'floor_8_ai_research',              // 인공지능 연구소 (작은 맵)
+        FLOOR_8_EDUCATION_SERVICE: 'floor_8_education_service',  // 교육서비스 본부 (큰 맵)
+        FLOOR_8_SALES_SUPPORT: 'floor_8_sales_support',          // 영업+교육지원 본부 (큰 맵)
+        FLOOR_8_CORRIDOR: 'floor_8_corridor',
+
+        // 기존 8층 호환성 (제거 예정)
         FLOOR_8_MAIN: 'floor_8_main',
 
         // 9층 - 1개 사무실 (CEO실)
