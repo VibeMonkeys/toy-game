@@ -13,6 +13,10 @@ import { Inventory } from '../ui/Inventory.js';
 import { PauseMenu } from '../ui/PauseMenu.js';
 import { ElevatorUI } from '../ui/ElevatorUI.js';
 import { MiniGameSystem } from '../ui/MiniGameSystem.js';
+import { TutorialSystem } from '../ui/TutorialSystem.js';
+import { IntroScreen } from '../ui/IntroScreen.js';
+import { CertificateScreen } from '../ui/CertificateScreen.js';
+import { QuestGuide } from '../ui/QuestGuide.js';
 import { MapManager } from '../maps/MapManager.js';
 import { Camera } from '../maps/Camera.js';
 import { Renderer } from '../graphics/Renderer.js';
@@ -46,6 +50,10 @@ export class Game {
         this.pauseMenu = new PauseMenu(this.canvas, this.ctx, this.audioManager);
         this.elevatorUI = new ElevatorUI(this.canvas, this.ctx, this.audioManager);
         this.miniGameSystem = new MiniGameSystem(this.canvas, this.ctx, this.audioManager);
+        this.tutorialSystem = new TutorialSystem(this.canvas, this.ctx);
+        this.introScreen = new IntroScreen(this.canvas, this.ctx);
+        this.certificateScreen = new CertificateScreen(this.canvas, this.ctx);
+        this.questGuide = new QuestGuide(this.canvas, this.ctx);
 
         // 다이얼로그 시스템
         this.currentDialog = null;
@@ -148,6 +156,10 @@ export class Game {
             if (result) {
                 this.handleTitleSelection(result);
             }
+        } else if (this.gameMode === CONSTANTS.GAME_MODES.INTRO) {
+            this.introScreen.handleKeyPress(event.key);
+        } else if (this.gameMode === CONSTANTS.GAME_MODES.CERTIFICATE) {
+            this.certificateScreen.handleKeyPress(event.key);
         } else if (this.gameMode === CONSTANTS.GAME_MODES.PLAYING) {
             this.handleGameInput(event);
         }
@@ -204,6 +216,50 @@ export class Game {
     }
 
     handleGameInput(event) {
+        // 튜토리얼이 활성화되어 있을 때는 대부분의 입력을 튜토리얼에서 먼저 처리
+        if (this.tutorialSystem.isVisible()) {
+            // UI 토글 키들은 먼저 처리하고 튜토리얼에 알림
+            if (event.key === 'q' || event.key === 'Q' || event.key === 'ㅂ') {
+                this.questSystem.toggleQuestUI();
+                const handled = this.tutorialSystem.handleKeyPress(
+                    'Q', // 한글키도 영어키로 통일해서 전달
+                    this.questSystem.showQuestUI,
+                    this.inventory.isVisible,
+                    this.minimap.isVisible
+                );
+                return;
+            }
+            if (event.key === 'i' || event.key === 'I' || event.key === 'ㅑ') {
+                this.inventory.toggle();
+                const handled = this.tutorialSystem.handleKeyPress(
+                    'I', // 한글키도 영어키로 통일해서 전달
+                    this.questSystem.showQuestUI,
+                    this.inventory.isVisible,
+                    this.minimap.isVisible
+                );
+                return;
+            }
+            if (event.key === 'm' || event.key === 'M' || event.key === 'ㅡ') {
+                this.minimap.toggle();
+                const handled = this.tutorialSystem.handleKeyPress(
+                    'M', // 한글키도 영어키로 통일해서 전달
+                    this.questSystem.showQuestUI,
+                    this.inventory.isVisible,
+                    this.minimap.isVisible
+                );
+                return;
+            }
+
+            // 다른 키 입력들
+            const handled = this.tutorialSystem.handleKeyPress(
+                event.key,
+                this.questSystem.showQuestUI,
+                this.inventory.isVisible,
+                this.minimap.isVisible
+            );
+            if (handled) return;
+        }
+
         // 코나미 코드 체크
         this.checkKonamiCode(event);
 
@@ -247,18 +303,24 @@ export class Game {
             return; // 대화 중에는 다른 입력 무시
         }
 
-        // UI 토글 기능들
-        if (event.key === 'i' || event.key === 'I') {
+        // UI 토글 기능들 (한글 키보드 지원)
+        if (event.key === 'i' || event.key === 'I' || event.key === 'ㅑ') {
             this.inventory.toggle();
             return;
         }
 
-        if (event.key === 'q' || event.key === 'Q') {
+        if (event.key === 'q' || event.key === 'Q' || event.key === 'ㅂ') {
             this.questSystem.toggleQuestUI();
             return;
         }
 
-        if (event.key === 'm' || event.key === 'M') {
+        // 퀘스트 UI가 열려있을 때는 이동 차단
+        if (this.questSystem.showQuestUI) {
+            this.questUI.handleKeyPress(event.code);
+            return; // 퀘스트 UI가 열려있으면 다른 입력 차단
+        }
+
+        if (event.key === 'm' || event.key === 'M' || event.key === 'ㅡ') {
             this.minimap.toggle();
             return;
         }
@@ -412,7 +474,7 @@ export class Game {
                 targetY = 8;
                 break;
             case 8:
-                targetMapId = CONSTANTS.MAPS.FLOOR_8_MAIN;
+                targetMapId = CONSTANTS.MAPS.FLOOR_8_CORRIDOR;
                 targetX = 20;
                 targetY = 29;
                 break;
@@ -444,6 +506,11 @@ export class Game {
     movePlayer(dx, dy) {
         const newX = this.player.x + dx;
         const newY = this.player.y + dy;
+
+        // 튜토리얼에 이동 알림
+        if (this.tutorialSystem.isVisible()) {
+            this.tutorialSystem.handleMovement();
+        }
 
         // 코나미 코드 활성화 시 벽 통과 가능
         const canMove = this.konamiActivated ||
@@ -500,11 +567,16 @@ export class Game {
     collectItem(item) {
         const collectedItem = this.mapManager.collectItem(item.x, item.y);
         if (collectedItem) {
+            console.log(`✅ 아이템 수집: ${collectedItem.name}`);
+
             this.gameState.addItem(collectedItem);
             this.inventory.showItemNotification(collectedItem);
             this.audioManager.playItemCollect();
 
-            // 퀘스트 진행 업데이트
+            // 퀘스트 시스템에 아이템 수집 알림
+            this.questSystem.onItemCollected(collectedItem, this.gameState);
+
+            // 기존 퀘스트 진행 업데이트도 유지
             this.questSystem.updateProgress(
                 CONSTANTS.QUEST_TARGETS.COLLECT_ALL_ITEMS,
                 this.gameState.itemsCollected
@@ -540,6 +612,11 @@ export class Game {
     }
 
     interact() {
+        // 튜토리얼에 상호작용 알림
+        if (this.tutorialSystem.isVisible()) {
+            this.tutorialSystem.handleInteraction();
+        }
+
         if (this.nearbyNPC) {
             // 특별한 액션이 있는 NPC 체크
             if (this.nearbyNPC.specialAction === 'arcade') {
@@ -588,26 +665,48 @@ export class Game {
                 }
             } else if (subSubmission.canSubmit) {
                 // 서브 퀘스트 자동으로 아이템 제출 처리
+                console.log(`🔍 서브퀘스트 처리: NPC ${this.nearbyNPC.id}, 인벤토리:`, this.gameState.inventory.map(item => item.name));
                 const result = this.questSystem.submitItemsToSubQuestGiver(
                     this.nearbyNPC.id,
                     this.gameState.inventory,
                     this.gameState
                 );
+                console.log(`📋 서브퀘스트 결과:`, result);
 
                 if (result.success) {
-                    // 성공 대화 표시
-                    let itemText = '';
-                    if (result.quest.requiredItem) {
-                        itemText = `'${result.quest.requiredItem}'`;
+                    // 성공 대화 표시 - 액션에 따라 다른 메시지
+                    let dialogMessage = [];
+
+                    if (result.action === 'start') {
+                        // 퀘스트 시작 시
+                        dialogMessage = [
+                            `${result.quest.title} 퀘스트를 시작하겠습니다!`,
+                            result.quest.description,
+                            '필요한 작업을 차례대로 진행해주세요.'
+                        ];
+                    } else if (result.action === 'progress') {
+                        // 퀘스트 진행 시
+                        if (result.quest.completed) {
+                            // 퀘스트 완료
+                            dialogMessage = [
+                                '훌륭하게 모든 작업을 완료하셨군요!',
+                                `서브 퀘스트 완료: ${result.quest.title}`,
+                                result.quest.rewardItem ?
+                                    `감사합니다! '${result.quest.rewardItem}'을(를) 드립니다.` :
+                                    '좋은 경험이 되셨기를 바랍니다!'
+                            ];
+                        } else {
+                            // 중간 단계 완료
+                            const nextStep = result.quest.steps ? result.quest.steps[result.quest.progress] : null;
+                            dialogMessage = [
+                                '이번 단계를 잘 완료하셨네요!',
+                                nextStep ? `다음 단계: ${nextStep.description}` : '계속 진행해주세요.',
+                                `진행도: ${result.quest.progress}/${result.quest.maxProgress}`
+                            ];
+                        }
                     }
 
-                    this.currentDialog = [
-                        itemText ? `${itemText}을(를) 가져오셨군요!` : '도와주셔서 감사합니다!',
-                        `서브 퀘스트 완료: ${result.quest.title}`,
-                        result.quest.rewardItem ?
-                            `감사합니다! '${result.quest.rewardItem}'을(를) 드립니다.` :
-                            '좋은 경험이 되셨기를 바랍니다!'
-                    ];
+                    this.currentDialog = dialogMessage;
                     this.currentNPC = this.nearbyNPC;
                     this.dialogIndex = 0;
                     this.audioManager.playDialogOpen();
@@ -637,6 +736,12 @@ export class Game {
             this.openElevator();
         } else if (this.nearbyPortal) {
             this.usePortal(this.nearbyPortal);
+        } else {
+            // 아이템 수집 확인
+            const item = this.mapManager.findItemAt(this.player.x, this.player.y);
+            if (item) {
+                this.collectItem(item);
+            }
         }
     }
 
@@ -659,12 +764,32 @@ export class Game {
         if (allQuestsCompleted && !this.gameCompleted) {
             this.gameCompleted = true;
 
-            // 잠시 후 축하 화면으로 전환
+            // 잠시 후 인증서 화면으로 전환
             setTimeout(() => {
-                this.gameMode = CONSTANTS.GAME_MODES.CELEBRATION;
-                this.celebrationScreen.show();
-            }, 3000); // 3초 후에 축하 화면
+                this.showCertificate();
+            }, 3000); // 3초 후에 인증서 화면
         }
+    }
+
+    showCertificate() {
+        // 플레이어 통계 수집
+        const playerStats = {
+            name: '플레이어', // 실제로는 입력받을 수 있지만 간단히 고정
+            completionTime: this.calculatePlayTime(),
+            itemsCollected: this.gameState.collectedItems ? this.gameState.collectedItems.length : 0,
+            questsCompleted: this.questSystem.getCompletedQuestCount()
+        };
+
+        this.gameMode = CONSTANTS.GAME_MODES.CERTIFICATE;
+        this.certificateScreen.show(playerStats, () => {
+            // 인증서 닫기 후 타이틀로 이동
+            this.gameMode = CONSTANTS.GAME_MODES.TITLE;
+        });
+    }
+
+    calculatePlayTime() {
+        // 간단한 플레이 타임 계산 (실제로는 시작 시간을 저장해서 계산)
+        return '완주';
     }
 
     startDialog(npc) {
@@ -737,6 +862,16 @@ export class Game {
     startNewGame() {
         console.log('🎮 새 게임 시작...');
 
+        // 먼저 인트로 화면 실행
+        this.gameMode = CONSTANTS.GAME_MODES.INTRO;
+        this.introScreen.start(() => {
+            this.startGameAfterIntro();
+        });
+    }
+
+    startGameAfterIntro() {
+        console.log('🎮 인트로 완료 후 게임 시작...');
+
         // 초기 상태로 리셋 - 로비에서 시작 (엘리베이터 바로 앞)
         const mapSet = this.mapManager.setCurrentMap(CONSTANTS.MAPS.LOBBY);
         console.log('맵 설정 결과:', mapSet, '현재 맵:', this.mapManager.getCurrentMapId());
@@ -753,7 +888,18 @@ export class Game {
         this.gameMode = CONSTANTS.GAME_MODES.PLAYING;
         console.log('게임 모드 변경:', this.gameMode);
 
-        this.inventory.showItemNotification({ name: '휴넷 26주년 엘리베이터 게임을 시작합니다!' });
+        // 게임 시작 시 모든 UI 닫기
+        this.questSystem.hideQuestUIPanel();
+        this.inventory.hide();
+        this.minimap.hide();
+
+        this.inventory.showItemNotification({ name: '휴넷 26주년 게임을 시작합니다!' });
+
+        // 튜토리얼 자동 시작
+        setTimeout(() => {
+            this.tutorialSystem.start();
+        }, 1000);
+
         console.log('✅ 새 게임 시작 완료');
     }
 
@@ -771,6 +917,10 @@ export class Game {
             this.celebrationScreen.update();
         } else if (this.gameMode === CONSTANTS.GAME_MODES.TITLE) {
             this.titleScreen.update();
+        } else if (this.gameMode === CONSTANTS.GAME_MODES.INTRO) {
+            this.introScreen.update();
+        } else if (this.gameMode === CONSTANTS.GAME_MODES.CERTIFICATE) {
+            this.certificateScreen.update();
         } else if (this.gameMode === CONSTANTS.GAME_MODES.PLAYING) {
             this.animationSystem.updateCharacterAnimation(this.player);
             this.elevatorUI.update();
@@ -791,6 +941,12 @@ export class Game {
                 return;
             } else if (this.gameMode === CONSTANTS.GAME_MODES.TITLE) {
                 this.titleScreen.draw();
+                return;
+            } else if (this.gameMode === CONSTANTS.GAME_MODES.INTRO) {
+                this.introScreen.draw();
+                return;
+            } else if (this.gameMode === CONSTANTS.GAME_MODES.CERTIFICATE) {
+                this.certificateScreen.draw();
                 return;
             }
         } catch (error) {
@@ -853,10 +1009,28 @@ export class Game {
             // 게임 안내 메시지
             this.drawGameInstructions();
 
+            // 퀘스트 가이드 (화면 상단)
+            if (!this.tutorialSystem.isVisible()) {
+                // 현재 맵 정보를 gameState에 추가해서 전달
+                const gameStateWithMap = {
+                    ...this.gameState,
+                    currentMap: this.mapManager.getCurrentMapId()
+                };
+                this.questGuide.draw(this.questSystem, gameStateWithMap);
+            }
+
             // UI 렌더링
-            this.questUI.draw(this.questSystem);
+            // QuestUI도 현재 맵 정보가 포함된 gameState 전달
+            const gameStateWithMap = {
+                ...this.gameState,
+                currentMap: this.mapManager.getCurrentMapId()
+            };
+            this.questUI.draw(this.questSystem, gameStateWithMap);
             this.minimap.draw(this.player, this.mapManager.getCurrentMapId(), this.mapManager.maps, this.gameState);
             this.inventory.draw(this.gameState);
+
+            // 튜토리얼 렌더링 (모든 UI 위에)
+            this.tutorialSystem.draw();
 
             // 대화창 렌더링 (UI보다 위에)
             if (this.currentDialog) {
