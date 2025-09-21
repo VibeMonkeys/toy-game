@@ -5,10 +5,12 @@ export class GameState {
         this.visitedMaps = ['lobby'];
         this.completedQuests = [];
         this.inventory = [];
+        this.collectedItems = []; // UI에서 참조하는 수집된 아이템 목록
     }
 
     addItem(item) {
         this.inventory.push(item);
+        this.collectedItems.push(item);
         this.itemsCollected++;
     }
 
@@ -38,7 +40,8 @@ export class GameState {
             totalItems: this.totalItems,
             visitedMaps: [...this.visitedMaps],
             completedQuests: [...this.completedQuests],
-            inventory: [...this.inventory]
+            inventory: [...this.inventory],
+            collectedItems: [...this.collectedItems]
         };
     }
 
@@ -48,5 +51,6 @@ export class GameState {
         this.visitedMaps = data.visitedMaps || ['lobby'];
         this.completedQuests = data.completedQuests || [];
         this.inventory = data.inventory || [];
+        this.collectedItems = data.collectedItems || data.inventory || []; // 하위 호환성
     }
 };
