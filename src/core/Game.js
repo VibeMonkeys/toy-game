@@ -1,5 +1,4 @@
 import { CONSTANTS } from '../utils/Constants.js';
-import { SaveSystem } from '../utils/SaveSystem.js';
 import { AudioManager } from '../utils/AudioManager.js';
 import { Player } from '../entities/Player.js';
 import { GameState } from './GameState.js';
@@ -21,6 +20,10 @@ import { MapManager } from '../maps/MapManager.js';
 import { Camera } from '../maps/Camera.js';
 import { Renderer } from '../graphics/Renderer.js';
 import { AnimationSystem } from '../graphics/AnimationSystem.js';
+import { GameUIRenderer } from './GameUIRenderer.js';
+import { DialogRenderer } from './DialogRenderer.js';
+import { ParticleSystem } from '../effects/ParticleSystem.js';
+import { TransitionManager } from '../effects/TransitionManager.js';
 
 export class Game {
     constructor() {
@@ -39,6 +42,14 @@ export class Game {
         this.camera = new Camera(this.canvas);
         this.animationSystem = new AnimationSystem();
         this.renderer = new Renderer(this.canvas, this.ctx, this.animationSystem);
+
+        // UI 렌더링 시스템
+        this.uiRenderer = new GameUIRenderer(this.canvas, this.ctx);
+        this.dialogRenderer = new DialogRenderer(this.canvas, this.ctx);
+
+        // 효과 시스템
+        this.particleSystem = new ParticleSystem(this.canvas, this.ctx);
+        this.transitionManager = new TransitionManager(this.canvas, this.ctx);
 
         // UI 시스템
         this.loadingScreen = new LoadingScreen(this.canvas, this.ctx);
@@ -69,6 +80,12 @@ export class Game {
         // 게임 완료 체크
         this.gameCompleted = false;
 
+        // 성능 최적화
+        this.lastFrameTime = 0;
+        this.targetFPS = 60;
+        this.frameInterval = 1000 / this.targetFPS;
+        this.animationFrameId = null;
+
         // 히든 요소들
         this.konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'KeyB', 'KeyA'];
         this.konamiIndex = 0;
@@ -87,12 +104,8 @@ export class Game {
         this.loadingScreen.show();
         console.log('✅ 로딩 화면 초기화 완료');
 
-        // 저장된 게임 확인 후 타이틀 옵션 설정
-        const hasSavedGame = SaveSystem.checkSavedGame();
-        const titleOptions = hasSavedGame ?
-            ['게임 계속하기', '새 게임 시작', '게임 정보'] :
-            ['새 게임 시작', '게임 정보'];
-
+        // 타이틀 옵션 설정 (새 게임만)
+        const titleOptions = ['새 게임 시작', '게임 정보'];
         this.titleScreen.setMenuOptions(titleOptions);
         console.log('✅ 타이틀 화면 옵션 설정 완료');
 
@@ -206,9 +219,6 @@ export class Game {
 
     handleTitleSelection(selection) {
         switch (selection) {
-            case '게임 계속하기':
-                this.loadGame();
-                break;
             case '새 게임 시작':
                 this.startNewGame();
                 break;
@@ -356,10 +366,6 @@ export class Game {
                     this.interact();
                 }
                 break;
-            case 's':
-            case 'S':
-                this.saveGame();
-                break;
         }
     }
 
@@ -415,11 +421,6 @@ export class Game {
         switch (action) {
             case 'resume':
                 // 게임 계속하기
-                this.applyPauseMenuSettings();
-                break;
-            case 'save':
-                this.saveGame();
-                this.pauseMenu.hide();
                 this.applyPauseMenuSettings();
                 break;
             case 'title':
@@ -550,24 +551,43 @@ export class Game {
     }
 
     usePortal(portal) {
-        if (this.mapManager.setCurrentMap(portal.targetMap)) {
-            this.player.setPosition(portal.targetX, portal.targetY);
-            this.camera.update(this.player.x, this.player.y);
-            this.gameState.visitMap(portal.targetMap);
+        // 페이드 전환 효과로 포털 이동
+        this.transitionManager.fadeTransition(
+            () => {
+                // 페이드 아웃 시 (화면이 검게 변할 때)
+            },
+            () => {
+                // 페이드 인 시작 시 (맵 변경)
+                if (this.mapManager.setCurrentMap(portal.targetMap)) {
+                    this.player.setPosition(portal.targetX, portal.targetY);
+                    this.camera.update(this.player.x, this.player.y);
+                    this.gameState.visitMap(portal.targetMap);
 
-            // 포털 사용 효과음
-            this.audioManager.playPortalSound();
+                    // 포털 사용 효과음
+                    this.audioManager.playPortalSound();
 
-            // 맵 이동 알림
-            const mapName = this.mapManager.getCurrentMap().name;
-            this.inventory.showItemNotification({ name: `${mapName}(으)로 이동했습니다!` });
-        }
+                    // 맵 이동 알림
+                    const mapName = this.mapManager.getCurrentMap().name;
+                    this.inventory.showItemNotification({ name: `${mapName}(으)로 이동했습니다!` });
+                }
+            },
+            600, // 0.6초 전환
+            'rgba(0, 20, 40, 1)' // 어두운 파란색
+        );
     }
 
     collectItem(item) {
         const collectedItem = this.mapManager.collectItem(item.x, item.y);
         if (collectedItem) {
             console.log(`✅ 아이템 수집: ${collectedItem.name}`);
+
+            // 아이템 수집 파티클 효과
+            const worldPos = this.camera.worldToScreen(item.x, item.y);
+            this.particleSystem.createItemCollectEffect(
+                worldPos.x + CONSTANTS.TILE_SIZE / 2,
+                worldPos.y + CONSTANTS.TILE_SIZE / 2,
+                collectedItem.name
+            );
 
             this.gameState.addItem(collectedItem);
             this.inventory.showItemNotification(collectedItem);
@@ -639,6 +659,13 @@ export class Game {
                 );
 
                 if (result.success) {
+                    // 퀘스트 완료 파티클 효과
+                    const npcScreenPos = this.camera.worldToScreen(this.nearbyNPC.x, this.nearbyNPC.y);
+                    this.particleSystem.createQuestCompleteEffect(
+                        npcScreenPos.x + CONSTANTS.TILE_SIZE / 2,
+                        npcScreenPos.y + CONSTANTS.TILE_SIZE / 2
+                    );
+
                     // 성공 대화 표시
                     let itemText = '';
                     if (result.quest.requiredItem) {
@@ -674,6 +701,16 @@ export class Game {
                 console.log(`📋 서브퀘스트 결과:`, result);
 
                 if (result.success) {
+                    // 서브 퀘스트 보상 파티클 효과
+                    const npcScreenPos = this.camera.worldToScreen(this.nearbyNPC.x, this.nearbyNPC.y);
+                    if (result.quest.completed || result.action === 'progress') {
+                        this.particleSystem.createRewardEffect(
+                            npcScreenPos.x + CONSTANTS.TILE_SIZE / 2,
+                            npcScreenPos.y + CONSTANTS.TILE_SIZE / 2,
+                            result.quest.rewardItem || '경험'
+                        );
+                    }
+
                     // 성공 대화 표시 - 액션에 따라 다른 메시지
                     let dialogMessage = [];
 
@@ -830,34 +867,6 @@ export class Game {
         // HTML 조작 제거, Canvas에서 그려짐
     }
 
-    saveGame() {
-        const gameData = {
-            currentMapId: this.mapManager.getCurrentMapId(),
-            player: this.player.serialize(),
-            gameState: this.gameState.serialize(),
-            questSystem: this.questSystem.serialize()
-        };
-
-        if (SaveSystem.saveGame(gameData)) {
-            this.inventory.showItemNotification({ name: '게임이 저장되었습니다!' });
-        } else {
-            this.inventory.showItemNotification({ name: '게임 저장에 실패했습니다.' });
-        }
-    }
-
-    loadGame() {
-        const gameData = SaveSystem.loadGame();
-        if (gameData) {
-            this.mapManager.setCurrentMap(gameData.currentMapId);
-            this.player.deserialize(gameData.player);
-            this.gameState.deserialize(gameData.gameState);
-            this.questSystem.deserialize(gameData.questSystem);
-
-            this.camera.update(this.player.x, this.player.y);
-            this.gameMode = CONSTANTS.GAME_MODES.PLAYING;
-            this.inventory.showItemNotification({ name: '게임이 로드되었습니다!' });
-        }
-    }
 
     startNewGame() {
         console.log('🎮 새 게임 시작...');
@@ -925,6 +934,10 @@ export class Game {
             this.animationSystem.updateCharacterAnimation(this.player);
             this.elevatorUI.update();
             this.miniGameSystem.update();
+
+            // 효과 시스템 업데이트
+            this.particleSystem.update();
+            this.transitionManager.update();
         }
     }
 
@@ -1003,11 +1016,11 @@ export class Game {
 
             // 상호작용 힌트
             if (this.showInteractionHint) {
-                this.drawInteractionHint();
+                this.uiRenderer.drawInteractionHint(this.nearbyNPC, this.nearbyElevator, this.nearbyPortal);
             }
 
             // 게임 안내 메시지
-            this.drawGameInstructions();
+            this.uiRenderer.drawGameInstructions(this.debugMode, this.konamiActivated);
 
             // 퀘스트 가이드 (화면 상단)
             if (!this.tutorialSystem.isVisible()) {
@@ -1034,7 +1047,7 @@ export class Game {
 
             // 대화창 렌더링 (UI보다 위에)
             if (this.currentDialog) {
-                this.drawDialog();
+                this.dialogRenderer.drawDialog(this.currentDialog, this.dialogIndex, this.currentNPC);
             }
 
             // 일시정지 메뉴 (최상위 레이어)
@@ -1048,274 +1061,57 @@ export class Game {
 
             // 디버그 정보 표시
             if (this.debugMode) {
-                this.drawDebugInfo();
+                this.uiRenderer.drawDebugInfo(this.player, this.mapManager, this.questSystem, this.gameState, this.konamiActivated);
             }
 
             // 코나미 코드 활성화 효과
             if (this.konamiActivated) {
-                this.drawInvincibleEffect();
+                this.uiRenderer.drawInvincibleEffect();
             }
+
+            // 파티클 시스템 렌더링
+            this.particleSystem.draw();
+
+            // 전환 효과 렌더링 (최상위)
+            this.transitionManager.drawTransitions();
         }
     }
 
-    drawInteractionHint() {
-        let message = '';
-        let icon = '';
-
-        if (this.nearbyNPC) {
-            message = `${this.nearbyNPC.name}과(와) 대화하기`;
-            icon = '💬';
-        } else if (this.nearbyElevator) {
-            message = '엘리베이터 - 층 선택하기';
-            icon = '🛗';
-        } else if (this.nearbyPortal) {
-            message = `${this.nearbyPortal.name}(으)로 이동하기`;
-            icon = '🚪';
-        }
-
-        if (message) {
-            // 메시지 박스 크기 계산
-            this.ctx.font = 'bold 18px Arial';
-            const textWidth = this.ctx.measureText(message).width + 60;
-            const boxHeight = 50;
-            const boxX = this.canvas.width/2 - textWidth/2;
-            const boxY = this.canvas.height - 120;
-
-            // 그림자 효과
-            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-            this.ctx.fillRect(boxX + 3, boxY + 3, textWidth, boxHeight);
-
-            // 메인 박스 배경
-            this.ctx.fillStyle = 'rgba(25, 25, 60, 0.95)';
-            this.ctx.fillRect(boxX, boxY, textWidth, boxHeight);
-
-            // 황금색 테두리
-            this.ctx.strokeStyle = '#FFD700';
-            this.ctx.lineWidth = 3;
-            this.ctx.strokeRect(boxX, boxY, textWidth, boxHeight);
-
-            // 반짝이는 내부 테두리
-            const sparkle = Math.sin(Date.now() * 0.008) * 0.3 + 0.7;
-            this.ctx.strokeStyle = `rgba(255, 255, 255, ${sparkle})`;
-            this.ctx.lineWidth = 1;
-            this.ctx.strokeRect(boxX + 2, boxY + 2, textWidth - 4, boxHeight - 4);
-
-            // 아이콘과 메시지
-            this.ctx.fillStyle = '#FFFFFF';
-            this.ctx.font = 'bold 18px Arial';
-            this.ctx.textAlign = 'center';
-
-            // 그림자 텍스트
-            this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
-            this.ctx.lineWidth = 3;
-            this.ctx.strokeText(`${icon} 스페이스`, this.canvas.width/2, boxY + 20);
-            this.ctx.strokeText(message, this.canvas.width/2, boxY + 38);
-
-            // 메인 텍스트
-            this.ctx.fillStyle = '#FFD700';
-            this.ctx.fillText(`${icon} 스페이스`, this.canvas.width/2, boxY + 20);
-
-            this.ctx.fillStyle = '#FFFFFF';
-            this.ctx.fillText(message, this.canvas.width/2, boxY + 38);
-        }
-    }
-
-    drawDebugInfo() {
-        const debugInfo = [
-            `Position: (${this.player.x}, ${this.player.y})`,
-            `Map: ${this.mapManager.getCurrentMapId()}`,
-            `FPS: ${Math.round(1000 / 16.67)}`, // 대략적인 FPS
-            `Quest: ${this.questSystem.currentQuest + 1}/${this.questSystem.quests.length}`,
-            `Items: ${this.gameState.itemsCollected}`,
-            `Konami: ${this.konamiActivated ? 'ON' : 'OFF'}`
-        ];
-
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        this.ctx.fillRect(10, 10, 200, 120);
-
-        this.ctx.fillStyle = '#00ff00';
-        this.ctx.font = '12px monospace';
-        this.ctx.textAlign = 'left';
-
-        debugInfo.forEach((info, index) => {
-            this.ctx.fillText(info, 15, 25 + index * 15);
-        });
-    }
-
-    drawInvincibleEffect() {
-        const time = Date.now() * 0.01;
-        const alpha = Math.sin(time) * 0.3 + 0.7;
-
-        // 화면 테두리에 무지개색 효과
-        const gradient = this.ctx.createLinearGradient(0, 0, this.canvas.width, 0);
-        gradient.addColorStop(0, `rgba(255, 0, 0, ${alpha * 0.3})`);
-        gradient.addColorStop(0.17, `rgba(255, 165, 0, ${alpha * 0.3})`);
-        gradient.addColorStop(0.33, `rgba(255, 255, 0, ${alpha * 0.3})`);
-        gradient.addColorStop(0.5, `rgba(0, 255, 0, ${alpha * 0.3})`);
-        gradient.addColorStop(0.67, `rgba(0, 0, 255, ${alpha * 0.3})`);
-        gradient.addColorStop(0.83, `rgba(75, 0, 130, ${alpha * 0.3})`);
-        gradient.addColorStop(1, `rgba(238, 130, 238, ${alpha * 0.3})`);
-
-        this.ctx.strokeStyle = gradient;
-        this.ctx.lineWidth = 5;
-        this.ctx.strokeRect(2, 2, this.canvas.width - 4, this.canvas.height - 4);
-
-        // 무적 모드 텍스트
-        this.ctx.fillStyle = `rgba(255, 255, 0, ${alpha})`;
-        this.ctx.font = 'bold 16px Arial';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText('🎮 INVINCIBLE MODE 🎮', this.canvas.width / 2, 30);
-    }
-
-    drawGameInstructions() {
-        // 하단에 게임 조작법 안내
-        const instructionY = this.canvas.height - 30;
-
-        // 반투명 배경
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-        this.ctx.fillRect(0, instructionY - 20, this.canvas.width, 40);
-
-        // 안내 텍스트
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-        this.ctx.font = '14px Arial';
-        this.ctx.textAlign = 'center';
-
-        let message = '방향키: 이동 | 스페이스: 상호작용 | I: 인벤토리 | Q: 퀘스트 | M: 미니맵 | S: 저장 | ESC: 메뉴';
-
-        // 디버그 모드일 때 추가 안내
-        if (this.debugMode) {
-            message += ' | H: 숨겨진 메시지 | D: 디버그';
-        }
-
-        // 코나미 코드 활성화 시 다른 메시지
-        if (this.konamiActivated) {
-            message = '🌟 무적 모드 활성화! 벽을 통과할 수 있습니다! 🌟';
-            this.ctx.fillStyle = 'rgba(255, 215, 0, 0.9)';
-        }
-
-        this.ctx.fillText(message, this.canvas.width / 2, instructionY);
-    }
-
-    drawDialog() {
-        if (!this.currentDialog || this.dialogIndex >= this.currentDialog.length) return;
-
-        const currentText = this.currentDialog[this.dialogIndex];
-
-        // 대화창 크기와 위치
-        const dialogWidth = 800;
-        const dialogHeight = 150;
-        const dialogX = (this.canvas.width - dialogWidth) / 2;
-        const dialogY = this.canvas.height - 200;
-
-        // 반투명 전체 배경 (대화 중임을 강조)
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-        // 대화창 그림자
-        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        this.ctx.fillRect(dialogX + 5, dialogY + 5, dialogWidth, dialogHeight);
-
-        // 대화창 배경
-        this.ctx.fillStyle = 'rgba(15, 25, 50, 0.95)';
-        this.ctx.fillRect(dialogX, dialogY, dialogWidth, dialogHeight);
-
-        // 대화창 테두리
-        this.ctx.strokeStyle = '#FFD700';
-        this.ctx.lineWidth = 4;
-        this.ctx.strokeRect(dialogX, dialogY, dialogWidth, dialogHeight);
-
-        // 내부 테두리
-        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-        this.ctx.lineWidth = 1;
-        this.ctx.strokeRect(dialogX + 3, dialogY + 3, dialogWidth - 6, dialogHeight - 6);
-
-        // NPC 이름 표시
-        if (this.currentNPC) {
-            this.ctx.fillStyle = '#FFD700';
-            this.ctx.font = 'bold 16px Arial';
-            this.ctx.textAlign = 'left';
-            this.ctx.fillText(`💬 ${this.currentNPC.name}`, dialogX + 20, dialogY + 25);
-
-            // NPC 이름 아래 구분선
-            this.ctx.strokeStyle = 'rgba(255, 215, 0, 0.5)';
-            this.ctx.lineWidth = 1;
-            this.ctx.beginPath();
-            this.ctx.moveTo(dialogX + 20, dialogY + 35);
-            this.ctx.lineTo(dialogX + dialogWidth - 20, dialogY + 35);
-            this.ctx.stroke();
-        }
-
-        // 대화 텍스트
-        this.ctx.fillStyle = '#FFFFFF';
-        this.ctx.font = 'bold 18px Arial';
-        this.ctx.textAlign = 'left';
-
-        // 텍스트 줄바꿈 처리
-        const maxWidth = dialogWidth - 40;
-        const lineHeight = 25;
-        const lines = this.wrapText(currentText, maxWidth);
-
-        // NPC 이름이 있으면 텍스트를 더 아래에 표시
-        const textStartY = this.currentNPC ? dialogY + 55 : dialogY + 35;
-
-        lines.forEach((line, index) => {
-            this.ctx.fillText(line, dialogX + 20, textStartY + index * lineHeight);
-        });
-
-        // 진행 표시
-        const progressText = `${this.dialogIndex + 1} / ${this.currentDialog.length}`;
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-        this.ctx.font = '14px Arial';
-        this.ctx.textAlign = 'right';
-        this.ctx.fillText(progressText, dialogX + dialogWidth - 20, dialogY + dialogHeight - 15);
-
-        // 계속하기 안내
-        this.ctx.fillStyle = '#FFD700';
-        this.ctx.font = 'bold 16px Arial';
-        this.ctx.textAlign = 'center';
-
-        const continueText = this.dialogIndex < this.currentDialog.length - 1 ?
-            '▶️ 스페이스나 엔터를 눌러 계속하기' :
-            '✅ 스페이스나 엔터를 눌러 닫기';
-
-        // 반짝이는 효과
-        const blinkAlpha = Math.sin(Date.now() * 0.005) * 0.3 + 0.7;
-        this.ctx.fillStyle = `rgba(255, 215, 0, ${blinkAlpha})`;
-        this.ctx.fillText(continueText, this.canvas.width / 2, dialogY + dialogHeight + 25);
-    }
-
-
-    wrapText(text, maxWidth) {
-        const words = text.split(' ');
-        const lines = [];
-        let currentLine = '';
-
-        this.ctx.font = 'bold 18px Arial'; // 측정을 위해 폰트 설정
-
-        for (let i = 0; i < words.length; i++) {
-            const testLine = currentLine + words[i] + ' ';
-            const metrics = this.ctx.measureText(testLine);
-            const testWidth = metrics.width;
-
-            if (testWidth > maxWidth && i > 0) {
-                lines.push(currentLine.trim());
-                currentLine = words[i] + ' ';
-            } else {
-                currentLine = testLine;
-            }
-        }
-        lines.push(currentLine.trim());
-
-        return lines;
-    }
-
-    gameLoop() {
+    gameLoop(currentTime = 0) {
         try {
-            this.update();
-            this.draw();
-            requestAnimationFrame(() => this.gameLoop());
+            // 프레임 레이트 제한
+            const deltaTime = currentTime - this.lastFrameTime;
+
+            if (deltaTime >= this.frameInterval) {
+                this.update();
+                this.draw();
+                this.lastFrameTime = currentTime;
+            }
+
+            // 다음 프레임 요청
+            this.animationFrameId = requestAnimationFrame((time) => this.gameLoop(time));
         } catch (error) {
             console.error('❌ 게임 루프 오류:', error);
+            // 오류 발생 시에도 게임 루프 계속 실행
+            this.animationFrameId = requestAnimationFrame((time) => this.gameLoop(time));
+        }
+    }
+
+    // 게임 정리 메서드 (메모리 누수 방지)
+    destroy() {
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+        }
+
+        // 이벤트 리스너 정리
+        document.removeEventListener('keydown', this.handleInput);
+        this.canvas.removeEventListener('mousemove', this.handleMouseMove);
+        this.canvas.removeEventListener('click', this.handleClick);
+
+        // 오디오 정리
+        if (this.audioManager) {
+            this.audioManager.destroy();
         }
     }
 };
