@@ -1,3 +1,5 @@
+import { Logger } from '../utils/Logger.js';
+
 // 스프라이트 관리 클래스
 export class SpriteManager {
     constructor() {
@@ -13,11 +15,11 @@ export class SpriteManager {
             const img = new Image();
             img.onload = () => {
                 this.sprites[name] = img;
-                console.log(`✅ 스프라이트 로드 완료: ${name}`);
+                Logger.info(`✅ 스프라이트 로드 완료: ${name}`);
                 resolve(img);
             };
             img.onerror = () => {
-                console.error(`❌ 스프라이트 로드 실패: ${name} (${path})`);
+                Logger.error(`❌ 스프라이트 로드 실패: ${name} (${path})`);
                 reject(new Error(`Failed to load sprite: ${name}`));
             };
             img.src = path;
@@ -36,12 +38,12 @@ export class SpriteManager {
                     cols: Math.floor(img.width / tileWidth),
                     rows: Math.floor(img.height / tileHeight)
                 };
-                console.log(`✅ 타일셋 로드 완료: ${name} (${this.tilesets[name].cols}x${this.tilesets[name].rows})`);
-                console.log(`   이미지 크기: ${img.width}x${img.height}, 타일 크기: ${tileWidth}x${tileHeight}`);
+                Logger.info(`✅ 타일셋 로드 완료: ${name} (${this.tilesets[name].cols}x${this.tilesets[name].rows})`);
+                Logger.debug(`   이미지 크기: ${img.width}x${img.height}, 타일 크기: ${tileWidth}x${tileHeight}`);
                 resolve(this.tilesets[name]);
             };
             img.onerror = () => {
-                console.error(`❌ 타일셋 로드 실패: ${name} (${path})`);
+                Logger.error(`❌ 타일셋 로드 실패: ${name} (${path})`);
                 reject(new Error(`Failed to load tileset: ${name}`));
             };
             img.src = path;
@@ -50,7 +52,7 @@ export class SpriteManager {
 
     // 모든 에셋 로드
     async loadAllAssets() {
-        console.log('🎨 게임 에셋 로딩 시작...');
+        Logger.info('🎨 게임 에셋 로딩 시작...');
 
         const loadPromises = [
             // 기본 캐릭터 스프라이트 (16x16)
@@ -92,13 +94,13 @@ export class SpriteManager {
         try {
             await Promise.all(loadPromises);
             this.loaded = true;
-            console.log('✅ 모든 게임 에셋 로딩 완료!');
-            console.log('📊 로딩된 타일셋:', Object.keys(this.tilesets));
-            console.log('📊 로딩된 스프라이트:', Object.keys(this.sprites));
+            Logger.info('✅ 모든 게임 에셋 로딩 완료!');
+            Logger.debug('📊 로딩된 타일셋:', Object.keys(this.tilesets));
+            Logger.debug('📊 로딩된 스프라이트:', Object.keys(this.sprites));
             return true;
         } catch (error) {
-            console.error('❌ 에셋 로딩 실패:', error);
-            console.log('🔍 현재 로딩된 타일셋:', Object.keys(this.tilesets));
+            Logger.error('❌ 에셋 로딩 실패:', error);
+            Logger.debug('🔍 현재 로딩된 타일셋:', Object.keys(this.tilesets));
             return false;
         }
     }
@@ -117,7 +119,7 @@ export class SpriteManager {
     drawTile(ctx, tilesetName, tileIndex, x, y, width = null, height = null) {
         const tileset = this.getTileset(tilesetName);
         if (!tileset) {
-            console.warn(`타일셋을 찾을 수 없습니다: ${tilesetName}`);
+            Logger.warn(`타일셋을 찾을 수 없습니다: ${tilesetName}`);
             return false;
         }
 
@@ -138,7 +140,7 @@ export class SpriteManager {
             );
             return true;
         } catch (error) {
-            console.warn(`타일 그리기 실패: ${tilesetName}[${tileIndex}]`, error);
+            Logger.warn(`타일 그리기 실패: ${tilesetName}[${tileIndex}]`, error);
             return false;
         }
     }
@@ -162,7 +164,7 @@ export class SpriteManager {
     drawOfficeFurniture(ctx, furnitureType, x, y, width = 48, height = 48) {
         const sprite = this.getSprite(`office_${furnitureType}`);
         if (!sprite) {
-            console.warn(`가구 스프라이트를 찾을 수 없습니다: office_${furnitureType}`);
+            Logger.warn(`가구 스프라이트를 찾을 수 없습니다: office_${furnitureType}`);
             return false;
         }
 
@@ -170,7 +172,7 @@ export class SpriteManager {
             ctx.drawImage(sprite, x, y, width, height);
             return true;
         } catch (error) {
-            console.warn(`가구 그리기 실패: office_${furnitureType}`, error);
+            Logger.warn(`가구 그리기 실패: office_${furnitureType}`, error);
             return false;
         }
     }

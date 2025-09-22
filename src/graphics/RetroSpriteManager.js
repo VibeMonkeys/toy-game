@@ -1,4 +1,5 @@
 import { CONSTANTS } from '../utils/Constants.js';
+import { Logger } from '../utils/Logger.js';
 
 /**
  * 1999 레트로 테마용 스프라이트 매니저
@@ -99,7 +100,7 @@ export class RetroSpriteManager {
      * 모든 레트로 스프라이트 로드
      */
     async loadSprites() {
-        console.log('🎨 RetroSpriteManager: 레트로 스프라이트 로딩 시작...');
+        Logger.info('🎨 RetroSpriteManager: 레트로 스프라이트 로딩 시작...');
 
         const loadPromises = Object.entries(this.spriteDefinitions).map(([key, def]) => {
             return this.loadSprite(key, def);
@@ -108,10 +109,10 @@ export class RetroSpriteManager {
         try {
             await Promise.all(loadPromises);
             this.loaded = true;
-            console.log('✅ RetroSpriteManager: 모든 레트로 스프라이트 로딩 완료!');
-            console.log(`📊 로드된 스프라이트: ${this.sprites.size}개`);
+            Logger.info('✅ RetroSpriteManager: 모든 레트로 스프라이트 로딩 완료!');
+            Logger.debug(`📊 로드된 스프라이트: ${this.sprites.size}개`);
         } catch (error) {
-            console.error('❌ RetroSpriteManager: 스프라이트 로딩 실패:', error);
+            Logger.error('❌ RetroSpriteManager: 스프라이트 로딩 실패:', error);
             this.loaded = false;
         }
     }
@@ -132,12 +133,12 @@ export class RetroSpriteManager {
                     cols: Math.floor(img.width / definition.frameWidth),
                     rows: Math.floor(img.height / definition.frameHeight)
                 });
-                console.log(`✅ 스프라이트 로드 완료: ${key} (${img.width}x${img.height})`);
+                Logger.info(`✅ 스프라이트 로드 완료: ${key} (${img.width}x${img.height})`);
                 resolve();
             };
 
             img.onerror = () => {
-                console.error(`❌ 스프라이트 로드 실패: ${key} - ${definition.src}`);
+                Logger.error(`❌ 스프라이트 로드 실패: ${key} - ${definition.src}`);
                 // 로드 실패해도 다른 스프라이트는 계속 로드
                 resolve();
             };
