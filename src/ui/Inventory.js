@@ -49,9 +49,12 @@ export class Inventory {
         this.ctx.font = '14px Arial';
         this.ctx.fillText(`아이템: ${gameState.itemsCollected}/${gameState.totalItems}`, this.x + 10, this.y + 50);
 
+        const coins = typeof gameState.getCoins === 'function' ? gameState.getCoins() : (gameState.coins || 0);
+        this.ctx.fillText(`코인: ${coins.toLocaleString()}원`, this.x + 10, this.y + 70);
+
         // 아이템 목록
         if (gameState.inventory.length > 0) {
-            let itemY = this.y + 75;
+            let itemY = this.y + 95;
             for (let i = 0; i < gameState.inventory.length; i++) {
                 const item = gameState.inventory[i];
 
@@ -78,7 +81,7 @@ export class Inventory {
         } else {
             this.ctx.fillStyle = '#888888';
             this.ctx.font = '12px Arial';
-            this.ctx.fillText('아이템이 없습니다', this.x + 10, this.y + 75);
+            this.ctx.fillText('아이템이 없습니다', this.x + 10, this.y + 95);
         }
 
         // 아이템 획득 알림 그리기
