@@ -1,5 +1,6 @@
 import { CONSTANTS } from '../utils/Constants.js';
 import { AudioManager } from '../utils/AudioManager.js';
+import { Logger } from '../utils/Logger.js';
 import { Player } from '../entities/Player.js';
 import { GameState } from './GameState.js';
 import { QuestSystem } from './QuestSystem.js';
@@ -30,6 +31,9 @@ export class Game {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
 
+        // 전역 참조 설정
+        window.game = this;
+
         // 핵심 시스템 초기화
         this.audioManager = new AudioManager();
         this.player = new Player();
@@ -51,6 +55,16 @@ export class Game {
         this.particleSystem = new ParticleSystem(this.canvas, this.ctx);
         this.transitionManager = new TransitionManager(this.canvas, this.ctx);
 
+        // 상태 플래그
+        this.secretClickCount = 0;
+        this.konamiActivated = false;
+        this.debugMode = false;
+
+        // 이벤트 핸들러 바인딩 (해제 대비)
+        this.boundKeyDownHandler = this.handleInput.bind(this);
+        this.boundMouseMoveHandler = this.onCanvasMouseMove.bind(this);
+        this.boundClickHandler = this.onCanvasClick.bind(this);
+
         // UI 시스템
         this.loadingScreen = new LoadingScreen(this.canvas, this.ctx, this.audioManager);
         this.celebrationScreen = new CelebrationScreen(this.canvas, this.ctx, this.audioManager);
@@ -65,6 +79,8 @@ export class Game {
         this.introScreen = new IntroScreen(this.canvas, this.ctx, this.audioManager);
         this.certificateScreen = new CertificateScreen(this.canvas, this.ctx);
         this.questGuide = new QuestGuide(this.canvas, this.ctx);
+
+        this.setupInputRouters();
 
         // 성능 최적화
         this.lastFrameTime = 0;
@@ -82,65 +98,97 @@ export class Game {
     }
 
     async init() {
-        console.log('🚀 게임 초기화 시작...');
+        Logger.info('🚀 게임 초기화 시작...');
 
         // 로딩 화면 시작
         this.loadingScreen.show();
-        console.log('✅ 로딩 화면 초기화 완료');
+        Logger.debug('✅ 로딩 화면 초기화 완료');
 
         // 타이틀 옵션 설정 (새 게임만)
         const titleOptions = ['새 게임 시작'];
         this.titleScreen.setMenuOptions(titleOptions);
-        console.log('✅ 타이틀 화면 옵션 설정 완료');
+        Logger.debug('✅ 타이틀 화면 옵션 설정 완료');
 
 
         // 오디오 초기화
         this.audioManager.init();
-        console.log('✅ 오디오 매니저 초기화 완료');
+        Logger.debug('✅ 오디오 매니저 초기화 완료');
 
         // 이벤트 리스너 설정
         this.setupEventListeners();
-        console.log('✅ 이벤트 리스너 설정 완료');
+        Logger.debug('✅ 이벤트 리스너 설정 완료');
 
         // 게임 루프 시작
-        console.log('🔄 게임 루프 시작...');
+        Logger.info('🔄 게임 루프 시작...');
         this.gameLoop();
     }
 
-    setupEventListeners() {
-        document.addEventListener('keydown', (event) => {
-            this.handleInput(event);
-        });
-
-        this.canvas.addEventListener('mousemove', (event) => {
-            if (this.gameMode === CONSTANTS.GAME_MODES.TITLE) {
-                this.titleScreen.handleMouseMove(event);
-            } else if (this.gameMode === CONSTANTS.GAME_MODES.PLAYING && this.elevatorUI.isVisible) {
-                this.elevatorUI.handleMouseMove(event);
+    setupInputRouters() {
+        this.mouseMoveHandlers = [
+            {
+                isActive: () => this.gameMode === CONSTANTS.GAME_MODES.TITLE,
+                handle: (event) => this.titleScreen.handleMouseMove(event)
+            },
+            {
+                isActive: () => this.gameMode === CONSTANTS.GAME_MODES.PLAYING && this.elevatorUI.isVisible,
+                handle: (event) => this.elevatorUI.handleMouseMove(event)
             }
-        });
+        ];
 
-        this.canvas.addEventListener('click', (event) => {
-            if (this.gameMode === CONSTANTS.GAME_MODES.TITLE) {
-                this.handleTitleClick(event);
-                const result = this.titleScreen.handleMouseClick(event);
-                if (result) {
-                    this.handleTitleSelection(result);
+        this.clickHandlers = [
+            {
+                isActive: () => this.gameMode === CONSTANTS.GAME_MODES.TITLE,
+                handle: (event) => {
+                    this.handleTitleClick(event);
+                    const result = this.titleScreen.handleMouseClick(event);
+                    if (result) {
+                        this.handleTitleSelection(result);
+                    }
                 }
-            } else if (this.gameMode === CONSTANTS.GAME_MODES.PLAYING) {
-                if (this.miniGameSystem.isVisible) {
+            },
+            {
+                isActive: () => this.gameMode === CONSTANTS.GAME_MODES.PLAYING && this.miniGameSystem.isVisible,
+                handle: (event) => {
                     const gameResult = this.miniGameSystem.handleMouseClick(event);
                     if (gameResult === 'close') {
                         this.miniGameSystem.hide();
                     }
-                } else if (this.elevatorUI.isVisible) {
+                }
+            },
+            {
+                isActive: () => this.gameMode === CONSTANTS.GAME_MODES.PLAYING && this.elevatorUI.isVisible,
+                handle: (event) => {
                     const elevatorResult = this.elevatorUI.handleMouseClick(event);
                     if (elevatorResult) {
                         this.handleElevatorAction(elevatorResult);
                     }
                 }
             }
-        });
+        ];
+    }
+
+    setupEventListeners() {
+        document.addEventListener('keydown', this.boundKeyDownHandler);
+        this.canvas.addEventListener('mousemove', this.boundMouseMoveHandler);
+        this.canvas.addEventListener('click', this.boundClickHandler);
+    }
+
+    onCanvasMouseMove(event) {
+        for (const handler of this.mouseMoveHandlers) {
+            if (handler.isActive()) {
+                handler.handle(event);
+                return;
+            }
+        }
+    }
+
+    onCanvasClick(event) {
+        for (const handler of this.clickHandlers) {
+            if (handler.isActive()) {
+                handler.handle(event);
+                return;
+            }
+        }
     }
 
     handleInput(event) {
@@ -396,10 +444,12 @@ export class Game {
 
     toggleDebugMode() {
         this.debugMode = !this.debugMode;
+        Logger.enableDebug(this.debugMode);
         this.inventory.showItemNotification({
             name: this.debugMode ? '🔧 디버그 모드 ON' : '🔧 디버그 모드 OFF'
         });
         this.audioManager.playUIClick();
+        Logger.info(this.debugMode ? '🔧 디버그 모드가 활성화되었습니다.' : '🔧 디버그 모드가 비활성화되었습니다.');
     }
 
     handlePauseMenuAction(action) {
@@ -526,6 +576,8 @@ export class Game {
 
             // 현재 맵을 게임 상태에 기록
             this.gameState.visitMap(this.mapManager.getCurrentMapId());
+        } else {
+            this.player.stopMoving();
         }
 
         // 이동 후 주변 상호작용 요소 확인
@@ -533,7 +585,6 @@ export class Game {
         this.checkNearbyPortal();
         this.checkNearbyElevator();
         this.checkNearbyObject();
-        this.player.stopMoving();
     }
 
     usePortal(portal) {
@@ -565,7 +616,7 @@ export class Game {
     collectItem(item) {
         const collectedItem = this.mapManager.collectItem(item.x, item.y);
         if (collectedItem) {
-            console.log(`✅ 아이템 수집: ${collectedItem.name}`);
+            Logger.debug(`✅ 아이템 수집: ${collectedItem.name}`);
 
             // 아이템 수집 파티클 효과
             const worldPos = this.camera.worldToScreen(item.x, item.y);
@@ -683,13 +734,13 @@ export class Game {
                 }
             } else if (subSubmission.canSubmit) {
                 // 서브 퀘스트 자동으로 아이템 제출 처리
-                console.log(`🔍 서브퀘스트 처리: NPC ${this.nearbyNPC.id}, 인벤토리:`, this.gameState.inventory.map(item => item.name));
+                Logger.debug(`🔍 서브퀘스트 처리: NPC ${this.nearbyNPC.id}, 인벤토리:`, this.gameState.inventory.map(item => item.name));
                 const result = this.questSystem.submitItemsToSubQuestGiver(
                     this.nearbyNPC.id,
                     this.gameState.inventory,
                     this.gameState
                 );
-                console.log(`📋 서브퀘스트 결과:`, result);
+                Logger.debug(`📋 서브퀘스트 결과:`, result);
 
                 if (result.success) {
                     // 서브 퀘스트 보상 파티클 효과
@@ -749,15 +800,15 @@ export class Game {
             } else {
                 // 일반 대화
                 this.startDialog(this.nearbyNPC);
-            }
 
-            // 퀘스트 진행
-            if (this.nearbyNPC.questTarget) {
-                this.questSystem.completeQuest(this.nearbyNPC.questTarget);
+                // 일반 대화에서만 기존 퀘스트 완료 확인
+                if (this.nearbyNPC.questTarget) {
+                    this.questSystem.completeQuest(this.nearbyNPC.questTarget);
 
-                // CEO와 대화하면 게임 완료 체크
-                if (this.nearbyNPC.questTarget === CONSTANTS.QUEST_TARGETS.TALK_TO_CEO) {
-                    this.checkGameCompletion();
+                    // CEO와 대화하면 게임 완료 체크
+                    if (this.nearbyNPC.questTarget === CONSTANTS.QUEST_TARGETS.TALK_TO_CEO) {
+                        this.checkGameCompletion();
+                    }
                 }
             }
         } else if (this.nearbyElevator) {
@@ -891,41 +942,48 @@ export class Game {
 
 
     startNewGame() {
-        console.log('🎮 새 게임 시작...');
+        Logger.info('🎮 새 게임 시작...');
 
         // 인트로는 이미 봤으니 바로 게임 시작
         this.startGameAfterIntro();
     }
 
     startGameAfterIntro() {
-        console.log('🎮 인트로 완료 후 게임 시작...');
+        Logger.info('🎮 인트로 완료 후 게임 시작...');
 
         // 초기 상태로 리셋 - 로비에서 시작 (엘리베이터 바로 앞)
+        this.secretClickCount = 0;
+        this.konamiActivated = false;
+        this.konamiIndex = 0;
+        this.debugMode = false;
+        Logger.enableDebug(false);
+
         const mapSet = this.mapManager.setCurrentMap(CONSTANTS.MAPS.LOBBY);
-        console.log('맵 설정 결과:', mapSet, '현재 맵:', this.mapManager.getCurrentMapId());
+        Logger.debug('맵 설정 결과:', mapSet, '현재 맵:', this.mapManager.getCurrentMapId());
 
         this.player = new Player(33, 15);
-        console.log('플레이어 생성:', this.player.x, this.player.y);
+        Logger.debug('플레이어 생성:', this.player.x, this.player.y);
 
         this.gameState = new GameState();
         this.questSystem = new QuestSystem(this.audioManager);
 
         this.camera.update(this.player.x, this.player.y);
-        console.log('카메라 업데이트 완료');
+        Logger.debug('카메라 업데이트 완료');
 
         this.gameMode = CONSTANTS.GAME_MODES.PLAYING;
-        console.log('게임 모드 변경:', this.gameMode);
+        Logger.debug('게임 모드 변경:', this.gameMode);
 
         // 게임 시작 시 모든 UI 닫기
         this.questSystem.hideQuestUIPanel();
         this.inventory.hide();
         this.minimap.hide();
 
+        this.inventory.showItemNotification({ name: '동전 5,000원을 지급받았습니다.' });
         this.inventory.showItemNotification({ name: '휴넷 26주년 게임을 시작합니다!' });
 
         // 튜토리얼 완료 콜백 설정
         this.tutorialSystem.setOnComplete(() => {
-            console.log('✅ 튜토리얼 완료! 정상적인 게임플레이 시작');
+            Logger.info('✅ 튜토리얼 완료! 정상적인 게임플레이 시작');
         });
 
         // 튜토리얼 자동 시작
@@ -933,7 +991,7 @@ export class Game {
             this.tutorialSystem.start();
         }, 1000);
 
-        console.log('✅ 새 게임 시작 완료');
+        Logger.info('✅ 새 게임 시작 완료');
     }
 
     update() {
@@ -944,10 +1002,10 @@ export class Game {
 
             // 로딩 완료 시 1999년 레트로 인트로로 전환
             if (this.loadingScreen.isComplete()) {
-                console.log('🖥️ 1999년 레트로 부팅 시퀀스 시작...');
+                Logger.info('🖥️ 1999년 레트로 부팅 시퀀스 시작...');
                 this.gameMode = CONSTANTS.GAME_MODES.INTRO;
                 this.introScreen.start(() => {
-                    console.log('📋 시작하기 화면으로 전환...');
+                    Logger.info('📋 시작하기 화면으로 전환...');
                     this.gameMode = CONSTANTS.GAME_MODES.TITLE;
                 });
             }
@@ -995,8 +1053,8 @@ export class Game {
                 return;
             }
         } catch (error) {
-            console.error('❌ Draw 메서드 오류 (첫 부분):', error);
-            console.log('현재 게임 모드:', this.gameMode);
+            Logger.error('❌ Draw 메서드 오류 (첫 부분):', error);
+            Logger.debug('현재 게임 모드:', this.gameMode);
         }
 
         if (this.gameMode === CONSTANTS.GAME_MODES.PLAYING) {
@@ -1004,7 +1062,7 @@ export class Game {
                 const currentMap = this.mapManager.getCurrentMap();
 
                 if (!currentMap) {
-                    console.error('현재 맵이 로딩되지 않았습니다:', this.mapManager.getCurrentMapId());
+                    Logger.error('현재 맵이 로딩되지 않았습니다:', this.mapManager.getCurrentMapId());
                     return;
                 }
 
@@ -1018,7 +1076,7 @@ export class Game {
                 this.renderer.drawInteractableObjects(this.camera, this.mapManager);
                 this.renderer.drawNPCs(this.camera, currentMap, this.questSystem);
             } catch (error) {
-                console.error('❌ 월드 렌더링 오류:', error);
+                Logger.error('❌ 월드 렌더링 오류:', error);
             }
 
             try {
@@ -1034,7 +1092,7 @@ export class Game {
                     animPos.bobOffset
                 );
             } catch (error) {
-                console.error('❌ 플레이어 렌더링 오류:', error);
+                Logger.error('❌ 플레이어 렌더링 오류:', error);
             }
 
             // 플레이어 이름 표시
@@ -1124,7 +1182,7 @@ export class Game {
             // 다음 프레임 요청
             this.animationFrameId = requestAnimationFrame((time) => this.gameLoop(time));
         } catch (error) {
-            console.error('❌ 게임 루프 오류:', error);
+            Logger.error('❌ 게임 루프 오류:', error);
             // 오류 발생 시에도 게임 루프 계속 실행
             this.animationFrameId = requestAnimationFrame((time) => this.gameLoop(time));
         }
@@ -1138,9 +1196,9 @@ export class Game {
         }
 
         // 이벤트 리스너 정리
-        document.removeEventListener('keydown', this.handleInput);
-        this.canvas.removeEventListener('mousemove', this.handleMouseMove);
-        this.canvas.removeEventListener('click', this.handleClick);
+        document.removeEventListener('keydown', this.boundKeyDownHandler);
+        this.canvas.removeEventListener('mousemove', this.boundMouseMoveHandler);
+        this.canvas.removeEventListener('click', this.boundClickHandler);
 
         // 오디오 정리
         if (this.audioManager) {
