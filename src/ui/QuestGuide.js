@@ -308,7 +308,10 @@ export class QuestGuide {
             }
 
             // 같은 층 내에서 이동
-            if (currentFloor === 7) {
+            if (currentFloor === 1) {
+                // 1층 로비에서는 이미 같은 공간이므로
+                return `➤ ${npcName}를 찾아서 대화하세요! ${submissionLocation.icon} 아이콘을 찾으세요`;
+            } else if (currentFloor === 7) {
                 if (submissionLocation.map === 'floor_7_corridor') {
                     return `🚪 복도로 나가서 → ${npcName} 찾기 → 대화하여 제출`;
                 }
