@@ -24,7 +24,13 @@ export class MapData {
             plants: [],
             printers: [],
             meetingTables: [],
-            elevatorDoors: []
+            elevatorDoors: [],
+            // 새로운 상호작용 오브젝트들
+            vendingMachines: [],
+            interactableComputers: [],
+            interactablePrinters: [],
+            whiteboards: [],
+            coffeeMachines: []
         };
     }
 
@@ -38,6 +44,7 @@ export class MapData {
                 walls: this.generateWalls(),
                 officeItems: {
                     ...officeItems,
+                    // 로비에는 화분과 기본적인 로비 가구만
                     plants: [
                         {x: 5, y: 5}, {x: 30, y: 5}, {x: 5, y: 25}, {x: 30, y: 25},
                         {x: 10, y: 15}, {x: 25, y: 15}, {x: 15, y: 8}, {x: 20, y: 22}
@@ -47,17 +54,15 @@ export class MapData {
                         {x: 34, y: 15}, {x: 35, y: 15}, {x: 36, y: 15}, {x: 37, y: 15},
                         {x: 34, y: 16}, {x: 35, y: 16}, {x: 36, y: 16}, {x: 37, y: 16}
                     ],
-                    desks: [
-                        {x: 8, y: 10}, {x: 12, y: 10}, {x: 22, y: 10}, {x: 26, y: 10},
-                        {x: 8, y: 20}, {x: 12, y: 20}, {x: 22, y: 20}, {x: 26, y: 20}
+                    // 로비에는 데스크, 의자, 컴퓨터 제거
+                    // 상호작용 오브젝트들 - 로비에 적절한 것들만
+                    vendingMachines: [
+                        {x: 2, y: 10, type: 'drink'}, // 음료 자판기
+                        {x: 2, y: 20, type: 'snack'}  // 간식 자판기
                     ],
-                    chairs: [
-                        {x: 9, y: 10}, {x: 13, y: 10}, {x: 23, y: 10}, {x: 27, y: 10},
-                        {x: 9, y: 20}, {x: 13, y: 20}, {x: 23, y: 20}, {x: 27, y: 20}
-                    ],
-                    computers: [
-                        {x: 8, y: 9}, {x: 12, y: 9}, {x: 22, y: 9}, {x: 26, y: 9},
-                        {x: 8, y: 19}, {x: 12, y: 19}, {x: 22, y: 19}, {x: 26, y: 19}
+                    // 로비 안내 컴퓨터 제거 - 실제 로비에는 부적절
+                    coffeeMachines: [
+                        {x: 32, y: 8} // 커피머신
                     ]
                 },
                 npcs: [
@@ -130,7 +135,9 @@ export class MapData {
                 items: [
                     { x: 18, y: 12, type: 'quest', name: '프린터 수리 도구', icon: '🔧' },
                     { x: 4, y: 15, type: 'quest', name: '따뜻한 차', icon: '🍵' },
-                    { x: 32, y: 18, type: 'quest', name: '청소 도구 세트', icon: '🧹' }
+                    { x: 32, y: 18, type: 'quest', name: '청소 도구 세트', icon: '🧹' },
+                    { x: 28, y: 12, type: 'currency', name: '동전', icon: '🪙', quantity: 5000 },
+                    { x: 16, y: 18, type: 'currency', name: '동전', icon: '🪙', quantity: 3000 }
                 ],
                 portals: [
                     {
@@ -173,11 +180,23 @@ export class MapData {
                     elevatorDoors: [
                         {x: 18, y: 7}, {x: 19, y: 7}, {x: 20, y: 7}, {x: 21, y: 7}, {x: 22, y: 7}
                     ],
-                    desks: [
-                        {x: 10, y: 10}, {x: 30, y: 10}, {x: 10, y: 20}, {x: 30, y: 20}
+                    // 복도에는 데스크, 의자 제거 - 화분이나 벤치 정도만
+                    plants: [
+                        {x: 10, y: 12}, {x: 30, y: 12}, {x: 10, y: 18}, {x: 30, y: 18}
                     ],
-                    chairs: [
-                        {x: 11, y: 10}, {x: 31, y: 10}, {x: 11, y: 20}, {x: 31, y: 20}
+                    // 상호작용 오브젝트들
+                    interactablePrinters: [
+                        {x: 35, y: 12, type: 'office'} // 사무용 프린터
+                    ],
+                    interactableComputers: [
+                        {x: 6, y: 18, type: 'office'} // 업무용 컴퓨터
+                    ],
+                    vendingMachines: [
+                        {x: 2, y: 15, type: 'drink'} // 음료 자판기
+                    ],
+                    whiteboards: [
+                        {x: 15, y: 3}, // 화이트보드
+                        {x: 25, y: 27}
                     ]
                 },
                 npcs: [
@@ -362,15 +381,10 @@ export class MapData {
                     elevatorDoors: [
                         {x: 18, y: 28}, {x: 19, y: 28}, {x: 20, y: 28}, {x: 21, y: 28}, {x: 22, y: 28}
                     ],
+                    // 복도에는 화분만 - 데스크, 의자 제거
                     plants: [
                         {x: 5, y: 5}, {x: 35, y: 5}, {x: 5, y: 25}, {x: 35, y: 25},
                         {x: 10, y: 15}, {x: 30, y: 15}
-                    ],
-                    desks: [
-                        {x: 8, y: 10}, {x: 32, y: 10}, {x: 8, y: 20}, {x: 32, y: 20}
-                    ],
-                    chairs: [
-                        {x: 9, y: 10}, {x: 33, y: 10}, {x: 9, y: 20}, {x: 33, y: 20}
                     ]
                 },
                 npcs: [

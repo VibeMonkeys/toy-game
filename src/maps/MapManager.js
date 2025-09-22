@@ -1,15 +1,54 @@
 import { CONSTANTS } from '../utils/Constants.js';
 import { MapData } from './MapData.js';
+import { VendingMachine } from '../objects/VendingMachine.js';
+import { Computer } from '../objects/Computer.js';
+import { Printer } from '../objects/Printer.js';
 
 export class MapManager {
     constructor() {
         this.maps = {};
         this.currentMapId = CONSTANTS.MAPS.LOBBY;
+        this.interactableObjects = {}; // 맵별 상호작용 오브젝트 저장
         this.initializeMaps();
     }
 
     initializeMaps() {
         this.maps = MapData.getAllMaps();
+        this.initializeInteractableObjects();
+    }
+
+    // 상호작용 오브젝트 초기화
+    initializeInteractableObjects() {
+        Object.keys(this.maps).forEach(mapId => {
+            this.interactableObjects[mapId] = [];
+            const map = this.maps[mapId];
+
+            if (map.officeItems) {
+                // 자판기 초기화
+                if (map.officeItems.vendingMachines) {
+                    map.officeItems.vendingMachines.forEach(data => {
+                        const vendingMachine = new VendingMachine(data.x, data.y, data.type);
+                        this.interactableObjects[mapId].push(vendingMachine);
+                    });
+                }
+
+                // 컴퓨터 초기화
+                if (map.officeItems.interactableComputers) {
+                    map.officeItems.interactableComputers.forEach(data => {
+                        const computer = new Computer(data.x, data.y, data.type);
+                        this.interactableObjects[mapId].push(computer);
+                    });
+                }
+
+                // 프린터 초기화
+                if (map.officeItems.interactablePrinters) {
+                    map.officeItems.interactablePrinters.forEach(data => {
+                        const printer = new Printer(data.x, data.y, data.type);
+                        this.interactableObjects[mapId].push(printer);
+                    });
+                }
+            }
+        });
     }
 
     getCurrentMap() {
@@ -113,6 +152,63 @@ export class MapManager {
             return item;
         }
         return null;
+    }
+
+    // 상호작용 오브젝트 관련 메서드들
+    getCurrentMapObjects() {
+        return this.interactableObjects[this.currentMapId] || [];
+    }
+
+    getNearbyObject(x, y, range = 1) {
+        const objects = this.getCurrentMapObjects();
+
+        for (let obj of objects) {
+            if (obj.isPlayerNearby(x, y, range)) {
+                return obj;
+            }
+        }
+        return null;
+    }
+
+    getObjectAt(x, y) {
+        const objects = this.getCurrentMapObjects();
+
+        for (let obj of objects) {
+            if (obj.x === x && obj.y === y) {
+                return obj;
+            }
+        }
+        return null;
+    }
+
+    updateObjects(deltaTime) {
+        const objects = this.getCurrentMapObjects();
+        objects.forEach(obj => {
+            if (obj.update) {
+                obj.update(deltaTime);
+            }
+        });
+    }
+
+    // 오브젝트 타입별 검색
+    getObjectsByType(type) {
+        const objects = this.getCurrentMapObjects();
+        return objects.filter(obj => obj.type === type);
+    }
+
+    // 모든 자판기 반환
+    getVendingMachines() {
+        return this.getObjectsByType(CONSTANTS.OBJECT_TYPES.VENDING_MACHINE);
+    }
+
+    // 모든 컴퓨터 반환
+    getComputers() {
+        return this.getObjectsByType(CONSTANTS.OBJECT_TYPES.COMPUTER);
+    }
+
+    // 모든 프린터 반환
+    getPrinters() {
+        return this.getObjectsByType(CONSTANTS.OBJECT_TYPES.PRINTER);
     }
 
 };

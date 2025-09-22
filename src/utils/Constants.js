@@ -105,5 +105,13 @@ export const CONSTANTS = {
         ROOFTOP: 'R'
     },
 
-    ELEVATOR_FLOORS: [1, 7, 8, 9, 'R']
+    ELEVATOR_FLOORS: [1, 7, 8, 9, 'R'],
+
+    OBJECT_TYPES: {
+        VENDING_MACHINE: 'vending_machine',
+        COMPUTER: 'computer',
+        PRINTER: 'printer',
+        WHITEBOARD: 'whiteboard',
+        COFFEE_MACHINE: 'coffee_machine'
+    }
 };

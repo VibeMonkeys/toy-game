@@ -1,11 +1,31 @@
 import { CONSTANTS } from '../utils/Constants.js';
 
 export class Renderer {
-    constructor(canvas, ctx, animationSystem = null) {
+    constructor(canvas, ctx, animationSystem = null, spriteManager = null) {
         this.canvas = canvas;
         this.ctx = ctx;
         this.tileSize = CONSTANTS.TILE_SIZE;
         this.animationSystem = animationSystem;
+        this.spriteManager = spriteManager;
+
+        // 스프라이트 사용 여부 (폴백 지원)
+        this.useSprites = false;
+    }
+
+    // 스프라이트 매니저 설정
+    setSpriteManager(spriteManager) {
+        this.spriteManager = spriteManager;
+        this.useSprites = spriteManager && spriteManager.isLoaded();
+        console.log('🎨 Renderer: 스프라이트 매니저 설정 완료');
+        console.log('🎨 Renderer: 스프라이트 사용 가능:', this.useSprites);
+        if (this.spriteManager) {
+            console.log('🎨 Renderer: 스프라이트 매니저 로딩 상태:', this.spriteManager.isLoaded());
+            console.log('🎨 Renderer: 캐릭터 타일셋 사용 가능:', this.spriteManager.hasTileset('characters'));
+            console.log('🎨 Renderer: 탑다운 타일셋 사용 가능:', this.spriteManager.hasTileset('topdown_tiles'));
+            console.log('🎨 Renderer: 모든 타일셋:', Object.keys(this.spriteManager.tilesets || {}));
+        } else {
+            console.error('❌ Renderer: 스프라이트 매니저가 null입니다!');
+        }
     }
 
     clearScreen() {
@@ -29,22 +49,53 @@ export class Renderer {
         const screenX = screenPos.x;
         const screenY = screenPos.y;
 
-        // 맵별 타일 스타일
-        switch (currentMap.name) {
-            case '휴넷 로비':
-                this.drawLobbyTile(screenX, screenY, x, y);
-                break;
-            case 'CEO실':
-                this.drawExecutiveTile(screenX, screenY, x, y);
-                break;
-            case '회의실':
-            case '카페테리아':
-                this.drawOfficeTile(screenX, screenY, x, y);
-                break;
-            default:
-                this.drawDefaultTile(screenX, screenY, x, y);
-                break;
+        // 스프라이트를 사용할 수 있는 경우
+        if (this.spriteManager && this.spriteManager.hasTileset('topdown_tiles')) {
+            this.drawSpritedFloorTile(screenX, screenY, x, y, currentMap);
+            return;
         }
+
+        // 폴백: 단순한 단색 바닥
+        this.drawSolidFloorTile(screenX, screenY);
+    }
+
+    // 스프라이트를 사용한 바닥 타일 렌더링
+    drawSpritedFloorTile(screenX, screenY, x, y, currentMap) {
+        // 스프라이트 대신 단순한 단색 바닥 사용
+        this.drawSolidFloorTile(screenX, screenY);
+    }
+
+    // 단순한 단색 바닥 타일
+    drawSolidFloorTile(screenX, screenY) {
+        // 깔끔한 갈색 단색 바닥
+        this.ctx.fillStyle = '#D2B48C'; // 연한 갈색 (tan)
+        // 또는 하얀색을 원하면: this.ctx.fillStyle = '#F5F5F5';
+        this.ctx.fillRect(screenX, screenY, this.tileSize, this.tileSize);
+
+        // 타일 경계선 (아주 옅게)
+        this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.05)';
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeRect(screenX, screenY, this.tileSize, this.tileSize);
+    }
+
+    // 통일된 갈색 마룻바닥 타일 (폴백용)
+    drawWoodenFloorTile(screenX, screenY, x, y) {
+        // 고급 우드 패턴 - 갈색 계열로 통일
+        const woodColors = ['#d4a574', '#c19660', '#b8874c'];
+        const colorIndex = (x * 3 + y * 7) % woodColors.length;
+
+        this.ctx.fillStyle = woodColors[colorIndex];
+        this.ctx.fillRect(screenX, screenY, this.tileSize, this.tileSize);
+
+        // 나무 결
+        this.ctx.strokeStyle = 'rgba(139, 69, 19, 0.2)';
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        for (let i = 0; i < 3; i++) {
+            this.ctx.moveTo(screenX, screenY + (i * this.tileSize / 3));
+            this.ctx.lineTo(screenX + this.tileSize, screenY + (i * this.tileSize / 3) + 5);
+        }
+        this.ctx.stroke();
     }
 
     drawLobbyTile(screenX, screenY, x, y) {
@@ -145,6 +196,165 @@ export class Renderer {
         this.drawOfficeItemType(camera, currentMap.officeItems.elevatorDoors, '#C0C0C0', '엘리베이터문');
     }
 
+    // 상호작용 오브젝트 렌더링
+    drawInteractableObjects(camera, mapManager) {
+        const objects = mapManager.getCurrentMapObjects();
+
+        objects.forEach(obj => {
+            if (!camera.isInView(obj.x, obj.y)) return;
+
+            const screenPos = camera.worldToScreen(obj.x, obj.y);
+            const screenX = screenPos.x;
+            const screenY = screenPos.y;
+
+            this.drawInteractableObject(obj, screenX, screenY);
+        });
+    }
+
+    drawInteractableObject(obj, screenX, screenY) {
+        // 스프라이트 사용 가능 시 실제 가구 스프라이트 그리기
+        if (this.spriteManager) {
+            let furnitureType = null;
+
+            switch (obj.type) {
+                case CONSTANTS.OBJECT_TYPES.VENDING_MACHINE:
+                    // 자판기 타입에 따라 다른 스프라이트 사용
+                    const vendingSprite = obj.machineType === 'drink' ? 'vending_machine_drink' : 'vending_machine_snack';
+                    if (this.spriteManager.hasSprite(vendingSprite)) {
+                        // 상호작용 중일 때 효과
+                        if (obj.isInteracting) {
+                            const pulse = Math.sin(Date.now() * 0.01) * 0.1 + 0.9;
+                            this.ctx.globalAlpha = pulse;
+                        }
+
+                        const sprite = this.spriteManager.getSprite(vendingSprite);
+                        this.ctx.drawImage(sprite, screenX, screenY, this.tileSize, this.tileSize);
+
+                        // 상호작용 표시
+                        if (obj.canInteract()) {
+                            this.ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+                            this.ctx.fillRect(screenX, screenY, this.tileSize, this.tileSize);
+                        }
+
+                        this.ctx.globalAlpha = 1.0;
+                        this.ctx.fillStyle = '#000000';
+                        this.ctx.font = '10px Arial';
+                        this.ctx.textAlign = 'center';
+                        this.ctx.fillText(obj.name, screenX + this.tileSize/2, screenY + this.tileSize + 12);
+                        return; // 완료
+                    } else {
+                        furnitureType = 'bookshelf'; // 폴백
+                    }
+                    break;
+                case CONSTANTS.OBJECT_TYPES.COMPUTER:
+                    furnitureType = 'monitor';
+                    break;
+                case CONSTANTS.OBJECT_TYPES.PRINTER:
+                    furnitureType = 'desk';
+                    break;
+            }
+
+            if (furnitureType && this.spriteManager.hasSprite(`office_${furnitureType}`)) {
+                // 상호작용 중일 때 효과
+                if (obj.isInteracting) {
+                    const pulse = Math.sin(Date.now() * 0.01) * 0.1 + 0.9;
+                    this.ctx.globalAlpha = pulse;
+                }
+
+                // 가구 스프라이트 그리기
+                this.spriteManager.drawOfficeFurniture(this.ctx, furnitureType, screenX, screenY, this.tileSize, this.tileSize);
+
+                // 상호작용 가능 표시
+                if (obj.canInteract()) {
+                    this.ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+                    this.ctx.fillRect(screenX, screenY, this.tileSize, this.tileSize);
+                } else {
+                    this.ctx.fillStyle = 'rgba(100, 100, 100, 0.5)';
+                    this.ctx.fillRect(screenX, screenY, this.tileSize, this.tileSize);
+                }
+
+                // 투명도 초기화
+                this.ctx.globalAlpha = 1.0;
+
+                // 오브젝트 이름 표시
+                this.ctx.fillStyle = '#000000';
+                this.ctx.font = '10px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText(obj.name, screenX + this.tileSize/2, screenY + this.tileSize + 12);
+                return; // 스프라이트 그리기 완료
+            }
+        }
+
+        // 폴백: 기존 이모지 방식
+        let backgroundColor, emoji, textColor = '#000000';
+
+        switch (obj.type) {
+            case CONSTANTS.OBJECT_TYPES.VENDING_MACHINE:
+                backgroundColor = obj.machineType === 'drink' ? '#4169E1' : '#FF6347';
+                emoji = obj.machineType === 'drink' ? '🥤' : '🍫';
+                break;
+            case CONSTANTS.OBJECT_TYPES.COMPUTER:
+                backgroundColor = '#2F4F4F';
+                emoji = '💻';
+                textColor = '#FFFFFF';
+                break;
+            case CONSTANTS.OBJECT_TYPES.PRINTER:
+                backgroundColor = '#A9A9A9';
+                emoji = '🖨️';
+                break;
+            default:
+                backgroundColor = '#808080';
+                emoji = '📦';
+        }
+
+        // 상호작용 가능 상태에 따른 시각적 효과
+        if (!obj.canInteract()) {
+            backgroundColor = '#666666';
+            textColor = '#CCCCCC';
+        } else if (obj.isInteracting) {
+            // 상호작용 중일 때 애니메이션 효과
+            const pulse = Math.sin(Date.now() * 0.01) * 0.1 + 0.9;
+            this.ctx.globalAlpha = pulse;
+        }
+
+        // 오브젝트 배경
+        this.ctx.fillStyle = backgroundColor;
+        this.ctx.fillRect(screenX, screenY, this.tileSize, this.tileSize);
+
+        // 테두리
+        this.ctx.strokeStyle = obj.canInteract() ? '#000000' : '#444444';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(screenX, screenY, this.tileSize, this.tileSize);
+
+        // 이모지
+        this.ctx.fillStyle = textColor;
+        this.ctx.font = 'bold 20px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText(emoji, screenX + this.tileSize/2, screenY + this.tileSize/2 + 7);
+
+        // 상태 표시 (쿨다운, 에러 등)
+        if (!obj.canInteract()) {
+            this.ctx.fillStyle = 'rgba(255, 0, 0, 0.6)';
+            this.ctx.fillRect(screenX, screenY + this.tileSize - 8, this.tileSize, 8);
+        }
+
+        // 상호작용 중일 때 특별한 표시
+        if (obj.isInteracting) {
+            this.ctx.fillStyle = 'rgba(255, 255, 0, 0.8)';
+            this.ctx.strokeStyle = '#FFD700';
+            this.ctx.lineWidth = 3;
+            this.ctx.strokeRect(screenX - 2, screenY - 2, this.tileSize + 4, this.tileSize + 4);
+        }
+
+        // 투명도 초기화
+        this.ctx.globalAlpha = 1.0;
+
+        // 오브젝트 이름 표시 (작은 글씨)
+        this.ctx.fillStyle = '#000000';
+        this.ctx.font = '10px Arial';
+        this.ctx.fillText(obj.name, screenX + this.tileSize/2, screenY + this.tileSize + 12);
+    }
+
     drawElevatorPanel(camera, currentMap) {
         if (!currentMap || !currentMap.elevatorPanel) return;
 
@@ -179,22 +389,39 @@ export class Renderer {
     drawOfficeItemType(camera, items, color, type) {
         if (!items) return;
 
-        this.ctx.fillStyle = color;
-
         for (let item of items) {
             if (camera.isInView(item.x, item.y)) {
                 const screenPos = camera.worldToScreen(item.x, item.y);
 
-                if (type === '화분') {
-                    this.drawPlant(screenPos.x, screenPos.y);
-                } else if (type === '모니터') {
-                    this.drawMonitor(screenPos.x, screenPos.y);
-                } else if (type === '의자') {
-                    this.drawChair(screenPos.x, screenPos.y);
-                } else if (type === '엘리베이터문') {
-                    this.drawElevatorDoor(screenPos.x, screenPos.y);
+                // 스프라이트 사용 가능 시 실제 가구 스프라이트 그리기
+                if (this.useSprites && this.spriteManager) {
+                    if (type === '데스크') {
+                        this.spriteManager.drawOfficeFurniture(this.ctx, 'desk', screenPos.x, screenPos.y, this.tileSize, this.tileSize);
+                    } else if (type === '의자') {
+                        this.spriteManager.drawOfficeFurniture(this.ctx, 'chair', screenPos.x, screenPos.y, this.tileSize, this.tileSize);
+                    } else if (type === '컴퓨터' || type === '모니터') {
+                        this.spriteManager.drawOfficeFurniture(this.ctx, 'monitor', screenPos.x, screenPos.y, this.tileSize, this.tileSize);
+                    } else if (type === '화분') {
+                        this.spriteManager.drawOfficeFurniture(this.ctx, 'plant', screenPos.x, screenPos.y, this.tileSize, this.tileSize);
+                    } else {
+                        // 기본 폴백
+                        this.ctx.fillStyle = color;
+                        this.ctx.fillRect(screenPos.x + 4, screenPos.y + 4, this.tileSize - 8, this.tileSize - 8);
+                    }
                 } else {
-                    this.ctx.fillRect(screenPos.x + 4, screenPos.y + 4, this.tileSize - 8, this.tileSize - 8);
+                    // 폴백: 기존 방식
+                    this.ctx.fillStyle = color;
+                    if (type === '화분') {
+                        this.drawPlant(screenPos.x, screenPos.y);
+                    } else if (type === '모니터') {
+                        this.drawMonitor(screenPos.x, screenPos.y);
+                    } else if (type === '의자') {
+                        this.drawChair(screenPos.x, screenPos.y);
+                    } else if (type === '엘리베이터문') {
+                        this.drawElevatorDoor(screenPos.x, screenPos.y);
+                    } else {
+                        this.ctx.fillRect(screenPos.x + 4, screenPos.y + 4, this.tileSize - 8, this.tileSize - 8);
+                    }
                 }
             }
         }
@@ -392,22 +619,32 @@ export class Renderer {
         this.ctx.fillText(item.name, centerX, screenY - 5);
     }
 
-    drawPixelCharacter(x, y, direction, isPlayer = false, customColor = null, camera, bobOffset = 0) {
+    drawPixelCharacter(x, y, direction, isPlayer = false, customColor = null, camera, bobOffset = 0, npcIndex = 0) {
         const screenPos = camera.worldToScreen(x, y);
-        const screenX = screenPos.x + this.tileSize/2;
-        const screenY = screenPos.y + this.tileSize/2 + (bobOffset || 0);
+        const screenX = screenPos.x;
+        const screenY = screenPos.y + (bobOffset || 0);
+
+        // 스프라이트를 사용할 수 있는 경우 - 조건 수정
+        if (this.spriteManager && this.spriteManager.hasTileset('characters')) {
+            this.drawCharacterSprite(screenX, screenY, direction, isPlayer, customColor, npcIndex);
+            return;
+        }
+
+        // 폴백: 기존 픽셀 아트 방식
+        const centerX = screenX + this.tileSize/2;
+        const centerY = screenY + this.tileSize/2;
 
         // 캐릭터 색상
         let characterColor = customColor || (isPlayer ? '#0000FF' : '#FF0000');
 
         // 몸체
         this.ctx.fillStyle = characterColor;
-        this.ctx.fillRect(screenX - 8, screenY - 8, 16, 20);
+        this.ctx.fillRect(centerX - 8, centerY - 8, 16, 20);
 
         // 머리
         this.ctx.fillStyle = '#FFDBAC';
         this.ctx.beginPath();
-        this.ctx.arc(screenX, screenY - 12, 8, 0, Math.PI * 2);
+        this.ctx.arc(centerX, centerY - 12, 8, 0, Math.PI * 2);
         this.ctx.fill();
 
         // 방향 표시 (화살표)
@@ -416,29 +653,87 @@ export class Renderer {
 
         switch (direction) {
             case CONSTANTS.DIRECTIONS.UP:
-                this.ctx.moveTo(screenX, screenY - 18);
-                this.ctx.lineTo(screenX - 4, screenY - 14);
-                this.ctx.lineTo(screenX + 4, screenY - 14);
+                this.ctx.moveTo(centerX, centerY - 18);
+                this.ctx.lineTo(centerX - 4, centerY - 14);
+                this.ctx.lineTo(centerX + 4, centerY - 14);
                 break;
             case CONSTANTS.DIRECTIONS.DOWN:
-                this.ctx.moveTo(screenX, screenY - 6);
-                this.ctx.lineTo(screenX - 4, screenY - 10);
-                this.ctx.lineTo(screenX + 4, screenY - 10);
+                this.ctx.moveTo(centerX, centerY - 6);
+                this.ctx.lineTo(centerX - 4, centerY - 10);
+                this.ctx.lineTo(centerX + 4, centerY - 10);
                 break;
             case CONSTANTS.DIRECTIONS.LEFT:
-                this.ctx.moveTo(screenX - 12, screenY - 12);
-                this.ctx.lineTo(screenX - 8, screenY - 8);
-                this.ctx.lineTo(screenX - 8, screenY - 16);
+                this.ctx.moveTo(centerX - 12, centerY - 12);
+                this.ctx.lineTo(centerX - 8, centerY - 8);
+                this.ctx.lineTo(centerX - 8, centerY - 16);
                 break;
             case CONSTANTS.DIRECTIONS.RIGHT:
-                this.ctx.moveTo(screenX + 12, screenY - 12);
-                this.ctx.lineTo(screenX + 8, screenY - 8);
-                this.ctx.lineTo(screenX + 8, screenY - 16);
+                this.ctx.moveTo(centerX + 12, centerY - 12);
+                this.ctx.lineTo(centerX + 8, centerY - 8);
+                this.ctx.lineTo(centerX + 8, centerY - 16);
                 break;
         }
 
         this.ctx.closePath();
         this.ctx.fill();
+    }
+
+    // 캐릭터 스프라이트 그리기
+    drawCharacterSprite(screenX, screenY, direction, isPlayer = false, customColor = null, npcIndex = 0) {
+        if (isPlayer) {
+            // 플레이어는 기본 캐릭터 시트의 첫 번째 캐릭터
+            this.spriteManager.drawTile(this.ctx, 'characters', 0, screenX, screenY, this.tileSize, this.tileSize);
+        } else {
+            // NPC는 기존 16x16 캐릭터 시트들만 사용 (간단하고 안정적)
+            const characterSets = [
+                'characters',
+                'office_workers_1',
+                'office_workers_2',
+                'eight_bit_rpg'
+            ];
+
+            // NPC 인덱스에 따라 다른 캐릭터 시트와 인덱스 선택
+            const setIndex = npcIndex % characterSets.length;
+            const tilesetName = characterSets[setIndex];
+            const characterIndex = Math.floor(npcIndex / characterSets.length) % 8; // 0-7번 캐릭터 사용
+
+            if (this.spriteManager.hasTileset(tilesetName)) {
+                // 타일셋 정보 확인 (디버깅용)
+                const tilesetInfo = this.spriteManager.getTilesetInfo(tilesetName);
+                console.log(`🔍 NPC ${npcIndex}: ${tilesetName}, index ${characterIndex}, tileset info:`, tilesetInfo);
+
+                this.spriteManager.drawTile(this.ctx, tilesetName, characterIndex, screenX, screenY, this.tileSize, this.tileSize);
+            } else {
+                // 폴백: 기본 캐릭터 시트 사용
+                console.log(`⚠️ NPC ${npcIndex}: ${tilesetName} not found, using fallback`);
+                this.spriteManager.drawTile(this.ctx, 'characters', characterIndex, screenX, screenY, this.tileSize, this.tileSize);
+            }
+        }
+    }
+
+    // 방향과 행에 따른 캐릭터 인덱스 계산
+    getCharacterIndex(direction, row, cols) {
+        let colOffset = 0;
+
+        switch (direction) {
+            case CONSTANTS.DIRECTIONS.DOWN:
+                colOffset = 0; // 정면
+                break;
+            case CONSTANTS.DIRECTIONS.UP:
+                colOffset = cols === 8 ? 6 : 9; // 뒷면
+                break;
+            case CONSTANTS.DIRECTIONS.LEFT:
+                colOffset = cols === 8 ? 2 : 3; // 왼쪽
+                break;
+            case CONSTANTS.DIRECTIONS.RIGHT:
+                colOffset = cols === 8 ? 4 : 6; // 오른쪽
+                break;
+            default:
+                colOffset = 0;
+                break;
+        }
+
+        return row * cols + colOffset;
     }
 
     drawNPCs(camera, currentMap, questSystem = null) {
@@ -453,10 +748,10 @@ export class Renderer {
     }
 
     drawNPC(npc, index, camera, questSystem = null) {
-        // 모든 NPC는 검은옷을 입은 단순한 형태
-        const characterColor = '#000000'; // 검은색 옷
+        // NPC마다 다른 캐릭터 사용
+        const characterColor = null; // 스프라이트의 원래 색상 사용
 
-        this.drawPixelCharacter(npc.x, npc.y, 'down', false, characterColor, camera);
+        this.drawPixelCharacter(npc.x, npc.y, 'down', false, characterColor, camera, 0, index);
 
         const screenPos = camera.worldToScreen(npc.x, npc.y);
 

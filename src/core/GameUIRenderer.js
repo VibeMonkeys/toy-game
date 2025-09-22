@@ -35,7 +35,7 @@ export class GameUIRenderer {
     }
 
     // 상호작용 힌트 그리기
-    drawInteractionHint(nearbyNPC, nearbyElevator, nearbyPortal) {
+    drawInteractionHint(nearbyNPC, nearbyElevator, nearbyPortal, nearbyObject) {
         let message = '';
         let icon = '';
 
@@ -48,6 +48,22 @@ export class GameUIRenderer {
         } else if (nearbyPortal) {
             message = `${nearbyPortal.name}(으)로 이동하기`;
             icon = '🚪';
+        } else if (nearbyObject) {
+            message = nearbyObject.getHintText();
+            // 오브젝트 타입에 따른 아이콘
+            switch (nearbyObject.type) {
+                case 'vending_machine':
+                    icon = nearbyObject.machineType === 'drink' ? '🥤' : '🍫';
+                    break;
+                case 'computer':
+                    icon = '💻';
+                    break;
+                case 'printer':
+                    icon = '🖨️';
+                    break;
+                default:
+                    icon = '📦';
+            }
         }
 
         if (message) {

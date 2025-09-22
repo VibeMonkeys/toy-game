@@ -19,7 +19,11 @@
       "Bash(pkill:*)",
       "Bash(npm run build:*)",
       "Bash(git checkout:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "WebSearch",
+      "WebFetch(domain:opengameart.org)",
+      "Bash(unzip:*)",
+      "WebFetch(domain:liberatedpixelcup.github.io)"
     ],
     "deny": [],
     "ask": []
