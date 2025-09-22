@@ -70,17 +70,17 @@ export class MapData {
                         id: 'reception',
                         name: '안내 데스크 직원',
                         x: 15, y: 15,
-                        dialog: ['환영합니다! Hunet 26주년 기념 보물찾기에 참여해주셔서 감사합니다.', '각 층을 탐험하며 단서를 모으세요!'],
-                        questGiver: false,
-                        questId: null
+                        dialog: ['환영합니다! 휴넷 26주년 기념 게임에 참여해주셔서 감사합니다.', '먼저 입장 패스를 찾아서 경비 아저씨에게 보여주세요!'],
+                        questGiver: true,
+                        questId: 1
                     },
                     {
                         id: 'guard',
                         name: '경비 아저씨',
                         x: 32, y: 18,
-                        dialog: ['이 건물은 정말 크죠?', '엘리베이터를 이용해서 다른 층으로 이동하세요.'],
-                        questGiver: false,
-                        questId: null
+                        dialog: ['입장 패스를 가져오셨나요?', '확인되었습니다. 이제 건물을 자유롭게 이용하실 수 있어요!'],
+                        questGiver: true,
+                        questId: 0
                     },
                     {
                         id: 'arcade_master',
@@ -133,17 +133,14 @@ export class MapData {
                     }
                 ],
                 items: [
-                    // 퀘스트 필수 아이템
-                    { x: 20, y: 15, type: 'treasure', name: '26주년 기념 메달', icon: '🏅', description: '휴넷 26주년을 기념하는 특별한 메달' },
+                    // 1층 퀘스트 아이템
+                    { x: 10, y: 10, type: 'treasure', name: '입장 패스', icon: '🎫', description: '휴넷 26주년 게임 입장 패스' },
+                    { x: 25, y: 20, type: 'treasure', name: '26주년 기념 메달', icon: '🏅', description: '휴넷 26주년을 기념하는 특별한 메달' },
 
-                    // 90년대 레트로 아이템들
-                    { x: 18, y: 12, type: 'retro', name: '플로피 디스크', icon: '💾', description: '1999년 인기 저장매체' },
-                    { x: 4, y: 15, type: 'retro', name: '삼성 비디오폰', icon: '📞', description: '바이브레이션 기능 포함' },
-                    { x: 32, y: 18, type: 'retro', name: 'CD-ROM', icon: '💿', description: '700MB 대용량 저장매체' },
-                    { x: 28, y: 12, type: 'retro', name: '공중전화카드', icon: '💳', description: '3000원권 전화카드' },
-                    { x: 16, y: 18, type: 'retro', name: '연봉봉투', icon: '📮', description: '월급 봉투 (비밀)' },
-                    { x: 12, y: 8, type: 'retro', name: '삤론테이프', icon: '📼', description: '음성 녹음용 카세트' },
-                    { x: 25, y: 22, type: 'retro', name: '도트 매트릭스 프린터', icon: '🖨️', description: '90년대 대표 프린터' }
+                    // 추가 아이템
+                    { x: 15, y: 15, type: 'treasure', name: '동전', icon: '🪙', description: '1000원 동전' },
+                    { x: 30, y: 10, type: 'treasure', name: '회사 팜플렛', icon: '📄', description: '휴넷 소개 자료' },
+                    { x: 8, y: 25, type: 'treasure', name: '방명록', icon: '📓', description: '방문자 방명록' }
                 ],
                 portals: [
                     {
@@ -210,25 +207,25 @@ export class MapData {
                         id: 'kim_deputy',
                         name: '김대리',
                         x: 12, y: 10,
-                        dialog: ['26주년 축하합니다! 저는 김대리예요.', '오늘은 특별한 날이니까 숨겨둔 26년 역사 자료를 찾아보세요!', '휴넷의 첫 시작이 바로 이 7층에서였다는 거 아시나요?'],
+                        dialog: ['26주년 축하합니다! 저는 김대리예요.', '업무 보고서를 찾아주세요!', '7층 복도 어딘가에 있을 거예요.'],
                         questGiver: true,
-                        questId: 0
+                        questId: 2
                     },
                     {
                         id: 'office_worker_2',
-                        name: '직원 박씨',
+                        name: '박직원',
                         x: 32, y: 20,
-                        dialog: ['여기는 7층 사무실입니다.', '김대리님이 뭔가 찾고 계시던데...', '도와드리는 게 어떨까요?'],
+                        dialog: ['계약서를 찾아주세요!', '709호 계열사에 있을 거예요.', '중요한 계약서라서 꼭 필요해요.'],
                         questGiver: true,
-                        questId: 1
+                        questId: 4
                     },
                     {
                         id: 'intern',
-                        name: '인턴 신입',
+                        name: '인턴',
                         x: 25, y: 15,
-                        dialog: ['저는 인턴이에요!', '회사가 정말 크죠?', '저도 아직 길을 잘 몰라요...'],
+                        dialog: ['프로젝트 파일이 필요해요!', '710호 본사 IT에 있을 거예요.', '도와주시면 감사하겠습니다!'],
                         questGiver: true,
-                        questId: 2
+                        questId: 3
                     },
                     {
                         id: 'hr_manager',
@@ -272,16 +269,13 @@ export class MapData {
                     }
                 ],
                 items: [
-                    // 퀘스트 필수 아이템
-                    { x: 30, y: 10, type: 'treasure', name: '7층 업무 보고서', icon: '📋', description: '김대리가 찾고 있는 중요한 보고서' },
+                    // 7층 퀘스트 아이템 (여러 위치에 배치해서 찾기 쉽게)
+                    { x: 20, y: 15, type: 'treasure', name: '업무 보고서', icon: '📋', description: '김대리가 요청한 업무 보고서' },
 
-                    // 90년대 사무실 레트로 아이템
-                    { x: 15, y: 15, type: 'retro', name: '도스 게임 CD', icon: '💿', description: 'Windows 95 게임 모음집' },
-                    { x: 5, y: 25, type: 'retro', name: '테이프 레코더', icon: '📼', description: '녹음 및 재생 기능' },
-                    { x: 35, y: 5, type: 'retro', name: '도시락 폰', icon: '📞', description: '프리미엄 시티폰 모델' },
-                    { x: 8, y: 8, type: 'retro', name: 'OHP 필름', icon: '📋', description: '오버헤드 프로젝터용' },
-                    { x: 25, y: 20, type: 'retro', name: '전자수첩', icon: '📊', description: '1999년 회계 프로그램' },
-                    { x: 12, y: 12, type: 'retro', name: '팩스기', icon: '📠', description: '전용선 팩스 기계' }
+                    // 추가 보물 아이템
+                    { x: 10, y: 10, type: 'treasure', name: '동전', icon: '🪙', description: '500원 동전' },
+                    { x: 30, y: 20, type: 'treasure', name: '열쇠', icon: '🔑', description: '사무실 열쇠' },
+                    { x: 15, y: 25, type: 'treasure', name: '메모지', icon: '📝', description: '중요한 메모' }
                 ],
                 portals: [
                     { x: 5, y: 10, targetMap: CONSTANTS.MAPS.FLOOR_7_709_AFFILIATES, targetX: 35, targetY: 15, name: '709호 계열사' },
@@ -322,8 +316,9 @@ export class MapData {
                     }
                 ],
                 items: [
-                    { x: 15, y: 15, type: 'treasure', name: '중요한 문서' },
-                    { x: 25, y: 12, type: 'treasure', name: '창립 스토리북' }
+                    { x: 20, y: 15, type: 'treasure', name: '중요 계약서', icon: '📂', description: '박직원이 필요한 계약서' },
+                    { x: 10, y: 10, type: 'treasure', name: '계열사 소개서', icon: '📚', description: '계열사 소개 자료' },
+                    { x: 30, y: 20, type: 'treasure', name: '명함', icon: '💳', description: '계열사 직원 명함' }
                 ],
                 portals: [
                     { x: 35, y: 15, targetMap: CONSTANTS.MAPS.FLOOR_7_CORRIDOR, targetX: 5, targetY: 10, name: '복도로' }
@@ -376,8 +371,9 @@ export class MapData {
                     }
                 ],
                 items: [
-                    { x: 20, y: 15, type: 'treasure', name: '프로젝트 파일' },
-                    { x: 12, y: 25, type: 'treasure', name: '개발팀 메시지' }
+                    { x: 20, y: 15, type: 'treasure', name: '프로젝트 파일', icon: '📁', description: '인턴이 필요한 프로젝트 파일' },
+                    { x: 12, y: 20, type: 'treasure', name: 'IT팀 소개서', icon: '💻', description: 'IT팀 소개 자료' },
+                    { x: 25, y: 10, type: 'treasure', name: 'USB', icon: '💾', description: '중요한 데이터 USB' }
                 ],
                 portals: [
                     { x: 5, y: 15, targetMap: CONSTANTS.MAPS.FLOOR_7_CORRIDOR, targetX: 35, targetY: 20, name: '복도로' }
@@ -406,11 +402,21 @@ export class MapData {
                         dialog: ['8층 각 본부로 안내해드릴게요!', '왼쪽에 IT본부와 인경실, 오른쪽에 다른 본부들이 있어요.'],
                         questGiver: false,
                         questId: null
+                    },
+                    {
+                        id: 'manager_lee',
+                        name: '팀장 이씨',
+                        x: 20, y: 20,
+                        dialog: ['회의 자료를 준비해주세요!', '회의록과 프레젠테이션이 모두 필요합니다.'],
+                        questGiver: true,
+                        questId: 5
                     }
                 ],
                 items: [
-                    { x: 12, y: 15, type: 'treasure', name: '회의록' },
-                    { x: 28, y: 18, type: 'treasure', name: '프레젠테이션 자료' }
+                    { x: 12, y: 15, type: 'treasure', name: '회의록', icon: '📋', description: '8층 중요 회의록' },
+                    { x: 28, y: 18, type: 'treasure', name: '프레젠테이션', icon: '📊', description: '8층 프레젠테이션 자료' },
+                    { x: 20, y: 10, type: 'treasure', name: '8층 보고서', icon: '📄', description: '8층 월간 보고서' },
+                    { x: 15, y: 25, type: 'treasure', name: '커피 쿠폰', icon: '☕', description: '스타벅스 커피 쿠폰' }
                 ],
                 portals: [
                     { x: 5, y: 8, targetMap: CONSTANTS.MAPS.FLOOR_8_IT_DIVISION, targetX: 35, targetY: 15, name: 'IT본부' },
@@ -579,16 +585,26 @@ export class MapData {
                         questId: null
                     },
                     {
+                        id: 'education_manager',
+                        name: '교육팀장',
+                        x: 25, y: 20,
+                        dialog: ['교육 매뉴얼을 찾아주세요!', '교육팀의 중요한 자료입니다.'],
+                        questGiver: true,
+                        questId: 6
+                    },
+                    {
                         id: 'training_coordinator_2',
                         name: '교육 담당자 한대리',
                         x: 12, y: 20,
                         dialog: ['휴넷 교육 프로그램을 담당하고 있어요.', '26주년 기념 이벤트도 교육의 일환이죠.', '게임을 통해 회사를 알아가세요!'],
-                        questGiver: true,
-                        questId: 104
+                        questGiver: false,
+                        questId: null
                     }
                 ],
                 items: [
-                    { x: 25, y: 15, type: 'treasure', name: '미래 비전서' }
+                    { x: 25, y: 15, type: 'treasure', name: '미래 비전서', icon: '📘', description: '휴넷의 미래 비전' },
+                    { x: 15, y: 20, type: 'treasure', name: '교육 매뉴얼', icon: '📖', description: '교육서비스본부 매뉴얼' },
+                    { x: 20, y: 10, type: 'treasure', name: '교육 자료', icon: '📚', description: '교육 프로그램 자료' }
                 ],
                 portals: [
                     { x: 5, y: 15, targetMap: CONSTANTS.MAPS.FLOOR_8_CORRIDOR, targetX: 35, targetY: 8, name: '복도로' }
@@ -700,13 +716,10 @@ export class MapData {
                     }
                 ],
                 items: [
-                    { x: 15, y: 15, type: 'treasure', name: '9층 기밀 문서' },
-                    { x: 35, y: 10, type: 'quest', name: '전략 브리핑 패키지', icon: '📋' },
-                    { x: 5, y: 25, type: 'quest', name: '법무 검토 완료서', icon: '📄' },
-                    { x: 25, y: 25, type: 'quest', name: '26주년 재무 분석 리포트', icon: '📊' },
-                    { x: 8, y: 8, type: 'quest', name: '조용한 음악', icon: '🎼' },
-                    { x: 30, y: 15, type: 'quest', name: '휴식용 쿠션', icon: '🛏️' },
-                    { x: 18, y: 22, type: 'quest', name: '전체 매출 및 수익 데이터', icon: '💹' }
+                    { x: 20, y: 15, type: 'treasure', name: '기밀 문서', icon: '📄', description: '9층 기밀 문서' },
+                    { x: 10, y: 10, type: 'treasure', name: '금고 열쇠', icon: '🔐', description: '비밀 금고 열쇠' },
+                    { x: 30, y: 20, type: 'treasure', name: '보석', icon: '💎', description: '작은 다이아몬드' },
+                    { x: 15, y: 25, type: 'treasure', name: '금화', icon: '🏆', description: '황금 동전' }
                 ],
                 portals: [
                     { x: 35, y: 15, targetMap: CONSTANTS.MAPS.FLOOR_9_CEO_OFFICE, targetX: 5, targetY: 15, name: 'CEO실' }
