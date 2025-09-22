@@ -8,7 +8,6 @@ export class VendingMachine extends InteractableObject {
 
         this.machineType = machineType;
         this.cooldown = 3000; // 3초 쿨다운
-        this.coins = 0; // 플레이어가 투입한 동전
         this.isOperating = false;
 
         // 상품 목록
@@ -41,10 +40,10 @@ export class VendingMachine extends InteractableObject {
         // 동전이 필요한지 확인
         const playerCoins = this.getPlayerCoins(gameState);
 
-        if (playerCoins === 0) {
+        if (playerCoins <= 0) {
             return {
                 success: false,
-                message: '동전이 필요합니다! (인벤토리에서 동전을 확인해보세요)',
+                message: '동전이 필요합니다! (퀘스트나 상호작용으로 확보하세요)',
                 showDialog: true
             };
         }
@@ -64,13 +63,23 @@ export class VendingMachine extends InteractableObject {
         };
     }
 
-    // 플레이어가 가진 동전 개수 확인
+    // 플레이어가 가진 동전 개수 확인 (GameState API 우선)
     getPlayerCoins(gameState) {
-        if (!gameState.inventory) return 0;
+        if (gameState) {
+            if (typeof gameState.getCoins === 'function') {
+                return gameState.getCoins();
+            }
+
+            if (typeof gameState.coins === 'number') {
+                return gameState.coins;
+            }
+        }
+
+        if (!gameState || !gameState.inventory) return 0;
         const coinItem = gameState.inventory.find(item =>
-            item.name === '동전' || item.name === 'coin' || item.name.includes('동전')
+            item.name === '동전' || item.name === 'coin' || (typeof item.name === 'string' && item.name.includes('동전'))
         );
-        return coinItem ? (coinItem.quantity || 1) : 0;
+        return coinItem ? (coinItem.quantity || 0) : 0;
     }
 
     // 상품 구매 처리
@@ -90,7 +99,13 @@ export class VendingMachine extends InteractableObject {
         }
 
         // 동전 차감
-        this.removeCoins(gameState, product.price);
+        const spent = this.deductCoins(gameState, product.price);
+        if (!spent) {
+            return {
+                success: false,
+                message: '동전 차감에 실패했습니다. 다시 시도해주세요.'
+            };
+        }
 
         // 상품 지급
         const purchasedItem = {
@@ -114,33 +129,45 @@ export class VendingMachine extends InteractableObject {
             this.isOperating = false;
         }, 2000);
 
+        const remainingCoins = this.getPlayerCoins(gameState);
+
         return {
             success: true,
-            message: `${product.emoji} ${product.name}을(를) 구매했습니다!`,
+            message: `${product.emoji} ${product.name}을(를) 구매했습니다! (잔액: ${remainingCoins}원)`,
             item: purchasedItem
         };
     }
 
-    // 동전 제거
-    removeCoins(gameState, amount) {
-        if (!gameState.inventory) return;
+    // 동전 차감 (GameState API 우선 사용)
+    deductCoins(gameState, amount) {
+        if (gameState && typeof gameState.spendCoins === 'function') {
+            return gameState.spendCoins(amount);
+        }
+
+        if (!gameState || !gameState.inventory) return false;
 
         const coinIndex = gameState.inventory.findIndex(item =>
-            item.name === '동전' || item.name === 'coin' || item.name.includes('동전')
+            item.name === '동전' || item.name === 'coin' || (typeof item.name === 'string' && item.name.includes('동전'))
         );
 
-        if (coinIndex !== -1) {
-            const coinItem = gameState.inventory[coinIndex];
-            const currentAmount = coinItem.quantity || 1;
-
-            if (currentAmount <= amount) {
-                // 동전 모두 사용
-                gameState.inventory.splice(coinIndex, 1);
-            } else {
-                // 일부만 사용
-                coinItem.quantity = currentAmount - amount;
-            }
+        if (coinIndex === -1) {
+            return false;
         }
+
+        const coinItem = gameState.inventory[coinIndex];
+        const currentAmount = coinItem.quantity || 0;
+
+        if (currentAmount < amount) {
+            return false;
+        }
+
+        if (currentAmount === amount) {
+            gameState.inventory.splice(coinIndex, 1);
+        } else {
+            coinItem.quantity = currentAmount - amount;
+        }
+
+        return true;
     }
 
     // 상품 선택 변경

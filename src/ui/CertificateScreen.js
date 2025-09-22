@@ -1,3 +1,5 @@
+import { Logger } from '../utils/Logger.js';
+
 export class CertificateScreen {
     constructor(canvas, ctx) {
         this.canvas = canvas;
@@ -21,7 +23,7 @@ export class CertificateScreen {
         this.itemsCollected = playerStats.itemsCollected || 0;
         this.questsCompleted = playerStats.questsCompleted || 0;
         this.onClose = onClose;
-        console.log('🏆 인증서 화면 표시!', playerStats);
+        Logger.info('🏆 인증서 화면 표시!', playerStats);
     }
 
     update() {
@@ -183,7 +185,7 @@ export class CertificateScreen {
 
     close() {
         this.isActive = false;
-        console.log('🏆 인증서 화면 닫기');
+        Logger.info('🏆 인증서 화면 닫기');
         if (this.onClose) {
             this.onClose();
         }

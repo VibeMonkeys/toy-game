@@ -1,3 +1,5 @@
+import { Logger } from '../utils/Logger.js';
+
 export class IntroScreen {
     constructor(canvas, ctx, audioManager = null) {
         this.canvas = canvas;
@@ -30,7 +32,7 @@ export class IntroScreen {
         this.memoryProgress = 0;
         this.loadingDots = 0;
         this.phaseSoundsPlayed.clear();
-        console.log('💻 1999년 레트로 부팅 시작!');
+        Logger.info('💻 1999년 레트로 부팅 시작!');
 
         // CRT 모니터 켜지는 소리
         if (this.audioManager) {
@@ -334,7 +336,7 @@ export class IntroScreen {
 
     complete() {
         this.isActive = false;
-        console.log('🎉 26주년 인트로 완료!');
+        Logger.info('🎉 26주년 인트로 완료!');
 
         // 완료 시 성공 사운드
         if (this.audioManager) {

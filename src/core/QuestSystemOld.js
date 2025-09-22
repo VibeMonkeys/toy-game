@@ -1,4 +1,5 @@
 import { CONSTANTS } from '../utils/Constants.js';
+import { Logger } from '../utils/Logger.js';
 
 export class QuestSystem {
     constructor(audioManager = null) {
@@ -618,7 +619,7 @@ export class QuestSystem {
         const quest = this.findSubQuestByGiver(npcId);
         if (!quest) return { canSubmit: false, reason: '서브 퀘스트가 없습니다.' };
 
-        console.log(`🎯 퀘스트 검증: ${quest.title} (ID: ${quest.id}), 진행도: ${quest.progress}/${quest.maxProgress}`);
+        Logger.debug(`🎯 퀘스트 검증: ${quest.title} (ID: ${quest.id}), 진행도: ${quest.progress}/${quest.maxProgress}`);
 
         // 이미 완료된 퀘스트는 더 이상 진행 불가
         if (quest.completed) {
@@ -627,7 +628,7 @@ export class QuestSystem {
 
         // 퀘스트가 아직 시작되지 않았다면 무조건 시작 가능
         if (quest.progress === 0) {
-            console.log(`✅ 퀘스트 시작 가능: ${quest.title}`);
+            Logger.debug(`✅ 퀘스트 시작 가능: ${quest.title}`);
             return { canSubmit: true, quest: quest, action: 'start' };
         }
 
@@ -635,19 +636,19 @@ export class QuestSystem {
         if (quest.progress < quest.maxProgress) {
             // 현재 단계에서 필요한 아이템 확인
             const currentStepRequiredItems = this.getStepRequiredItems(quest.id, quest.progress);
-            console.log(`🔧 현재 단계 검증 (step ${quest.progress}): 필요 아이템 [${currentStepRequiredItems.join(', ')}], 보유 아이템: [${playerInventory.map(item => item.name).join(', ')}]`);
+            Logger.debug(`🔧 현재 단계 검증 (step ${quest.progress}): 필요 아이템 [${currentStepRequiredItems.join(', ')}], 보유 아이템: [${playerInventory.map(item => item.name).join(', ')}]`);
 
             if (currentStepRequiredItems.length > 0) {
                 const missingItems = currentStepRequiredItems.filter(itemName =>
                     !playerInventory.some(item => item.name === itemName)
                 );
                 if (missingItems.length > 0) {
-                    console.log(`❌ 아이템 부족: [${missingItems.join(', ')}]`);
+                    Logger.debug(`❌ 아이템 부족: [${missingItems.join(', ')}]`);
                     return { canSubmit: false, reason: `현재 단계를 완료하려면 '${missingItems.join(', ')}'이(가) 필요합니다.` };
                 }
             }
 
-            console.log(`✅ 단계 진행 가능`);
+            Logger.debug(`✅ 단계 진행 가능`);
             return { canSubmit: true, quest: quest, action: 'progress' };
         }
 
@@ -1038,44 +1039,44 @@ export class QuestSystem {
 
     // 아이템 수집 시 호출되는 메서드
     onItemCollected(item, gameState) {
-        console.log(`📋 퀘스트 시스템: 아이템 수집 확인 - ${item.name}`);
-        console.log(`🎒 현재 인벤토리:`, gameState.collectedItems.map(i => i.name));
+        Logger.debug(`📋 퀘스트 시스템: 아이템 수집 확인 - ${item.name}`);
+        Logger.debug(`🎒 현재 인벤토리:`, gameState.collectedItems.map(i => i.name));
 
         // 현재 퀘스트의 필요 아이템 확인
         const currentQuest = this.getCurrentQuest();
         if (!currentQuest) {
-            console.log(`❌ 현재 진행 중인 퀘스트가 없습니다`);
+            Logger.debug(`❌ 현재 진행 중인 퀘스트가 없습니다`);
             return;
         }
 
-        console.log(`🎯 현재 퀘스트: ${currentQuest.title} (ID: ${currentQuest.id})`);
+        Logger.debug(`🎯 현재 퀘스트: ${currentQuest.title} (ID: ${currentQuest.id})`);
 
         // 현재 퀘스트에서 요구하는 아이템인지 확인
         const requiredItems = currentQuest.requiredItems || [currentQuest.requiredItem];
-        console.log(`📋 필요 아이템들:`, requiredItems);
+        Logger.debug(`📋 필요 아이템들:`, requiredItems);
 
         if (requiredItems.includes(item.name)) {
-            console.log(`✅ 퀘스트 아이템 매치: ${item.name}`);
+            Logger.debug(`✅ 퀘스트 아이템 매치: ${item.name}`);
 
             // 모든 필요 아이템이 수집되었는지 확인
             const collectedRequiredItems = requiredItems.filter(reqItem =>
                 gameState.collectedItems.some(collectedItem => collectedItem.name === reqItem)
             );
 
-            console.log(`📊 수집 진행도: ${collectedRequiredItems.length}/${requiredItems.length}`);
-            console.log(`📝 수집된 필요 아이템들:`, collectedRequiredItems);
+            Logger.debug(`📊 수집 진행도: ${collectedRequiredItems.length}/${requiredItems.length}`);
+            Logger.debug(`📝 수집된 필요 아이템들:`, collectedRequiredItems);
 
             // 퀘스트 진행도 업데이트 (수집된 아이템 개수로)
             const previousProgress = currentQuest.progress;
             currentQuest.progress = collectedRequiredItems.length;
 
-            console.log(`📈 진행도 업데이트: ${previousProgress} → ${currentQuest.progress}`);
+            Logger.debug(`📈 진행도 업데이트: ${previousProgress} → ${currentQuest.progress}`);
 
             if (currentQuest.progress === currentQuest.maxProgress) {
-                console.log(`🎉 ${currentQuest.title} 아이템 수집 완료!`);
+                Logger.debug(`🎉 ${currentQuest.title} 아이템 수집 완료!`);
             }
         } else {
-            console.log(`❌ 현재 퀘스트와 무관한 아이템: ${item.name}`);
+            Logger.debug(`❌ 현재 퀘스트와 무관한 아이템: ${item.name}`);
         }
     }
 };
