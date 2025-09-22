@@ -1,9 +1,12 @@
+import { Logger } from '../utils/Logger.js';
+
 export class QuestGuide {
     constructor(canvas, ctx) {
         this.canvas = canvas;
         this.ctx = ctx;
         this.animationTime = 0;
         this.lastInventoryState = ''; // 디버깅용 상태 추적
+        this.logger = new Logger('QuestGuide');
     }
 
     draw(questSystem, gameState) {
@@ -100,6 +103,12 @@ export class QuestGuide {
         const playerInventory = gameState?.collectedItems || [];
         const currentMap = gameState?.currentMap || 'lobby';
 
+        // 디버깅 로그
+        const inventoryNames = playerInventory.map(item => item.name).join(', ');
+        if (inventoryNames !== this.lastInventoryState) {
+            this.logger.log('인벤토리 변경 감지:', inventoryNames || '(비어있음)');
+            this.lastInventoryState = inventoryNames;
+        }
 
         // 필요한 아이템이 있는 경우
         if (quest.requiredItem || quest.requiredItems) {
@@ -113,10 +122,14 @@ export class QuestGuide {
             if (missingItems.length > 0) {
                 // 첫 번째 미수집 아이템에 대한 가이드
                 const firstMissingItem = missingItems[0];
-                return this.getLocationGuide(firstMissingItem, currentMap);
+                const guideText = this.getLocationGuide(firstMissingItem, currentMap);
+                this.logger.log('아이템 수집 가이드:', firstMissingItem, '->', guideText);
+                return guideText;
             } else {
                 // 모든 아이템을 수집했으면 제출 가이드
-                return this.getSubmissionGuide(quest, currentMap);
+                const guideText = this.getSubmissionGuide(quest, currentMap);
+                this.logger.log('제출 가이드:', quest.questGiver, '->', guideText);
+                return guideText;
             }
         }
 
@@ -125,28 +138,29 @@ export class QuestGuide {
     }
 
     getLocationGuide(itemName, currentMap) {
-        // 아이템별 목표 위치 정의
+        // 아이템별 목표 위치 정의 (QuestData.js와 MapData.js에 맞춰 업데이트)
         const itemLocations = {
-            '7층 업무 보고서': { floor: 7, map: 'floor_7_corridor', detail: '7층 복도' },
-            '중요한 문서': { floor: 7, map: 'floor_7_709_affiliates', detail: '709호 계열사 사무실' },
-            '프로젝트 파일': { floor: 7, map: 'floor_7_710_main_it', detail: '710호 본사 IT 사무실' },
-            '창립 스토리북': { floor: 7, map: 'floor_7_709_affiliates', detail: '709호 계열사 사무실' },
-            '개발팀 메시지': { floor: 7, map: 'floor_7_710_main_it', detail: '710호 본사 IT 사무실' },
+            // 1층 아이템
+            '입장 패스': { floor: 1, map: 'lobby', detail: '1층 로비 바닥' },
+            '26주년 기념 메달': { floor: 1, map: 'lobby', detail: '1층 로비 바닥' },
+
+            // 7층 아이템
+            '업무 보고서': { floor: 7, map: 'floor_7_corridor', detail: '7층 복도' },
+            '프로젝트 파일': { floor: 7, map: 'floor_7_710_main_it', detail: '710호 본사IT' },
+            '중요 계약서': { floor: 7, map: 'floor_7_709_affiliates', detail: '709호 계열사' },
+
+            // 8층 아이템
             '회의록': { floor: 8, map: 'floor_8_corridor', detail: '8층 복도' },
-            '프레젠테이션 자료': { floor: 8, map: 'floor_8_corridor', detail: '8층 복도' },
-            '기획팀 메시지': { floor: 8, map: 'floor_8_it_division', detail: 'IT본부 사무실' },
-            '인사팀 메시지': { floor: 8, map: 'floor_8_hr_office', detail: '인경실' },
-            '미래 비전서': { floor: 8, map: 'floor_8_education_service', detail: '교육서비스본부' },
-            '영업팀 메시지': { floor: 8, map: 'floor_8_sales_support', detail: '영업+교육지원본부' },
-            '9층 기밀 문서': { floor: 9, map: 'floor_9_corridor', detail: '9층 복도' },
-            '재무팀 메시지': { floor: 9, map: 'floor_9_ceo_office', detail: '9층 CEO실' },
-            '임원진 메시지': { floor: 9, map: 'floor_9_ceo_office', detail: '9층 CEO실' },
-            '26주년 기념 메달': { floor: 1, map: 'lobby', detail: '1층 로비' }
+            '프레젠테이션': { floor: 8, map: 'floor_8_corridor', detail: '8층 복도' },
+            '교육 매뉴얼': { floor: 8, map: 'floor_8_education_service', detail: '교육서비스본부' },
+
+            // 9층 아이템
+            '기밀 문서': { floor: 9, map: 'floor_9_ceo_office', detail: '9층 CEO실' }
         };
 
         const targetLocation = itemLocations[itemName];
         if (!targetLocation) {
-            return `📍 ${itemName}을(를) 찾으세요`;
+            return `📍 ${itemName}을(를) 찾으세요 - 바닥을 잘 살펴보세요`;
         }
 
         return this.getDetailedDirections(currentMap, targetLocation, itemName);
@@ -259,17 +273,17 @@ export class QuestGuide {
     }
 
     getSubmissionGuide(quest, currentMap) {
-        // 퀘스트별 제출 위치 정의
+        // 퀘스트별 제출 위치 정의 (QuestData.js의 실제 퀘스트 ID와 NPC 매칭)
         const submissionLocations = {
-            0: { floor: 7, map: 'floor_7_corridor', npc: '김대리', detail: '7층 복도' },
-            1: { floor: 7, map: 'floor_7_corridor', npc: '박직원', detail: '7층 복도' },
-            2: { floor: 7, map: 'floor_7_corridor', npc: '인턴', detail: '7층 복도' },
-            3: { floor: 8, map: 'floor_8_corridor', npc: '팀장 이씨', detail: '8층 복도' },
-            4: { floor: 9, map: 'floor_9_corridor', npc: '비서 정씨', detail: '9층 복도' },
-            5: { floor: 1, map: 'lobby', npc: '26주년 코디네이터', detail: '1층 로비' },
-            6: { floor: 1, map: 'lobby', npc: '역사 관리자', detail: '1층 로비' },
-            7: { floor: 9, map: 'floor_9_ceo_office', npc: 'CEO', detail: '9층 CEO실' },
-            8: { floor: 9, map: 'floor_9_ceo_office', npc: 'CEO 김대표', detail: '9층 CEO실' }
+            0: { floor: 1, map: 'lobby', npc: '경비 아저씨', detail: '1층 로비 오른쪽', icon: '📕' },  // guard
+            1: { floor: 1, map: 'lobby', npc: '안내 데스크 직원', detail: '1층 로비 중앙', icon: '📕' },  // reception
+            2: { floor: 7, map: 'floor_7_corridor', npc: '김대리', detail: '7층 복도', icon: '📕' },  // kim_deputy
+            3: { floor: 7, map: 'floor_7_corridor', npc: '인턴', detail: '7층 복도', icon: '📕' },  // intern
+            4: { floor: 7, map: 'floor_7_corridor', npc: '박직원', detail: '7층 복도', icon: '📕' },  // office_worker_2
+            5: { floor: 8, map: 'floor_8_corridor', npc: '팀장 이씨', detail: '8층 복도', icon: '📕' },  // manager_lee
+            6: { floor: 8, map: 'floor_8_corridor', npc: '교육팀장', detail: '8층 복도', icon: '📕' },  // education_manager
+            7: { floor: 9, map: 'floor_9_corridor', npc: '비서 정씨', detail: '9층 복도', icon: '📕' },  // secretary_jung
+            8: { floor: 9, map: 'floor_9_ceo_office', npc: 'CEO 김대표', detail: '9층 CEO실', icon: '📕' }  // ceo_kim
         };
 
         const submissionLocation = submissionLocations[quest.id];
@@ -290,7 +304,7 @@ export class QuestGuide {
         if (currentFloor === targetFloor) {
             // 이미 목표 맵에 있는 경우
             if (currentMap === submissionLocation.map) {
-                return `✅ ${npcName}를 찾아서 대화하세요! (스페이스바로 대화)`;
+                return `✅ ${npcName}를 찾아서 대화하세요! ${submissionLocation.icon} 아이콘을 찾으세요 (스페이스바로 대화)`;
             }
 
             // 같은 층 내에서 이동
