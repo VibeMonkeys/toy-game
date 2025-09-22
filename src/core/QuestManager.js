@@ -1,4 +1,5 @@
 import { QUEST_DATA, QUEST_VALIDATION } from '../data/QuestData.js';
+import { Logger } from '../utils/Logger.js';
 
 // 퀘스트 관리 전용 클래스
 export class QuestManager {
@@ -19,7 +20,14 @@ export class QuestManager {
 
     // NPC별 퀘스트 반환
     getQuestByNPC(npcId) {
-        return this.quests.find(quest => quest.questGiver === npcId && !quest.completed) || null;
+        Logger.debug(`🔍 NPC ${npcId}에 대한 퀘스트 검색`);
+        const quest = this.quests.find(quest => quest.questGiver === npcId && !quest.completed);
+        if (quest) {
+            Logger.debug(`✅ 퀘스트 발견: ${quest.title} (ID: ${quest.id})`);
+        } else {
+            Logger.debug(`❌ NPC ${npcId}에 대한 활성 퀘스트 없음`);
+        }
+        return quest || null;
     }
 
     // 완료된 퀘스트 수 반환
@@ -39,9 +47,11 @@ export class QuestManager {
             quest.completed = true;
             quest.progress = quest.maxProgress;
 
-            // 다음 퀘스트로 이동
-            if (questId === this.currentQuest && this.currentQuest < this.quests.length - 1) {
-                this.currentQuest++;
+            Logger.info(`✅ 퀘스트 완료: ${quest.title} (ID: ${questId})`);
+
+            if (questId === this.currentQuest) {
+                this.currentQuest = Math.min(this.currentQuest + 1, this.quests.length - 1);
+                Logger.debug(`➡️ 다음 퀘스트로 이동: ${this.currentQuest}`);
             }
 
             return true;
@@ -64,20 +74,26 @@ export class QuestManager {
 
     // 아이템 제출 가능 여부 확인
     canSubmitItems(npcId, inventory) {
-        console.log(`🔍 퀘스트 체크: NPC ${npcId}`);
-        console.log(`📦 플레이어 인벤토리:`, inventory.map(item => item.name));
+        Logger.debug(`🔍 퀘스트 체크: NPC ${npcId}`);
+        Logger.debug('📦 플레이어 인벤토리:', inventory.map(item => item.name));
 
         const quest = this.getQuestByNPC(npcId);
         if (!quest) {
-            console.log(`❌ ${npcId}에 대한 퀘스트가 없습니다.`);
+            Logger.debug(`❌ ${npcId}에 대한 퀘스트가 없습니다.`);
             return { canSubmit: false, reason: '퀘스트가 없습니다.' };
         }
 
-        console.log(`📋 발견된 퀘스트:`, quest.title, `필요 아이템:`, quest.requiredItem || quest.requiredItems);
+        // 이미 완료된 퀘스트는 제외
+        if (quest.completed) {
+            Logger.debug(`⭐ 퀘스트 이미 완료됨: ${quest.title}`);
+            return { canSubmit: false, reason: '이미 완료된 퀘스트입니다.' };
+        }
+
+        Logger.debug('📋 발견된 퀘스트:', quest.title, '필요 아이템:', quest.requiredItem || quest.requiredItems);
 
         if (!QUEST_VALIDATION.canComplete(quest, inventory)) {
             const missingItems = QUEST_VALIDATION.getMissingItems(quest, inventory);
-            console.log(`❌ 부족한 아이템:`, missingItems);
+            Logger.debug('❌ 부족한 아이템:', missingItems);
             return {
                 canSubmit: false,
                 reason: `필요한 아이템: ${missingItems.join(', ')}`,
@@ -85,18 +101,22 @@ export class QuestManager {
             };
         }
 
-        console.log(`✅ 퀘스트 완료 가능!`);
+        Logger.debug('✅ 퀘스트 완료 가능!');
         return { canSubmit: true, quest: quest };
     }
 
     // 아이템 제출 처리
     submitItems(npcId, inventory, gameState) {
+        Logger.debug(`🎯 아이템 제출 시작: NPC ${npcId}`);
+
         const submission = this.canSubmitItems(npcId, inventory);
         if (!submission.canSubmit) {
+            Logger.debug(`❌ 제출 실패: ${submission.reason}`);
             return { success: false, message: submission.reason };
         }
 
         const quest = submission.quest;
+        Logger.debug(`📝 퀘스트 처리 중: ${quest.title} (ID: ${quest.id})`);
 
         // 아이템 제거 처리
         this._removeQuestItems(quest, inventory, gameState);
@@ -109,9 +129,12 @@ export class QuestManager {
         quest.itemSubmitted = true;
         quest.progress = quest.maxProgress;
 
-        // 다음 퀘스트로 이동
-        if (quest.id === this.currentQuest && this.currentQuest < this.quests.length - 1) {
-            this.currentQuest++;
+        Logger.info(`✅ 퀘스트 완료: ${quest.title}`);
+
+        // 다음 퀘스트로 이동 (순차적으로)
+        if (quest.id === this.currentQuest) {
+            this.currentQuest = Math.min(this.currentQuest + 1, this.quests.length - 1);
+            Logger.debug(`➡️ 다음 퀘스트로 이동: ${this.currentQuest}`);
         }
 
         return {
@@ -165,7 +188,7 @@ export class QuestManager {
 
     // 아이템 수집 시 퀘스트 진행도 확인
     onItemCollected(item, gameState) {
-        console.log(`📋 퀘스트 매니저: 아이템 수집 확인 - ${item.name}`);
+        Logger.debug(`📋 퀘스트 매니저: 아이템 수집 확인 - ${item.name}`);
 
         // 현재 퀘스트 진행도 업데이트
         const currentQuest = this.getCurrentQuest();
@@ -185,6 +208,7 @@ export class QuestManager {
     _updateQuestProgressForItem(quest, item, gameState) {
         const itemsNeeded = quest.requiredItems || (quest.requiredItem ? [quest.requiredItem] : []);
 
+        // 이 퀘스트에 필요한 아이템인지 확인
         if (itemsNeeded.includes(item.name)) {
             // 현재 보유한 필요 아이템 수 계산
             const collectedNeededItems = itemsNeeded.filter(neededItem =>
@@ -193,11 +217,15 @@ export class QuestManager {
 
             quest.progress = collectedNeededItems.length;
 
-            if (quest.progress >= quest.maxProgress) {
-                quest.completed = true;
-            }
+            // progress가 maxProgress를 초과하지 않도록 제한
+            quest.progress = Math.min(quest.progress, quest.maxProgress);
 
-            console.log(`📈 퀘스트 "${quest.title}" 진행도: ${quest.progress}/${quest.maxProgress}`);
+            Logger.debug(`📈 퀘스트 "${quest.title}" 진행도: ${quest.progress}/${quest.maxProgress}`);
+
+            // 완료 체크는 제거 - 아이템 제출 시에만 완료 처리
+            // if (quest.progress >= quest.maxProgress) {
+            //     quest.completed = true;
+            // }
         }
     }
 
