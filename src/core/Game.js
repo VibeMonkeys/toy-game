@@ -20,7 +20,6 @@ import { MapManager } from '../maps/MapManager.js';
 import { Camera } from '../maps/Camera.js';
 import { Renderer } from '../graphics/Renderer.js';
 import { AnimationSystem } from '../graphics/AnimationSystem.js';
-import { SpriteManager } from '../graphics/SpriteManager.js';
 import { GameUIRenderer } from './GameUIRenderer.js';
 import { DialogRenderer } from './DialogRenderer.js';
 import { ParticleSystem } from '../effects/ParticleSystem.js';
@@ -31,19 +30,18 @@ export class Game {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
 
-        // 게임 상태 관리
-        this.gameMode = CONSTANTS.GAME_MODES.LOADING;
-
-        // 시스템 초기화
+        // 핵심 시스템 초기화
         this.audioManager = new AudioManager();
         this.player = new Player();
         this.gameState = new GameState();
         this.questSystem = new QuestSystem(this.audioManager);
+
+        // 게임 상태 관리
+        this.gameMode = CONSTANTS.GAME_MODES.LOADING;
         this.mapManager = new MapManager();
         this.camera = new Camera(this.canvas);
         this.animationSystem = new AnimationSystem();
-        this.spriteManager = new SpriteManager();
-        this.renderer = new Renderer(this.canvas, this.ctx, this.animationSystem, this.spriteManager);
+        this.renderer = new Renderer(this.canvas, this.ctx, this.animationSystem);
 
         // UI 렌더링 시스템
         this.uiRenderer = new GameUIRenderer(this.canvas, this.ctx);
@@ -54,7 +52,7 @@ export class Game {
         this.transitionManager = new TransitionManager(this.canvas, this.ctx);
 
         // UI 시스템
-        this.loadingScreen = new LoadingScreen(this.canvas, this.ctx);
+        this.loadingScreen = new LoadingScreen(this.canvas, this.ctx, this.audioManager);
         this.celebrationScreen = new CelebrationScreen(this.canvas, this.ctx, this.audioManager);
         this.titleScreen = new TitleScreen(this.canvas, this.ctx, this.audioManager);
         this.questUI = new QuestUI(this.canvas, this.ctx);
@@ -64,24 +62,9 @@ export class Game {
         this.elevatorUI = new ElevatorUI(this.canvas, this.ctx, this.audioManager);
         this.miniGameSystem = new MiniGameSystem(this.canvas, this.ctx, this.audioManager);
         this.tutorialSystem = new TutorialSystem(this.canvas, this.ctx);
-        this.introScreen = new IntroScreen(this.canvas, this.ctx);
+        this.introScreen = new IntroScreen(this.canvas, this.ctx, this.audioManager);
         this.certificateScreen = new CertificateScreen(this.canvas, this.ctx);
         this.questGuide = new QuestGuide(this.canvas, this.ctx);
-
-        // 다이얼로그 시스템
-        this.currentDialog = null;
-        this.currentNPC = null;
-        this.dialogIndex = 0;
-
-        // 상호작용 시스템
-        this.nearbyNPC = null;
-        this.nearbyPortal = null;
-        this.nearbyElevator = null;
-        this.nearbyObject = null;
-        this.showInteractionHint = false;
-
-        // 게임 완료 체크
-        this.gameCompleted = false;
 
         // 성능 최적화
         this.lastFrameTime = 0;
@@ -89,12 +72,10 @@ export class Game {
         this.frameInterval = 1000 / this.targetFPS;
         this.animationFrameId = null;
 
-        // 히든 요소들
+        // 코나미 코드 (↑↑↓↓←→←→BA)
         this.konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'KeyB', 'KeyA'];
         this.konamiIndex = 0;
-        this.konamiActivated = false;
-        this.secretClickCount = 0;
-        this.debugMode = false;
+
 
         // 초기화
         this.init();
@@ -108,15 +89,10 @@ export class Game {
         console.log('✅ 로딩 화면 초기화 완료');
 
         // 타이틀 옵션 설정 (새 게임만)
-        const titleOptions = ['새 게임 시작', '게임 정보'];
+        const titleOptions = ['새 게임 시작'];
         this.titleScreen.setMenuOptions(titleOptions);
         console.log('✅ 타이틀 화면 옵션 설정 완료');
 
-        // 스프라이트 에셋 로딩
-        console.log('🎨 스프라이트 에셋 로딩 시작...');
-        await this.spriteManager.loadAllAssets();
-        this.renderer.setSpriteManager(this.spriteManager);
-        console.log('✅ 스프라이트 에셋 로딩 완료');
 
         // 오디오 초기화
         this.audioManager.init();
@@ -917,11 +893,8 @@ export class Game {
     startNewGame() {
         console.log('🎮 새 게임 시작...');
 
-        // 먼저 인트로 화면 실행
-        this.gameMode = CONSTANTS.GAME_MODES.INTRO;
-        this.introScreen.start(() => {
-            this.startGameAfterIntro();
-        });
+        // 인트로는 이미 봤으니 바로 게임 시작
+        this.startGameAfterIntro();
     }
 
     startGameAfterIntro() {
@@ -950,6 +923,11 @@ export class Game {
 
         this.inventory.showItemNotification({ name: '휴넷 26주년 게임을 시작합니다!' });
 
+        // 튜토리얼 완료 콜백 설정
+        this.tutorialSystem.setOnComplete(() => {
+            console.log('✅ 튜토리얼 완료! 정상적인 게임플레이 시작');
+        });
+
         // 튜토리얼 자동 시작
         setTimeout(() => {
             this.tutorialSystem.start();
@@ -964,9 +942,14 @@ export class Game {
         if (this.gameMode === CONSTANTS.GAME_MODES.LOADING) {
             this.loadingScreen.update();
 
-            // 로딩 완료 시 타이틀로 전환
+            // 로딩 완료 시 1999년 레트로 인트로로 전환
             if (this.loadingScreen.isComplete()) {
-                this.gameMode = CONSTANTS.GAME_MODES.TITLE;
+                console.log('🖥️ 1999년 레트로 부팅 시퀀스 시작...');
+                this.gameMode = CONSTANTS.GAME_MODES.INTRO;
+                this.introScreen.start(() => {
+                    console.log('📋 시작하기 화면으로 전환...');
+                    this.gameMode = CONSTANTS.GAME_MODES.TITLE;
+                });
             }
         } else if (this.gameMode === CONSTANTS.GAME_MODES.CELEBRATION) {
             this.celebrationScreen.update();

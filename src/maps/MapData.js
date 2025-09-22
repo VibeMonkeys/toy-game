@@ -133,11 +133,17 @@ export class MapData {
                     }
                 ],
                 items: [
-                    { x: 18, y: 12, type: 'quest', name: '프린터 수리 도구', icon: '🔧' },
-                    { x: 4, y: 15, type: 'quest', name: '따뜻한 차', icon: '🍵' },
-                    { x: 32, y: 18, type: 'quest', name: '청소 도구 세트', icon: '🧹' },
-                    { x: 28, y: 12, type: 'currency', name: '동전', icon: '🪙', quantity: 5000 },
-                    { x: 16, y: 18, type: 'currency', name: '동전', icon: '🪙', quantity: 3000 }
+                    // 퀘스트 필수 아이템
+                    { x: 20, y: 15, type: 'treasure', name: '26주년 기념 메달', icon: '🏅', description: '휴넷 26주년을 기념하는 특별한 메달' },
+
+                    // 90년대 레트로 아이템들
+                    { x: 18, y: 12, type: 'retro', name: '플로피 디스크', icon: '💾', description: '1999년 인기 저장매체' },
+                    { x: 4, y: 15, type: 'retro', name: '삼성 비디오폰', icon: '📞', description: '바이브레이션 기능 포함' },
+                    { x: 32, y: 18, type: 'retro', name: 'CD-ROM', icon: '💿', description: '700MB 대용량 저장매체' },
+                    { x: 28, y: 12, type: 'retro', name: '공중전화카드', icon: '💳', description: '3000원권 전화카드' },
+                    { x: 16, y: 18, type: 'retro', name: '연봉봉투', icon: '📮', description: '월급 봉투 (비밀)' },
+                    { x: 12, y: 8, type: 'retro', name: '삤론테이프', icon: '📼', description: '음성 녹음용 카세트' },
+                    { x: 25, y: 22, type: 'retro', name: '도트 매트릭스 프린터', icon: '🖨️', description: '90년대 대표 프린터' }
                 ],
                 portals: [
                     {
@@ -266,11 +272,16 @@ export class MapData {
                     }
                 ],
                 items: [
-                    { x: 15, y: 15, type: 'treasure', name: '7층 업무 보고서' },
-                    { x: 5, y: 25, type: 'quest', name: '윤씨 명찰', icon: '🎫' },
-                    { x: 35, y: 5, type: 'quest', name: '택배 상자', icon: '📦' },
-                    { x: 8, y: 8, type: 'quest', name: '프로젝터 장비', icon: '📽️' },
-                    { x: 25, y: 20, type: 'quest', name: '개발 현황 데이터', icon: '💾' }
+                    // 퀘스트 필수 아이템
+                    { x: 30, y: 10, type: 'treasure', name: '7층 업무 보고서', icon: '📋', description: '김대리가 찾고 있는 중요한 보고서' },
+
+                    // 90년대 사무실 레트로 아이템
+                    { x: 15, y: 15, type: 'retro', name: '도스 게임 CD', icon: '💿', description: 'Windows 95 게임 모음집' },
+                    { x: 5, y: 25, type: 'retro', name: '테이프 레코더', icon: '📼', description: '녹음 및 재생 기능' },
+                    { x: 35, y: 5, type: 'retro', name: '도시락 폰', icon: '📞', description: '프리미엄 시티폰 모델' },
+                    { x: 8, y: 8, type: 'retro', name: 'OHP 필름', icon: '📋', description: '오버헤드 프로젝터용' },
+                    { x: 25, y: 20, type: 'retro', name: '전자수첩', icon: '📊', description: '1999년 회계 프로그램' },
+                    { x: 12, y: 12, type: 'retro', name: '팩스기', icon: '📠', description: '전용선 팩스 기계' }
                 ],
                 portals: [
                     { x: 5, y: 10, targetMap: CONSTANTS.MAPS.FLOOR_7_709_AFFILIATES, targetX: 35, targetY: 15, name: '709호 계열사' },
@@ -1039,14 +1050,16 @@ export class MapData {
                     }
                 ],
                 items: [
-                    { x: 6, y: 14, type: 'health', name: '신선한 공기', icon: '🌬️' },
-                    { x: 32, y: 14, type: 'item', name: '재떨이', icon: '🚬' },
-                    { x: 16, y: 24, type: 'quest', name: '보안 감사 리포트', icon: '📝' },
-                    { x: 24, y: 8, type: 'quest', name: '운동 프로그램 완주증', icon: '🏋️' },
-                    { x: 4, y: 4, type: 'quest', name: '메시지 전달 확인서', icon: '📞' },
-                    { x: 8, y: 20, type: 'quest', name: '명상 가이드 자격증', icon: '🧘' },
-                    { x: 28, y: 12, type: 'quest', name: '게임 챔피언 트로피', icon: '🏆' },
-                    { x: 35, y: 18, type: 'quest', name: '스트레스 해소 키트', icon: '💆' }
+                    // 90년대 옵상 레트로 아이템
+                    { x: 6, y: 14, type: 'retro', name: '국무당 담배', icon: '🚬', description: '90년대 인기 담배 브랜드' },
+                    { x: 32, y: 14, type: 'retro', name: '워크맨', icon: '🎧', description: '소니 배터리 노래 듣기' },
+                    { x: 16, y: 24, type: 'retro', name: '전자오락기', icon: '🎰', description: '전대안사용 오락기' },
+                    { x: 24, y: 8, type: 'retro', name: '하이하이텔', icon: '📱', description: '제일 아름다운 당신에게' },
+                    { x: 4, y: 4, type: 'retro', name: '올림픽 기념품', icon: '🏅', description: '1988 서울올림픽 기념품' },
+                    { x: 8, y: 20, type: 'retro', name: '머리기 기팬', icon: '🧢', description: '대우 레미콘 전자제품' },
+                    { x: 28, y: 12, type: 'retro', name: '포켓머니 장난감', icon: '🕹️', description: '닌텐도 전용 게임기' },
+                    { x: 35, y: 18, type: 'retro', name: '딩딩밥 넘기기', icon: '👕', description: '90년대 유행 전자제품' },
+                    { x: 20, y: 16, type: 'retro', name: '노다지 게임기', icon: '📾', description: '전용 휘대용 게임기' }
                 ],
                 portals: [],
                 elevatorPanel: { x: 19, y: 28 }

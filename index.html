@@ -28,7 +28,8 @@
         async function loadGame() {
             try {
                 console.log('Game.js import 시도...');
-                const { Game } = await import('./src/core/Game.js');
+                const timestamp = Date.now();
+                const { Game } = await import('./src/core/Game.js?v=' + timestamp);
                 console.log('Game.js import 성공');
 
                 function initializeGame() {

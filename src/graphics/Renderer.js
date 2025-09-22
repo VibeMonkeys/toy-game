@@ -1,4 +1,5 @@
 import { CONSTANTS } from '../utils/Constants.js';
+import { RetroSpriteManager } from './RetroSpriteManager.js';
 
 export class Renderer {
     constructor(canvas, ctx, animationSystem = null, spriteManager = null) {
@@ -8,8 +9,27 @@ export class Renderer {
         this.animationSystem = animationSystem;
         this.spriteManager = spriteManager;
 
+        // 레트로 스프라이트 매니저 초기화
+        this.retroSpriteManager = new RetroSpriteManager();
+        this.retroSpritesLoaded = false;
+
+        // 레트로 스프라이트 로드 시작
+        this.loadRetroSprites();
+
         // 스프라이트 사용 여부 (폴백 지원)
         this.useSprites = false;
+    }
+
+    // 레트로 스프라이트 로드
+    async loadRetroSprites() {
+        try {
+            await this.retroSpriteManager.loadSprites();
+            this.retroSpritesLoaded = true;
+            console.log('🎨 Renderer: 레트로 스프라이트 로드 완료!');
+        } catch (error) {
+            console.error('❌ Renderer: 레트로 스프라이트 로드 실패:', error);
+            this.retroSpritesLoaded = false;
+        }
     }
 
     // 스프라이트 매니저 설정
@@ -65,11 +85,158 @@ export class Renderer {
         this.drawSolidFloorTile(screenX, screenY);
     }
 
-    // 단순한 단색 바닥 타일
+    // 1999 레트로 바닥 패턴
+    drawRetroFloorTile(screenX, screenY, x, y, currentMap) {
+        const mapName = currentMap.name;
+
+        // 맵별 90년대 레트로 테마
+        if (mapName.includes('로비') || mapName === 'Lobby') {
+            this.drawRetroLobbyTile(screenX, screenY, x, y);
+        } else if (mapName.includes('카페') || mapName.includes('커피') || mapName.includes('스타벅스') || mapName.includes('메머드') || mapName.includes('국밥') || mapName.includes('팀홀턴')) {
+            this.drawRetroCafeTile(screenX, screenY, x, y);
+        } else if (mapName.includes('CEO') || mapName.includes('9층')) {
+            this.drawRetroExecutiveTile(screenX, screenY, x, y);
+        } else if (mapName.includes('옥상')) {
+            this.drawRetroRooftopTile(screenX, screenY, x, y);
+        } else {
+            this.drawRetroOfficeTile(screenX, screenY, x, y);
+        }
+    }
+
+    // 90년대 로비 타일 (대리석 패턴)
+    drawRetroLobbyTile(screenX, screenY, x, y) {
+        const baseColors = ['#f5f5dc', '#f0f8ff', '#faf0e6']; // 베이지, 앨리스블루, 리넨
+        const colorIndex = (x + y) % baseColors.length;
+
+        this.ctx.fillStyle = baseColors[colorIndex];
+        this.ctx.fillRect(screenX, screenY, this.tileSize, this.tileSize);
+
+        // 90년대 대리석 패턴
+        this.ctx.strokeStyle = '#d3d3d3';
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeRect(screenX, screenY, this.tileSize, this.tileSize);
+
+        // 대리석 베인 효과
+        if ((x + y) % 4 === 0) {
+            this.ctx.strokeStyle = '#c0c0c0';
+            this.ctx.beginPath();
+            this.ctx.moveTo(screenX + 2, screenY + this.tileSize - 2);
+            this.ctx.lineTo(screenX + this.tileSize - 2, screenY + 2);
+            this.ctx.stroke();
+        }
+    }
+
+    // 90년대 오피스 타일 (카펫 패턴)
+    drawRetroOfficeTile(screenX, screenY, x, y) {
+        // 90년대 특유의 브라운/베이지 카펫
+        const carpetColors = ['#d2b48c', '#deb887', '#f5deb3', '#d2b48c'];
+        const colorIndex = (x * 3 + y * 7) % carpetColors.length;
+
+        this.ctx.fillStyle = carpetColors[colorIndex];
+        this.ctx.fillRect(screenX, screenY, this.tileSize, this.tileSize);
+
+        // 카펫 텍스처 (수직 선)
+        this.ctx.strokeStyle = 'rgba(139, 69, 19, 0.15)';
+        this.ctx.lineWidth = 1;
+        for (let i = 0; i < 3; i++) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(screenX + (i * this.tileSize / 3), screenY);
+            this.ctx.lineTo(screenX + (i * this.tileSize / 3), screenY + this.tileSize);
+            this.ctx.stroke();
+        }
+
+        // 카펫 패턴 점
+        if ((x + y) % 8 === 0) {
+            this.ctx.fillStyle = 'rgba(160, 82, 45, 0.3)';
+            this.ctx.beginPath();
+            this.ctx.arc(screenX + this.tileSize/2, screenY + this.tileSize/2, 2, 0, Math.PI * 2);
+            this.ctx.fill();
+        }
+    }
+
+    // 90년대 카페 타일 (나무 패턴)
+    drawRetroCafeTile(screenX, screenY, x, y) {
+        // 따뜻한 나무 색상
+        const woodColors = ['#8b4513', '#a0522d', '#cd853f'];
+        const colorIndex = (x * 5 + y * 3) % woodColors.length;
+
+        this.ctx.fillStyle = woodColors[colorIndex];
+        this.ctx.fillRect(screenX, screenY, this.tileSize, this.tileSize);
+
+        // 나무 결 패턴
+        this.ctx.strokeStyle = 'rgba(101, 67, 33, 0.4)';
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        for (let i = 0; i < 2; i++) {
+            this.ctx.moveTo(screenX, screenY + (i * this.tileSize / 2) + 3);
+            this.ctx.lineTo(screenX + this.tileSize, screenY + (i * this.tileSize / 2));
+        }
+        this.ctx.stroke();
+    }
+
+    // 90년대 임원실 타일 (고급 마룻바닥)
+    drawRetroExecutiveTile(screenX, screenY, x, y) {
+        // 고급스러운 마호가니 색상
+        const mahoganyColors = ['#c04000', '#a0311c', '#8b2500'];
+        const colorIndex = (x * 7 + y * 11) % mahoganyColors.length;
+
+        this.ctx.fillStyle = mahoganyColors[colorIndex];
+        this.ctx.fillRect(screenX, screenY, this.tileSize, this.tileSize);
+
+        // 고급 나무 결
+        this.ctx.strokeStyle = 'rgba(160, 49, 28, 0.6)';
+        this.ctx.lineWidth = 1;
+
+        // 나무 판자 효과
+        this.ctx.strokeRect(screenX + 1, screenY + 1, this.tileSize - 2, this.tileSize - 2);
+
+        // 고급 나무 결 패턴
+        if ((x + y) % 3 === 0) {
+            this.ctx.strokeStyle = 'rgba(139, 37, 0, 0.3)';
+            this.ctx.beginPath();
+            this.ctx.moveTo(screenX + 4, screenY);
+            this.ctx.quadraticCurveTo(screenX + this.tileSize/2, screenY + this.tileSize/2, screenX + this.tileSize - 4, screenY + this.tileSize);
+            this.ctx.stroke();
+        }
+    }
+
+    // 90년대 옥상 타일 (콘크리트)
+    drawRetroRooftopTile(screenX, screenY, x, y) {
+        // 콘크리트 색상
+        const concreteColors = ['#a9a9a9', '#b0b0b0', '#989898'];
+        const colorIndex = (x + y) % concreteColors.length;
+
+        this.ctx.fillStyle = concreteColors[colorIndex];
+        this.ctx.fillRect(screenX, screenY, this.tileSize, this.tileSize);
+
+        // 콘크리트 비비바닥 텍처
+        this.ctx.strokeStyle = 'rgba(128, 128, 128, 0.5)';
+        this.ctx.lineWidth = 1;
+
+        // 규칙적인 비비바닥 패턴
+        for (let i = 0; i < 4; i++) {
+            this.ctx.strokeRect(
+                screenX + (i * this.tileSize / 4),
+                screenY,
+                this.tileSize / 4,
+                this.tileSize
+            );
+        }
+
+        // 비비바닥 어두운 선
+        if ((x + y) % 6 === 0) {
+            this.ctx.strokeStyle = 'rgba(105, 105, 105, 0.7)';
+            this.ctx.beginPath();
+            this.ctx.moveTo(screenX, screenY + this.tileSize/2);
+            this.ctx.lineTo(screenX + this.tileSize, screenY + this.tileSize/2);
+            this.ctx.stroke();
+        }
+    }
+
+    // 단순한 단색 바닥 타일 (폴백용)
     drawSolidFloorTile(screenX, screenY) {
         // 깔끔한 갈색 단색 바닥
         this.ctx.fillStyle = '#D2B48C'; // 연한 갈색 (tan)
-        // 또는 하얀색을 원하면: this.ctx.fillStyle = '#F5F5F5';
         this.ctx.fillRect(screenX, screenY, this.tileSize, this.tileSize);
 
         // 타일 경계선 (아주 옅게)
@@ -392,8 +559,19 @@ export class Renderer {
         for (let item of items) {
             if (camera.isInView(item.x, item.y)) {
                 const screenPos = camera.worldToScreen(item.x, item.y);
+                const frame = this.retroSpriteManager ? this.retroSpriteManager.getAnimationFrame() : 0;
 
-                // 스프라이트 사용 가능 시 실제 가구 스프라이트 그리기
+                // 레트로 스프라이트 우선 사용
+                if (this.retroSpritesLoaded) {
+                    if (type === '컴퓨터' || type === '모니터') {
+                        this.retroSpriteManager.drawRetroObject(
+                            this.ctx, 'computer', screenPos.x, screenPos.y, this.tileSize, this.tileSize, 'working', frame
+                        );
+                        return;
+                    }
+                }
+
+                // 기존 스프라이트 시스템 폴백
                 if (this.useSprites && this.spriteManager) {
                     if (type === '데스크') {
                         this.spriteManager.drawOfficeFurniture(this.ctx, 'desk', screenPos.x, screenPos.y, this.tileSize, this.tileSize);
@@ -584,12 +762,22 @@ export class Renderer {
         const centerX = screenX + this.tileSize/2;
         const centerY = screenY + this.tileSize/2;
 
+        // 90년대 레트로 아이템 전용 렌더링
+        if (item.type === 'retro') {
+            this.drawRetroItem(screenX, screenY, item);
+            return;
+        }
+
         // 아이템 타입별 색상
         const colors = {
             'treasure': '#FFD700',
             'key': '#C0C0C0',
             'document': '#87CEEB',
-            'badge': '#FF6347'
+            'badge': '#FF6347',
+            'quest': '#32CD32',
+            'currency': '#FFD700',
+            'food': '#FF6347',
+            'health': '#00FF00'
         };
 
         const color = colors[item.type] || '#FFFFFF';
@@ -612,6 +800,14 @@ export class Renderer {
 
         this.ctx.globalAlpha = 1;
 
+        // 아이콘 표시 (icon 속성이 있는 경우)
+        if (item.icon) {
+            this.ctx.fillStyle = '#000000';
+            this.ctx.font = '16px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText(item.icon, centerX, centerY + 5);
+        }
+
         // 아이템 이름 표시
         this.ctx.fillStyle = '#000000';
         this.ctx.font = '10px Arial';
@@ -619,12 +815,101 @@ export class Renderer {
         this.ctx.fillText(item.name, centerX, screenY - 5);
     }
 
+    // 90년대 레트로 아이템 렌더링
+    drawRetroItem(screenX, screenY, item) {
+        const centerX = screenX + this.tileSize/2;
+        const centerY = screenY + this.tileSize/2;
+
+        // 90년대 레트로 테마 색상 (노스탤지어 키치한 색상)
+        const retroColors = {
+            '플로피': '#4169E1',      // 로얄 블루
+            'CD': '#CD853F',           // 퍼루
+            '전화': '#8B4513',         // 새들 브라운
+            '테이프': '#2F4F4F',       // 다크 슬레이트 그레이
+            '노트북': '#696969',       // 딩 그레이
+            '게임': '#8A2BE2',         // 블루 바이올렛
+            '담배': '#F5DEB3',         // 휘트
+            '음악': '#DA70D6'          // 오키드
+        };
+
+        // 아이템 이름에서 색상 결정
+        let bgColor = '#D2B48C'; // 기본 베이지 색상
+        for (let [key, color] of Object.entries(retroColors)) {
+            if (item.name.includes(key)) {
+                bgColor = color;
+                break;
+            }
+        }
+
+        // 90년대 특유의 베벨 박스 스타일
+        this.ctx.fillStyle = bgColor;
+        this.ctx.fillRect(screenX + 4, screenY + 4, this.tileSize - 8, this.tileSize - 8);
+
+        // 베벨 효과
+        this.ctx.strokeStyle = '#F5F5DC';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(screenX + 2, screenY + 2, this.tileSize - 4, this.tileSize - 4);
+
+        this.ctx.strokeStyle = '#696969';
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeRect(screenX + 6, screenY + 6, this.tileSize - 12, this.tileSize - 12);
+
+        // 90년대 스타일 아이콘
+        if (item.icon) {
+            this.ctx.fillStyle = '#000000';
+            this.ctx.font = 'bold 14px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText(item.icon, centerX, centerY + 4);
+        }
+
+        // 반짝이는 효과 (레트로 아이템용)
+        const time = Date.now();
+        const pulse = Math.sin(time * 0.003) * 0.2 + 0.8;
+        this.ctx.globalAlpha = pulse;
+        this.ctx.strokeStyle = '#FFD700';
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeRect(screenX + 1, screenY + 1, this.tileSize - 2, this.tileSize - 2);
+        this.ctx.globalAlpha = 1;
+
+        // 아이템 이름 (더 눈에 띄게)
+        this.ctx.fillStyle = '#FFFFFF';
+        this.ctx.font = 'bold 10px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.strokeStyle = '#000000';
+        this.ctx.lineWidth = 3;
+        this.ctx.strokeText(item.name, centerX, screenY - 8);
+        this.ctx.fillText(item.name, centerX, screenY - 8);
+
+        // 설명 표시 (마우스 호버 효과 대신)
+        if (item.description) {
+            this.ctx.fillStyle = '#FFFFE0';
+            this.ctx.font = '8px Arial';
+            this.ctx.fillText(item.description, centerX, screenY + this.tileSize + 12);
+        }
+    }
+
     drawPixelCharacter(x, y, direction, isPlayer = false, customColor = null, camera, bobOffset = 0, npcIndex = 0) {
         const screenPos = camera.worldToScreen(x, y);
         const screenX = screenPos.x;
         const screenY = screenPos.y + (bobOffset || 0);
 
-        // 스프라이트를 사용할 수 있는 경우 - 조건 수정
+        // 레트로 스프라이트 우선 사용
+        if (this.retroSpritesLoaded) {
+            const frame = this.retroSpriteManager.getAnimationFrame();
+
+            if (isPlayer) {
+                this.retroSpriteManager.drawRetroPlayer(
+                    this.ctx, screenX, screenY, this.tileSize, this.tileSize, direction, frame
+                );
+            } else {
+                this.retroSpriteManager.drawRetroNPC(
+                    this.ctx, npcIndex, screenX, screenY, this.tileSize, this.tileSize, 'idle', frame
+                );
+            }
+            return;
+        }
+
+        // 기존 스프라이트 시스템 폴백
         if (this.spriteManager && this.spriteManager.hasTileset('characters')) {
             this.drawCharacterSprite(screenX, screenY, direction, isPlayer, customColor, npcIndex);
             return;

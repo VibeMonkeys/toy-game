@@ -64,13 +64,20 @@ export class QuestManager {
 
     // 아이템 제출 가능 여부 확인
     canSubmitItems(npcId, inventory) {
+        console.log(`🔍 퀘스트 체크: NPC ${npcId}`);
+        console.log(`📦 플레이어 인벤토리:`, inventory.map(item => item.name));
+
         const quest = this.getQuestByNPC(npcId);
         if (!quest) {
+            console.log(`❌ ${npcId}에 대한 퀘스트가 없습니다.`);
             return { canSubmit: false, reason: '퀘스트가 없습니다.' };
         }
 
+        console.log(`📋 발견된 퀘스트:`, quest.title, `필요 아이템:`, quest.requiredItem || quest.requiredItems);
+
         if (!QUEST_VALIDATION.canComplete(quest, inventory)) {
             const missingItems = QUEST_VALIDATION.getMissingItems(quest, inventory);
+            console.log(`❌ 부족한 아이템:`, missingItems);
             return {
                 canSubmit: false,
                 reason: `필요한 아이템: ${missingItems.join(', ')}`,
@@ -78,6 +85,7 @@ export class QuestManager {
             };
         }
 
+        console.log(`✅ 퀘스트 완료 가능!`);
         return { canSubmit: true, quest: quest };
     }
 
