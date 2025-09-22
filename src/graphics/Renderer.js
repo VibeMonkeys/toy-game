@@ -1,5 +1,6 @@
 import { CONSTANTS } from '../utils/Constants.js';
 import { RetroSpriteManager } from './RetroSpriteManager.js';
+import { Logger } from '../utils/Logger.js';
 
 export class Renderer {
     constructor(canvas, ctx, animationSystem = null, spriteManager = null) {
@@ -25,9 +26,9 @@ export class Renderer {
         try {
             await this.retroSpriteManager.loadSprites();
             this.retroSpritesLoaded = true;
-            console.log('🎨 Renderer: 레트로 스프라이트 로드 완료!');
+            Logger.info('🎨 Renderer: 레트로 스프라이트 로드 완료!');
         } catch (error) {
-            console.error('❌ Renderer: 레트로 스프라이트 로드 실패:', error);
+            Logger.error('❌ Renderer: 레트로 스프라이트 로드 실패:', error);
             this.retroSpritesLoaded = false;
         }
     }
@@ -36,15 +37,15 @@ export class Renderer {
     setSpriteManager(spriteManager) {
         this.spriteManager = spriteManager;
         this.useSprites = spriteManager && spriteManager.isLoaded();
-        console.log('🎨 Renderer: 스프라이트 매니저 설정 완료');
-        console.log('🎨 Renderer: 스프라이트 사용 가능:', this.useSprites);
+        Logger.debug('🎨 Renderer: 스프라이트 매니저 설정 완료');
+        Logger.debug('🎨 Renderer: 스프라이트 사용 가능:', this.useSprites);
         if (this.spriteManager) {
-            console.log('🎨 Renderer: 스프라이트 매니저 로딩 상태:', this.spriteManager.isLoaded());
-            console.log('🎨 Renderer: 캐릭터 타일셋 사용 가능:', this.spriteManager.hasTileset('characters'));
-            console.log('🎨 Renderer: 탑다운 타일셋 사용 가능:', this.spriteManager.hasTileset('topdown_tiles'));
-            console.log('🎨 Renderer: 모든 타일셋:', Object.keys(this.spriteManager.tilesets || {}));
+            Logger.debug('🎨 Renderer: 스프라이트 매니저 로딩 상태:', this.spriteManager.isLoaded());
+            Logger.debug('🎨 Renderer: 캐릭터 타일셋 사용 가능:', this.spriteManager.hasTileset('characters'));
+            Logger.debug('🎨 Renderer: 탑다운 타일셋 사용 가능:', this.spriteManager.hasTileset('topdown_tiles'));
+            Logger.debug('🎨 Renderer: 모든 타일셋:', Object.keys(this.spriteManager.tilesets || {}));
         } else {
-            console.error('❌ Renderer: 스프라이트 매니저가 null입니다!');
+            Logger.error('❌ Renderer: 스프라이트 매니저가 null입니다!');
         }
     }
 
@@ -985,12 +986,12 @@ export class Renderer {
             if (this.spriteManager.hasTileset(tilesetName)) {
                 // 타일셋 정보 확인 (디버깅용)
                 const tilesetInfo = this.spriteManager.getTilesetInfo(tilesetName);
-                console.log(`🔍 NPC ${npcIndex}: ${tilesetName}, index ${characterIndex}, tileset info:`, tilesetInfo);
+                Logger.debug(`🔍 NPC ${npcIndex}: ${tilesetName}, index ${characterIndex}, tileset info:`, tilesetInfo);
 
                 this.spriteManager.drawTile(this.ctx, tilesetName, characterIndex, screenX, screenY, this.tileSize, this.tileSize);
             } else {
                 // 폴백: 기본 캐릭터 시트 사용
-                console.log(`⚠️ NPC ${npcIndex}: ${tilesetName} not found, using fallback`);
+                Logger.warn(`⚠️ NPC ${npcIndex}: ${tilesetName} not found, using fallback`);
                 this.spriteManager.drawTile(this.ctx, 'characters', characterIndex, screenX, screenY, this.tileSize, this.tileSize);
             }
         }
@@ -1040,27 +1041,45 @@ export class Renderer {
 
         const screenPos = camera.worldToScreen(npc.x, npc.y);
 
-        // 퀘스트 NPC 위에 특별한 표시 (느낌표) - 완료되지 않은 퀘스트만
-        if (npc.questGiver && questSystem && !this.isNPCQuestCompleted(npc, questSystem)) {
-            this.ctx.fillStyle = '#FFD700';
-            this.ctx.font = 'bold 16px Arial';
+        // 퀘스트 NPC 위에 퀘스트 상태 표시
+        if (npc.questGiver && questSystem) {
+            const questStatus = this.getNPCQuestStatus(npc, questSystem);
+
+            this.ctx.font = '24px Arial';
             this.ctx.textAlign = 'center';
-            this.ctx.strokeStyle = '#000000';
-            this.ctx.lineWidth = 2;
 
-            // 느낌표 배경 원
-            this.ctx.beginPath();
-            this.ctx.arc(screenPos.x + this.tileSize/2, screenPos.y - 20, 10, 0, Math.PI * 2);
-            this.ctx.fillStyle = '#FFD700';
-            this.ctx.fill();
-            this.ctx.strokeStyle = '#000000';
-            this.ctx.lineWidth = 2;
-            this.ctx.stroke();
+            let icon = '';
+            let bgColor = '';
 
-            // 느낌표
-            this.ctx.fillStyle = '#000000';
-            this.ctx.font = 'bold 14px Arial';
-            this.ctx.fillText('!', screenPos.x + this.tileSize/2, screenPos.y - 15);
+            if (questStatus === 'canComplete') {
+                // 완료 가능 - 닫힌 책 (녹색 배경)
+                icon = '📕';
+                bgColor = '#4CAF50';
+            } else if (questStatus === 'inProgress') {
+                // 진행 중 - 펼쳐진 책 (노란색 배경)
+                icon = '📖';
+                bgColor = '#FFD700';
+            } else if (questStatus === 'completed') {
+                // 이미 완료됨 - 체크마크
+                icon = '✅';
+                bgColor = '#808080';
+            }
+
+            if (icon) {
+                // 배경 원 그리기
+                this.ctx.beginPath();
+                this.ctx.arc(screenPos.x + this.tileSize/2, screenPos.y - 15, 15, 0, Math.PI * 2);
+                this.ctx.fillStyle = bgColor;
+                this.ctx.fill();
+                this.ctx.strokeStyle = '#000000';
+                this.ctx.lineWidth = 2;
+                this.ctx.stroke();
+
+                // 아이콘 그리기
+                this.ctx.fillStyle = '#FFFFFF';
+                this.ctx.font = '18px Arial';
+                this.ctx.fillText(icon, screenPos.x + this.tileSize/2, screenPos.y - 8);
+            }
         }
 
         // NPC 이름 항상 표시
@@ -1075,6 +1094,31 @@ export class Renderer {
 
         this.ctx.strokeText(npc.name, nameX, nameY);
         this.ctx.fillText(npc.name, nameX, nameY);
+    }
+
+    getNPCQuestStatus(npc, questSystem) {
+        if (!npc.questGiver || !questSystem) return null;
+
+        // questGiver ID로 퀘스트 찾기
+        const quest = questSystem.quests.find(q => q.questGiver === npc.id);
+        if (!quest) return null;
+
+        // 퀘스트가 이미 완료됨
+        if (quest.completed) {
+            return 'completed';
+        }
+
+        // 퀘스트 완료 조건 확인 (아이템 체크)
+        const gameState = window.game?.gameState;
+        if (gameState && gameState.inventory) {
+            const canComplete = questSystem.questManager.canSubmitItems(npc.id, gameState.inventory);
+            if (canComplete.canSubmit) {
+                return 'canComplete';  // 완료 가능 (덮인 책)
+            }
+        }
+
+        // 퀘스트 진행 중
+        return 'inProgress';  // 진행 중 (펼쳐진 책)
     }
 
     isNPCQuestCompleted(npc, questSystem) {
