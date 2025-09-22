@@ -1,3 +1,5 @@
+import { Logger } from './Logger.js';
+
 export class AudioManager {
     constructor() {
         this.audioContext = null;
@@ -13,7 +15,7 @@ export class AudioManager {
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
             this.initialized = true;
         } catch (error) {
-            console.warn('Audio context not supported:', error);
+            Logger.warn('Audio context not supported:', error);
         }
     }
 
@@ -40,7 +42,7 @@ export class AudioManager {
             oscillator.start(this.audioContext.currentTime);
             oscillator.stop(this.audioContext.currentTime + duration / 1000);
         } catch (error) {
-            console.warn('Audio playback failed:', error);
+            Logger.warn('Audio playback failed:', error);
         }
     }
 
@@ -157,9 +159,9 @@ export class AudioManager {
 
     playCRTMonitorOn() {
         // CRT 모니터 켜지는 소리
-        setTimeout(() => this.playBeep(15000, 50), 0);    // 고주파 휘파람
-        setTimeout(() => this.playBeep(12000, 30), 50);   // 전자음
-        setTimeout(() => this.playBeep(8000, 20), 100);   // 안정화
+        setTimeout(() => this.playBeep(6000, 80), 0);     // 고주파 휘파람
+        setTimeout(() => this.playBeep(4500, 60), 80);    // 전자음
+        setTimeout(() => this.playBeep(3200, 40), 160);   // 안정화
     }
 
     playKeyboardClick() {
@@ -206,5 +208,22 @@ export class AudioManager {
         setTimeout(() => this.playBeep(784, 200), 200);   // G5
         setTimeout(() => this.playBeep(659, 200), 400);   // E5
         setTimeout(() => this.playBeep(523, 400), 600);   // C5 (길게)
+    }
+
+    destroy() {
+        if (this.audioContext) {
+            try {
+                this.audioContext.close();
+            } catch (error) {
+                Logger.warn('Audio context close failed:', error);
+            }
+            this.audioContext = null;
+        }
+
+        if (this.sounds && typeof this.sounds.clear === 'function') {
+            this.sounds.clear();
+        }
+
+        this.initialized = false;
     }
 };
