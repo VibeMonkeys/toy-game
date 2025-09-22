@@ -100,10 +100,11 @@ export class QuestUI {
 
         currentY += 30;
 
-        // 퀘스트 설명
+        // 퀘스트 설명 (동적으로 변경)
         this.ctx.fillStyle = '#cccccc';
         this.ctx.font = '14px Arial';
-        this.drawWrappedText(currentQuest.description, x + 20, currentY, width - 40, 18);
+        const dynamicDescription = this.getDynamicQuestDescription(currentQuest, gameState);
+        this.drawWrappedText(dynamicDescription, x + 20, currentY, width - 40, 18);
 
         currentY += 60;
 
@@ -365,6 +366,42 @@ export class QuestUI {
     }
 
     // 퀘스트 아이템 데이터 캐싱 및 성능 최적화
+    getDynamicQuestDescription(quest, gameState) {
+        const playerInventory = gameState?.collectedItems || [];
+        const hasRequiredItem = quest.requiredItem ?
+            playerInventory.some(item => item.name === quest.requiredItem) : false;
+
+        const hasAllRequiredItems = quest.requiredItems ?
+            quest.requiredItems.every(reqItem =>
+                playerInventory.some(item => item.name === reqItem)
+            ) : true;
+
+        // 아이템을 모두 가지고 있으면 NPC에게 가져가라고 안내
+        if ((quest.requiredItem && hasRequiredItem) ||
+            (quest.requiredItems && hasAllRequiredItems)) {
+            const npcName = this.getNPCNameByQuestGiver(quest.questGiver);
+            return `✅ 아이템 수집 완료! → ${npcName}에게 가져가세요! (📕 아이콘을 찾으세요)`;
+        }
+
+        // 아이템이 없으면 원래 설명 표시
+        return quest.description;
+    }
+
+    getNPCNameByQuestGiver(questGiverId) {
+        const npcNames = {
+            'guard': '경비 아저씨',
+            'reception': '안내 데스크 직원',
+            'kim_deputy': '김대리',
+            'intern': '인턴',
+            'office_worker_2': '박직원',
+            'manager_lee': '팀장 이씨',
+            'education_manager': '교육팀장',
+            'secretary_jung': '비서 정씨',
+            'ceo_kim': 'CEO 김대표'
+        };
+        return npcNames[questGiverId] || questGiverId;
+    }
+
     getQuestItemData(quest, gameState) {
         const questId = quest.id;
         const inventoryKey = gameState?.collectedItems?.map(i => i.name).join(',') || '';
