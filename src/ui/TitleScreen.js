@@ -10,42 +10,32 @@ export class TitleScreen {
         this.showGameInfo = false;
         this.menuAreas = [];
 
-        // 1999년 레트로 스타일 요소들 (응답하라 1999 감성)
+        // 응답하라 1999 스타일 요소들
         this.titleText = '휴넷 26주년 기념 게임에 오신 것을 환영합니다';
         this.subtitleText = '휴넷 에듀테크 어드벤처 RPG v1.0';
         this.companyText = '(c)1999 휴넷 코퍼레이션 - 인간 네트워크';
-        this.typewriterIndex = 0;
-        this.typewriterSpeed = 3;
-        this.typewriterComplete = false;
-
-        // 90년대 컴퓨터 효과들
-        this.crtScanlines = [];
-        this.pixelNoise = [];
-        this.windowsElements = [];
-        this.bootSequence = [];
-        this.logoGlow = 0;
-        this.backgroundMatrix = [];
-        this.particleTrails = [];
-        this.scanlines = [];
-        this.glitchEffect = 0;
-        this.retroColors = {
-            amber: '#FFB000',
-            green: '#00FF41',
-            blue: '#0080FF',
-            white: '#F0F0F0',
-            darkBlue: '#000080',
-            lightGray: '#C0C0C0',
-            darkGray: '#808080'
-        };
-
-        this.initializeRetroEffects();
 
         this.showSecretMessage = false;
         this.specialMessage = null;
 
-        this.initializeCRTEffects();
-        this.createWindowsElements();
-        this.initializeBootSequence();
+        // 로그라이크 게임 스타일 파티클
+        this.particles = [];
+        this.initializeParticles();
+    }
+
+    initializeParticles() {
+        // 배경 파티클 효과 (로그라이크 게임 스타일)
+        for (let i = 0; i < 50; i++) {
+            this.particles.push({
+                x: Math.random() * this.canvas.width,
+                y: Math.random() * this.canvas.height,
+                size: Math.random() * 2 + 1,
+                speedX: (Math.random() - 0.5) * 0.5,
+                speedY: (Math.random() - 0.5) * 0.5,
+                color: Math.random() > 0.5 ? '#FFD700' : '#FFA500',
+                alpha: Math.random() * 0.5 + 0.1
+            });
+        }
     }
 
     setMenuOptions(options) {
@@ -54,103 +44,26 @@ export class TitleScreen {
     }
 
     update() {
-        // 애니메이션 업데이트는 draw 메서드에서 처리됨
-    }
+        this.animationTime += 0.02;
 
-    initializeCRTEffects() {
-        // CRT 모니터 스캔라인
-        for (let i = 0; i < this.canvas.height; i += 3) {
-            this.crtScanlines.push({
-                y: i,
-                opacity: Math.random() * 0.15 + 0.05,
-                flicker: Math.random() * 0.1
-            });
-        }
+        // 파티클 업데이트
+        this.particles.forEach(particle => {
+            particle.x += particle.speedX;
+            particle.y += particle.speedY;
 
-        // CRT 픽셀 노이즈
-        for (let i = 0; i < 200; i++) {
-            this.pixelNoise.push({
-                x: Math.random() * this.canvas.width,
-                y: Math.random() * this.canvas.height,
-                brightness: Math.random(),
-                flickerSpeed: Math.random() * 0.1 + 0.05
-            });
-        }
-    }
-
-    initializeRetroEffects() {
-        // 매트릭스 스타일 배경 문자들 초기화
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%^&*()_+-=[]{}|;:,.<>?~`';
-        for (let i = 0; i < 100; i++) {
-            this.backgroundMatrix.push({
-                char: chars[Math.floor(Math.random() * chars.length)],
-                x: Math.random() * this.canvas.width,
-                y: Math.random() * this.canvas.height,
-                speed: Math.random() * 2 + 1,
-                opacity: Math.random() * 0.3 + 0.1
-            });
-        }
-
-        // 네온 파티클 트레일 초기화
-        const colors = ['#ff0040', '#00ffff', '#ffff00', '#ff8000', '#8000ff'];
-        for (let i = 0; i < 15; i++) {
-            this.particleTrails.push({
-                x: Math.random() * this.canvas.width,
-                y: Math.random() * this.canvas.height,
-                vx: (Math.random() - 0.5) * 2,
-                vy: (Math.random() - 0.5) * 2,
-                color: colors[Math.floor(Math.random() * colors.length)],
-                trail: [],
-                maxTrailLength: 10
-            });
-        }
-
-        // 스캔라인 초기화
-        for (let i = 0; i < this.canvas.height; i += 4) {
-            this.scanlines.push({
-                y: i,
-                opacity: Math.random() * 0.1 + 0.02
-            });
-        }
-    }
-
-    createWindowsElements() {
-        // Windows 98 스타일 UI 요소들
-        this.windowsElements = {
-            startButton: {
-                x: 5, y: this.canvas.height - 35,
-                width: 80, height: 30,
-                text: '시작',
-                pressed: false
-            },
-            taskbar: {
-                x: 0, y: this.canvas.height - 40,
-                width: this.canvas.width, height: 40
-            },
-            windows: [],
-            clock: {
-                x: this.canvas.width - 100, y: this.canvas.height - 25,
-                time: '23:59'
+            // 경계 체크
+            if (particle.x < 0 || particle.x > this.canvas.width) {
+                particle.speedX *= -1;
             }
-        };
-    }
+            if (particle.y < 0 || particle.y > this.canvas.height) {
+                particle.speedY *= -1;
+            }
 
-    initializeBootSequence() {
-        // 90년대 부팅 시퀀스 메시지
-        this.bootSequence = [
-            'HUNET CORP. BIOS v2.04.08',
-            'System initialized successfully',
-            'Loading Windows 98...',
-            'Starting HUNET Adventure Game',
-            'Press any key to continue...'
-        ];
-        this.currentBootMessage = 0;
-        this.bootMessageTimer = 0;
+            particle.alpha = Math.sin(this.animationTime * 2 + particle.x * 0.01) * 0.3 + 0.2;
+        });
     }
 
     draw() {
-        // 1999년 클래식 게임 스타일
-        this.updateAnimations();
         this.drawTitle();
         this.drawMenu();
 
@@ -158,7 +71,6 @@ export class TitleScreen {
             this.drawGameInfo();
         }
 
-        // 비밀 메시지들
         if (this.showSecretMessage) {
             this.drawSecretMessage();
         }
@@ -168,400 +80,198 @@ export class TitleScreen {
         }
     }
 
-    updateAnimations() {
-        this.animationTime += 0.03;
-        this.logoGlow += 0.05;
-        this.glitchEffect = Math.random() * 0.1;
-
-        // 타이핑 애니메이션
-        if (!this.typewriterComplete) {
-            this.typewriterIndex += this.typewriterSpeed;
-            if (this.typewriterIndex >= this.titleText.length + this.subtitleText.length) {
-                this.typewriterComplete = true;
-            }
-        }
-
-        // 매트릭스 문자 업데이트
-        this.backgroundMatrix.forEach(char => {
-            char.y += char.speed;
-            if (char.y > this.canvas.height + 50) {
-                char.y = -50;
-                char.x = Math.random() * this.canvas.width;
-            }
-            char.opacity = Math.sin(this.animationTime + char.x * 0.01) * 0.2 + 0.1;
-        });
-
-        // 파티클 트레일 업데이트
-        this.particleTrails.forEach(particle => {
-            particle.x += particle.vx;
-            particle.y += particle.vy;
-
-            // 트레일 추가
-            particle.trail.push({ x: particle.x, y: particle.y });
-            if (particle.trail.length > particle.maxTrailLength) {
-                particle.trail.shift();
-            }
-
-            // 경계 체크
-            if (particle.x < 0 || particle.x > this.canvas.width) {
-                particle.vx *= -1;
-            }
-            if (particle.y < 0 || particle.y > this.canvas.height) {
-                particle.vy *= -1;
-            }
-        });
-    }
-
-    drawBackground() {
-        // Windows 98 데스크톱 스타일 배경
-        const gradient = this.ctx.createLinearGradient(0, 0, this.canvas.width, this.canvas.height);
-        gradient.addColorStop(0, '#008080');
-        gradient.addColorStop(0.5, '#008B8B');
-        gradient.addColorStop(1, '#006666');
-
-        this.ctx.fillStyle = gradient;
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-        // Windows 98 태스크바
-        this.drawTaskbar();
-    }
-
-    drawTaskbar() {
-        const taskbar = this.windowsElements.taskbar;
-
-        // 태스크바 배경
-        this.ctx.fillStyle = '#C0C0C0';
-        this.ctx.fillRect(taskbar.x, taskbar.y, taskbar.width, taskbar.height);
-
-        // 태스크바 테두리 (3D 효과)
-        this.ctx.strokeStyle = '#FFFFFF';
-        this.ctx.lineWidth = 1;
-        this.ctx.beginPath();
-        this.ctx.moveTo(taskbar.x, taskbar.y + taskbar.height);
-        this.ctx.lineTo(taskbar.x, taskbar.y);
-        this.ctx.lineTo(taskbar.x + taskbar.width, taskbar.y);
-        this.ctx.stroke();
-
-        this.ctx.strokeStyle = '#808080';
-        this.ctx.beginPath();
-        this.ctx.moveTo(taskbar.x + taskbar.width, taskbar.y);
-        this.ctx.lineTo(taskbar.x + taskbar.width, taskbar.y + taskbar.height);
-        this.ctx.lineTo(taskbar.x, taskbar.y + taskbar.height);
-        this.ctx.stroke();
-
-        // 시작 버튼
-        this.drawWindows98Button(
-            this.windowsElements.startButton.x,
-            this.windowsElements.startButton.y,
-            this.windowsElements.startButton.width,
-            this.windowsElements.startButton.height,
-            this.windowsElements.startButton.text,
-            this.windowsElements.startButton.pressed
-        );
-
-        // 시계
-        this.ctx.fillStyle = '#000000';
-        this.ctx.font = '12px Arial';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText(this.windowsElements.clock.time, this.windowsElements.clock.x, this.windowsElements.clock.y);
-    }
-
-    drawWindows98Button(x, y, width, height, text, pressed = false) {
-        // 버튼 배경
-        this.ctx.fillStyle = '#C0C0C0';
-        this.ctx.fillRect(x, y, width, height);
-
-        // 3D 버튼 테두리
-        if (pressed) {
-            // 눌린 상태
-            this.ctx.strokeStyle = '#808080';
-            this.ctx.lineWidth = 1;
-            this.ctx.beginPath();
-            this.ctx.moveTo(x, y + height);
-            this.ctx.lineTo(x, y);
-            this.ctx.lineTo(x + width, y);
-            this.ctx.stroke();
-
-            this.ctx.strokeStyle = '#FFFFFF';
-            this.ctx.beginPath();
-            this.ctx.moveTo(x + width, y);
-            this.ctx.lineTo(x + width, y + height);
-            this.ctx.lineTo(x, y + height);
-            this.ctx.stroke();
-        } else {
-            // 일반 상태
-            this.ctx.strokeStyle = '#FFFFFF';
-            this.ctx.lineWidth = 1;
-            this.ctx.beginPath();
-            this.ctx.moveTo(x, y + height);
-            this.ctx.lineTo(x, y);
-            this.ctx.lineTo(x + width, y);
-            this.ctx.stroke();
-
-            this.ctx.strokeStyle = '#808080';
-            this.ctx.beginPath();
-            this.ctx.moveTo(x + width, y);
-            this.ctx.lineTo(x + width, y + height);
-            this.ctx.lineTo(x, y + height);
-            this.ctx.stroke();
-        }
-
-        // 버튼 텍스트
-        this.ctx.fillStyle = '#000000';
-        this.ctx.font = 'bold 12px Arial';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText(text, x + width/2, y + height/2 + 4);
-    }
-
-    drawCRTEffects() {
-        // CRT 모니터 스캔라인 효과
-        this.crtScanlines.forEach(line => {
-            const opacity = line.opacity + Math.sin(this.animationTime * 2 + line.y * 0.01) * line.flicker;
-            this.ctx.fillStyle = `rgba(0, 255, 0, ${Math.max(0, opacity)})`;
-            this.ctx.fillRect(0, line.y, this.canvas.width, 1);
-        });
-
-        // CRT 픽셀 노이즈
-        this.pixelNoise.forEach(pixel => {
-            const brightness = pixel.brightness + Math.sin(this.animationTime * 10 + pixel.x * 0.01) * pixel.flickerSpeed;
-            this.ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0, Math.min(1, brightness * 0.1))})`;
-            this.ctx.fillRect(pixel.x, pixel.y, 1, 1);
-        });
-
-        // 약간의 색수차 효과
-        if (Math.random() < 0.005) {
-            this.ctx.fillStyle = 'rgba(255, 0, 0, 0.02)';
-            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        }
-    }
-
-    drawWindowsDecorations() {
-        // Windows 98 스타일 장식 요소들
-
-        // 가끔 "윈도우" 팝업 효과
-        if (Math.random() < 0.001) {
-            this.drawFakeWindow();
-        }
-
-        // 마우스 커서 (화살표)
-        const cursorX = this.canvas.width * 0.7;
-        const cursorY = this.canvas.height * 0.3;
-
-        this.ctx.fillStyle = '#FFFFFF';
-        this.ctx.strokeStyle = '#000000';
-        this.ctx.lineWidth = 1;
-
-        this.ctx.beginPath();
-        this.ctx.moveTo(cursorX, cursorY);
-        this.ctx.lineTo(cursorX + 10, cursorY + 8);
-        this.ctx.lineTo(cursorX + 6, cursorY + 12);
-        this.ctx.lineTo(cursorX + 8, cursorY + 16);
-        this.ctx.lineTo(cursorX + 4, cursorY + 18);
-        this.ctx.lineTo(cursorX + 2, cursorY + 14);
-        this.ctx.closePath();
-        this.ctx.fill();
-        this.ctx.stroke();
-    }
-
-    drawFakeWindow() {
-        const windowX = Math.random() * (this.canvas.width - 300);
-        const windowY = Math.random() * (this.canvas.height - 200);
-        const windowWidth = 250;
-        const windowHeight = 150;
-
-        // 윈도우 배경
-        this.ctx.fillStyle = '#C0C0C0';
-        this.ctx.fillRect(windowX, windowY, windowWidth, windowHeight);
-
-        // 윈도우 테두리
-        this.ctx.strokeStyle = '#808080';
-        this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(windowX, windowY, windowWidth, windowHeight);
-
-        // 타이틀 바
-        this.ctx.fillStyle = '#000080';
-        this.ctx.fillRect(windowX, windowY, windowWidth, 20);
-
-        // 타이틀 텍스트
-        this.ctx.fillStyle = '#FFFFFF';
-        this.ctx.font = '12px Arial';
-        this.ctx.textAlign = 'left';
-        this.ctx.fillText('HUNET Game Loader', windowX + 5, windowY + 14);
-
-        // 닫기 버튼
-        this.ctx.fillStyle = '#C0C0C0';
-        this.ctx.fillRect(windowX + windowWidth - 18, windowY + 2, 16, 16);
-        this.ctx.strokeStyle = '#000000';
-        this.ctx.lineWidth = 1;
-        this.ctx.strokeRect(windowX + windowWidth - 18, windowY + 2, 16, 16);
-        this.ctx.fillStyle = '#000000';
-        this.ctx.font = 'bold 12px Arial';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText('×', windowX + windowWidth - 10, windowY + 14);
-    }
-
-
     drawTitle() {
-        // 1999년 클래식 게임 스타일 타이틀
         this.drawClassicGameTitle();
     }
 
-    drawDOSWelcomeBox() {
-        // DOS 스타일 환영 상자
-        const boxWidth = 600;
-        const boxHeight = 200;
-        const boxX = (this.canvas.width - boxWidth) / 2;
-        const boxY = 50;
+    drawClassicGameTitle() {
+        const centerX = this.canvas.width / 2;
+        const centerY = this.canvas.height / 2;
 
-        // DOS 스타일 이중 테두리 박스
-        this.ctx.strokeStyle = '#FFFF00';
-        this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+        // 응답하라 1999 스타일 깊은 배경 그라데이션
+        const bgGradient = this.ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, Math.max(this.canvas.width, this.canvas.height));
+        bgGradient.addColorStop(0, '#2c1810');
+        bgGradient.addColorStop(0.4, '#1a0f0a');
+        bgGradient.addColorStop(1, '#0a0504');
+        this.ctx.fillStyle = bgGradient;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-        this.ctx.strokeStyle = '#00FF00';
-        this.ctx.lineWidth = 1;
-        this.ctx.strokeRect(boxX + 4, boxY + 4, boxWidth - 8, boxHeight - 8);
+        // 90년대 스타일 패턴 배경
+        this.drawRetroPattern();
 
-        // 1990년대 컴퓨터 시작 메시지
-        this.ctx.fillStyle = '#00FFFF';
-        this.ctx.font = '12px "굴림", "Gulim", monospace';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText('■□■□■□■□■□■□■□■□■□■□■□■□■□■□■□■□■', this.canvas.width / 2, boxY + 25);
+        // 배경 파티클
+        this.drawParticles();
 
-        this.ctx.fillStyle = '#FFFFFF';
-        this.ctx.font = '11px "굴림", "Gulim", monospace';
-        this.ctx.fillText('HUNET CORP. COMPUTER SYSTEM v2.04', this.canvas.width / 2, boxY + 50);
-        this.ctx.fillText('SYSTEM INITIALIZED SUCCESSFULLY', this.canvas.width / 2, boxY + 65);
-        this.ctx.fillText('26TH ANNIVERSARY EDITION LOADED', this.canvas.width / 2, boxY + 80);
-        this.ctx.fillText('LOADING GAME ENVIRONMENT...', this.canvas.width / 2, boxY + 95);
-
-        this.ctx.fillStyle = '#00FFFF';
-        this.ctx.fillText('■□■□■□■□■□■□■□■□■□■□■□■□■□■□■□■□■', this.canvas.width / 2, boxY + 185);
-    }
-
-    draw1990sDecorations() {
-        // 1990년대 ASCII 아트 스타일 장식
-        this.ctx.fillStyle = '#808080';
-        this.ctx.font = '10px monospace';
-        this.ctx.textAlign = 'left';
-
-        // 좌측 장식
-        const leftDecor = [
-            '┌─────────┐',
-            '│ HUNET   │',
-            '│ 1999.03 │',
-            '│ 26th    │',
-            '└─────────┘'
-        ];
-
-        for (let i = 0; i < leftDecor.length; i++) {
-            this.ctx.fillText(leftDecor[i], 50, 300 + i * 15);
-        }
-
-        // 우측 장식
-        this.ctx.textAlign = 'right';
-        const rightDecor = [
-            '┌─────────┐',
-            '│ WELCOME │',
-            '│ TO GAME │',
-            '│ WORLD   │',
-            '└─────────┘'
-        ];
-
-        for (let i = 0; i < rightDecor.length; i++) {
-            this.ctx.fillText(rightDecor[i], this.canvas.width - 50, 300 + i * 15);
-        }
-    }
-
-    drawLogo() {
-        const logoX = this.canvas.width / 2;
-        const logoY = 80;
-
+        // 메인 로고 컨테이너 (로그라이크 게임 스타일)
         this.ctx.save();
-        this.ctx.translate(logoX, logoY);
+        this.ctx.translate(centerX, 140);
 
-        // Windows 98 스타일 로고 (사각형 아이콘)
-        const iconSize = 64;
+        // 외곽 프레임 (픽셀 아트 스타일)
+        this.ctx.fillStyle = '#8B4513';
+        this.ctx.fillRect(-180, -80, 360, 160);
 
-        // 아이콘 배경 (3D 효과)
-        this.ctx.fillStyle = '#C0C0C0';
-        this.ctx.fillRect(-iconSize/2, -iconSize/2, iconSize, iconSize);
+        // 내부 프레임
+        this.ctx.fillStyle = '#D2691E';
+        this.ctx.fillRect(-170, -70, 340, 140);
 
-        // 3D 테두리
-        this.ctx.strokeStyle = '#FFFFFF';
+        // 금속 테두리 효과
+        this.ctx.strokeStyle = '#FFD700';
+        this.ctx.lineWidth = 4;
+        this.ctx.strokeRect(-175, -75, 350, 150);
+
+        this.ctx.strokeStyle = '#FFA500';
         this.ctx.lineWidth = 2;
-        this.ctx.beginPath();
-        this.ctx.moveTo(-iconSize/2, iconSize/2);
-        this.ctx.lineTo(-iconSize/2, -iconSize/2);
-        this.ctx.lineTo(iconSize/2, -iconSize/2);
-        this.ctx.stroke();
+        this.ctx.strokeRect(-172, -72, 344, 144);
 
-        this.ctx.strokeStyle = '#808080';
-        this.ctx.beginPath();
-        this.ctx.moveTo(iconSize/2, -iconSize/2);
-        this.ctx.lineTo(iconSize/2, iconSize/2);
-        this.ctx.lineTo(-iconSize/2, iconSize/2);
-        this.ctx.stroke();
-
-        // HUNET 로고 내부
-        this.ctx.fillStyle = '#000080';
-        this.ctx.font = 'bold 14px Arial';
+        // 메인 타이틀 (굵은 픽셀 스타일)
+        this.ctx.fillStyle = '#FFD700';
+        this.ctx.strokeStyle = '#8B4513';
+        this.ctx.lineWidth = 3;
+        this.ctx.font = 'bold 48px "Courier New", monospace';
         this.ctx.textAlign = 'center';
-        this.ctx.fillText('HUNET', 0, -8);
 
-        // 26주년 텍스트
-        this.ctx.fillStyle = '#FF0000';
-        this.ctx.font = 'bold 12px Arial';
-        this.ctx.fillText('26TH', 0, 8);
+        // 그림자 효과
+        this.ctx.fillStyle = '#8B4513';
+        this.ctx.fillText('HUNET 26TH', 2, -12);
 
-        // 아이콘 하이라이트
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-        this.ctx.fillRect(-iconSize/2 + 4, -iconSize/2 + 4, iconSize/3, iconSize/3);
+        // 메인 텍스트
+        this.ctx.fillStyle = '#FFD700';
+        this.ctx.fillText('HUNET 26TH', 0, -15);
+
+        // 서브타이틀
+        this.ctx.fillStyle = '#FFA500';
+        this.ctx.font = 'bold 24px "Courier New", monospace';
+        this.ctx.fillText('ANNIVERSARY', 0, 20);
+
+        // "TREASURE HUNT" 텍스트 (더 임팩트 있게)
+        this.ctx.fillStyle = '#FF6347';
+        this.ctx.strokeStyle = '#8B0000';
+        this.ctx.lineWidth = 2;
+        this.ctx.font = 'bold 28px "Courier New", monospace';
+        this.ctx.strokeText('TREASURE HUNT', 0, 50);
+        this.ctx.fillStyle = '#FFD700';
+        this.ctx.fillText('TREASURE HUNT', 0, 50);
 
         this.ctx.restore();
+
+        // 로그라이크 스타일 장식 요소들
+        this.drawRoguelikeDecorations(centerX);
+
+        // 1999년 감성 하단 정보
+        this.drawVintageFooter(centerX);
     }
 
-
-    drawStar(x, y, outerRadius, innerRadius, points) {
-        this.ctx.save();
-        this.ctx.translate(x, y);
-        this.ctx.rotate(-Math.PI / 2);
-
-        this.ctx.beginPath();
-        for (let i = 0; i < points * 2; i++) {
-            const radius = i % 2 === 0 ? outerRadius : innerRadius;
-            const angle = (i * Math.PI) / points;
-            const px = radius * Math.cos(angle);
-            const py = radius * Math.sin(angle);
-
-            if (i === 0) {
-                this.ctx.moveTo(px, py);
-            } else {
-                this.ctx.lineTo(px, py);
+    drawRetroPattern() {
+        // 90년대 패턴 배경
+        this.ctx.fillStyle = 'rgba(139, 69, 19, 0.1)';
+        for (let x = 0; x < this.canvas.width; x += 40) {
+            for (let y = 0; y < this.canvas.height; y += 40) {
+                if ((x + y) % 80 === 0) {
+                    this.ctx.fillRect(x, y, 20, 20);
+                }
             }
         }
-        this.ctx.closePath();
-        this.ctx.fill();
-        this.ctx.restore();
+    }
+
+    drawParticles() {
+        this.particles.forEach(particle => {
+            this.ctx.save();
+            this.ctx.globalAlpha = particle.alpha;
+            this.ctx.fillStyle = particle.color;
+            this.ctx.fillRect(particle.x, particle.y, particle.size, particle.size);
+            this.ctx.restore();
+        });
+    }
+
+    drawRoguelikeDecorations(centerX) {
+        // 양쪽 장식 기둥
+        const decorY = 280;
+
+        // 왼쪽 기둥
+        this.drawPixelColumn(centerX - 250, decorY);
+        // 오른쪽 기둥
+        this.drawPixelColumn(centerX + 250, decorY);
+
+        // 중앙 보석들 (로그라이크 아이템 스타일)
+        for (let i = 0; i < 3; i++) {
+            const x = centerX - 60 + (i * 60);
+            const y = decorY + 20;
+            this.drawPixelGem(x, y, ['#FF6B6B', '#4ECDC4', '#45B7D1'][i]);
+        }
+    }
+
+    drawPixelColumn(x, y) {
+        // 픽셀 아트 스타일 기둥
+        this.ctx.fillStyle = '#8B4513';
+        this.ctx.fillRect(x - 15, y - 100, 30, 120);
+
+        this.ctx.fillStyle = '#D2691E';
+        this.ctx.fillRect(x - 12, y - 95, 24, 110);
+
+        // 기둥 장식
+        this.ctx.fillStyle = '#FFD700';
+        for (let i = 0; i < 5; i++) {
+            this.ctx.fillRect(x - 10, y - 80 + (i * 20), 20, 4);
+        }
+    }
+
+    drawPixelGem(x, y, color) {
+        // 로그라이크 스타일 보석
+        this.ctx.fillStyle = color;
+        this.ctx.fillRect(x - 8, y - 8, 16, 16);
+
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        this.ctx.fillRect(x - 6, y - 6, 4, 4);
+
+        this.ctx.strokeStyle = '#000';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(x - 8, y - 8, 16, 16);
+    }
+
+    drawVintageFooter(centerX) {
+        // 1999년 스타일 하단 정보
+        const footerY = this.canvas.height - 120;
+
+        // 배경 박스
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        this.ctx.fillRect(centerX - 300, footerY - 20, 600, 80);
+
+        this.ctx.strokeStyle = '#FFD700';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(centerX - 300, footerY - 20, 600, 80);
+
+        // 회사 정보
+        this.ctx.fillStyle = '#D2691E';
+        this.ctx.font = 'bold 16px "Courier New", monospace';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('H U M A N   N E T W O R K', centerX, footerY);
+
+        this.ctx.fillStyle = '#FFD700';
+        this.ctx.font = '14px "Courier New", monospace';
+        this.ctx.fillText('Since 1999 • Educational Technology Leader', centerX, footerY + 20);
+
+        this.ctx.fillStyle = '#FFA500';
+        this.ctx.font = '12px "Courier New", monospace';
+        this.ctx.fillText('© 1999 HUNET Corporation. All Rights Reserved.', centerX, footerY + 40);
     }
 
     drawMenu() {
         this.menuAreas = [];
-        const startY = 340;
-        const spacing = 50;
+        const startY = 360;
+        const spacing = 60;
 
-        this.ctx.font = 'bold 16px Arial';
+        this.ctx.font = 'bold 16px "Courier New", monospace';
         this.ctx.textAlign = 'center';
 
         for (let i = 0; i < this.menuOptions.length; i++) {
             const y = startY + i * spacing;
             const isSelected = i === this.menuIndex;
-            const buttonWidth = 200;
-            const buttonHeight = 40;
+            const buttonWidth = 280;
+            const buttonHeight = 50;
             const buttonX = this.canvas.width / 2 - buttonWidth / 2;
-            const buttonY = y - 20;
+            const buttonY = y - 25;
 
-            // 1999년 클래식 게임 스타일 버튼
+            // 로그라이크 스타일 버튼
             this.drawClassicButton(buttonX, buttonY, buttonWidth, buttonHeight, this.menuOptions[i], isSelected);
 
             // 마우스 클릭 영역 저장
@@ -574,51 +284,125 @@ export class TitleScreen {
             });
         }
 
-        // 조작 힌트 (Windows 98 스타일)
-        this.ctx.fillStyle = '#000000';
-        this.ctx.font = '12px Arial';
+        // 조작 힌트 (픽셀 스타일)
+        this.ctx.fillStyle = '#D2691E';
+        this.ctx.font = '14px "Courier New", monospace';
+        this.ctx.textAlign = 'center';
         this.ctx.fillText('↑↓ 선택 | ENTER 확인 | ESC 정보', this.canvas.width / 2, this.canvas.height - 60);
-
-        // 1999년 저작권 메시지
-        this.ctx.fillStyle = '#666666';
-        this.ctx.font = '10px Arial';
-        this.ctx.fillText('© 1999 HUNET Corporation. All rights reserved.', this.canvas.width / 2, this.canvas.height - 80);
     }
 
+    drawClassicButton(x, y, width, height, text, isSelected) {
+        // 로그라이크 스타일 픽셀 버튼
+
+        // 버튼 그림자
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        this.ctx.fillRect(x + 4, y + 4, width, height);
+
+        if (isSelected) {
+            // 선택된 버튼 - 로그라이크 스타일 골드 버튼
+            this.ctx.fillStyle = '#8B4513';
+            this.ctx.fillRect(x, y, width, height);
+
+            this.ctx.fillStyle = '#D2691E';
+            this.ctx.fillRect(x + 2, y + 2, width - 4, height - 4);
+
+            this.ctx.fillStyle = '#FFD700';
+            this.ctx.fillRect(x + 4, y + 4, width - 8, height - 8);
+
+            // 골드 테두리
+            this.ctx.strokeStyle = '#FFA500';
+            this.ctx.lineWidth = 3;
+            this.ctx.strokeRect(x, y, width, height);
+
+        } else {
+            // 일반 버튼 - 로그라이크 스타일 스톤 버튼
+            this.ctx.fillStyle = '#2F2F2F';
+            this.ctx.fillRect(x, y, width, height);
+
+            this.ctx.fillStyle = '#4A4A4A';
+            this.ctx.fillRect(x + 2, y + 2, width - 4, height - 4);
+
+            this.ctx.fillStyle = '#696969';
+            this.ctx.fillRect(x + 4, y + 4, width - 8, height - 8);
+
+            // 스톤 테두리
+            this.ctx.strokeStyle = '#808080';
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect(x, y, width, height);
+        }
+
+        // 픽셀 스타일 하이라이트
+        this.ctx.fillStyle = isSelected ? 'rgba(255, 255, 255, 0.4)' : 'rgba(255, 255, 255, 0.2)';
+        this.ctx.fillRect(x + 6, y + 6, width - 12, 4);
+        this.ctx.fillRect(x + 6, y + 6, 4, height - 12);
+
+        // 버튼 텍스트 (픽셀 폰트 스타일)
+        this.ctx.font = isSelected ? 'bold 18px "Courier New", monospace' : 'bold 16px "Courier New", monospace';
+        this.ctx.textAlign = 'center';
+
+        // 텍스트 그림자
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        this.ctx.fillText(text, x + width/2 + 1, y + height/2 + 7);
+
+        // 메인 텍스트
+        this.ctx.fillStyle = isSelected ? '#000080' : '#FFD700';
+        this.ctx.fillText(text, x + width/2, y + height/2 + 6);
+
+        // 선택된 버튼에 로그라이크 스타일 인디케이터
+        if (isSelected) {
+            // 왼쪽 다이아몬드
+            this.drawPixelDiamond(x - 20, y + height/2, '#FFD700');
+            // 오른쪽 다이아몬드
+            this.drawPixelDiamond(x + width + 10, y + height/2, '#FFD700');
+        }
+    }
+
+    drawPixelDiamond(x, y, color) {
+        this.ctx.fillStyle = color;
+        this.ctx.fillRect(x - 1, y - 4, 3, 1);
+        this.ctx.fillRect(x - 2, y - 3, 5, 1);
+        this.ctx.fillRect(x - 3, y - 2, 7, 1);
+        this.ctx.fillRect(x - 4, y - 1, 9, 3);
+        this.ctx.fillRect(x - 3, y + 2, 7, 1);
+        this.ctx.fillRect(x - 2, y + 3, 5, 1);
+        this.ctx.fillRect(x - 1, y + 4, 3, 1);
+    }
 
     drawGameInfo() {
         // 어두운 배경
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // 터미널 스타일 정보 박스
+        // 로그라이크 스타일 정보 박스
         const boxWidth = 700;
         const boxHeight = 500;
         const boxX = (this.canvas.width - boxWidth) / 2;
         const boxY = (this.canvas.height - boxHeight) / 2;
 
-        // 네온 테두리
-        this.ctx.strokeStyle = '#00ffff';
-        this.ctx.lineWidth = 3;
-        this.ctx.shadowColor = '#00ffff';
-        this.ctx.shadowBlur = 10;
+        // 골드 테두리
+        this.ctx.strokeStyle = '#FFD700';
+        this.ctx.lineWidth = 4;
         this.ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
 
+        // 내부 테두리
+        this.ctx.strokeStyle = '#D2691E';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(boxX + 4, boxY + 4, boxWidth - 8, boxHeight - 8);
+
         // 어두운 배경
-        this.ctx.shadowBlur = 0;
-        this.ctx.fillStyle = '#000020';
-        this.ctx.fillRect(boxX + 3, boxY + 3, boxWidth - 6, boxHeight - 6);
+        this.ctx.fillStyle = '#1a0f0a';
+        this.ctx.fillRect(boxX + 6, boxY + 6, boxWidth - 12, boxHeight - 12);
 
         // 제목
-        this.ctx.fillStyle = '#00ffff';
-        this.ctx.font = 'bold 24px monospace';
+        this.ctx.fillStyle = '#FFD700';
+        this.ctx.font = 'bold 24px "Courier New", monospace';
         this.ctx.textAlign = 'center';
         this.ctx.fillText('=== GAME INFO ===', this.canvas.width / 2, boxY + 40);
 
-        // 정보 텍스트 (터미널 스타일)
-        this.ctx.font = '16px monospace';
+        // 정보 텍스트 (로그라이크 스타일)
+        this.ctx.font = '16px "Courier New", monospace';
         this.ctx.textAlign = 'left';
-        this.ctx.fillStyle = '#00ff00';
+        this.ctx.fillStyle = '#D2691E';
 
         const infoText = [
             '> 휴넷 26주년 기념 에듀테크 어드벤처 RPG',
@@ -647,21 +431,21 @@ export class TitleScreen {
         let textY = boxY + 80;
         for (let line of infoText) {
             if (line.startsWith('>')) {
-                this.ctx.fillStyle = '#ffff00';
+                this.ctx.fillStyle = '#FFD700';
             } else if (line.startsWith('  [')) {
-                this.ctx.fillStyle = '#00ffff';
+                this.ctx.fillStyle = '#FFA500';
             } else if (line.startsWith('  •')) {
-                this.ctx.fillStyle = '#ff6600';
+                this.ctx.fillStyle = '#FF6347';
             } else {
-                this.ctx.fillStyle = '#00ff00';
+                this.ctx.fillStyle = '#D2691E';
             }
             this.ctx.fillText(line, boxX + 30, textY);
             textY += 20;
         }
 
         // 닫기 안내
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.font = 'bold 16px monospace';
+        this.ctx.fillStyle = '#FFD700';
+        this.ctx.font = 'bold 16px "Courier New", monospace';
         this.ctx.textAlign = 'center';
         this.ctx.fillText('[ESC] 돌아가기', this.canvas.width / 2, boxY + boxHeight - 30);
     }
@@ -743,207 +527,49 @@ export class TitleScreen {
         return selectedOption;
     }
 
-    update() {
-        // 애니메이션 업데이트만 수행
-        this.animationTime += 0.05;
-    }
-
     drawSecretMessage() {
         // 반투명 배경
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
         // 비밀 메시지
-        this.ctx.fillStyle = '#ffff00';
-        this.ctx.font = 'bold 32px Arial';
+        this.ctx.fillStyle = '#FFD700';
+        this.ctx.font = 'bold 32px "Courier New", monospace';
         this.ctx.textAlign = 'center';
         this.ctx.fillText('🔍 숨겨진 기능을 발견했습니다! 🔍', this.canvas.width / 2, this.canvas.height / 2 - 50);
 
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.font = '20px Arial';
+        this.ctx.fillStyle = '#FFA500';
+        this.ctx.font = '20px "Courier New", monospace';
         this.ctx.fillText('게임 중에 H키를 눌러 더 많은 비밀을 찾아보세요!', this.canvas.width / 2, this.canvas.height / 2);
         this.ctx.fillText('D키로 디버그 모드도 활성화할 수 있어요!', this.canvas.width / 2, this.canvas.height / 2 + 30);
         this.ctx.fillText('↑↑↓↓←→←→BA 를 입력해보세요...', this.canvas.width / 2, this.canvas.height / 2 + 60);
     }
 
     drawSpecialMessage() {
-        // 무지개 배경 효과
+        // 로그라이크 스타일 특별 메시지 배경
         const time = Date.now() * 0.005;
-        const gradient = this.ctx.createRadialGradient(
-            this.canvas.width / 2, this.canvas.height / 2, 0,
-            this.canvas.width / 2, this.canvas.height / 2, 400
-        );
-
-        for (let i = 0; i < 7; i++) {
-            const hue = (time * 50 + i * 51.43) % 360;
-            const alpha = 0.1 + Math.sin(time + i) * 0.05;
-            gradient.addColorStop(i / 6, `hsla(${hue}, 70%, 50%, ${alpha})`);
-        }
-
-        this.ctx.fillStyle = gradient;
+        this.ctx.fillStyle = 'rgba(139, 69, 19, 0.8)';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
         // 특별 메시지
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.font = 'bold 24px Arial';
+        this.ctx.fillStyle = '#FFD700';
+        this.ctx.font = 'bold 24px "Courier New", monospace';
         this.ctx.textAlign = 'center';
-        this.ctx.strokeStyle = '#000000';
+        this.ctx.strokeStyle = '#8B4513';
         this.ctx.lineWidth = 2;
         this.ctx.strokeText(this.specialMessage, this.canvas.width / 2, this.canvas.height / 2);
         this.ctx.fillText(this.specialMessage, this.canvas.width / 2, this.canvas.height / 2);
 
-        // 반짝이는 별 효과
-        for (let i = 0; i < 20; i++) {
-            const x = this.canvas.width / 2 + Math.cos(time + i) * (100 + i * 20);
-            const y = this.canvas.height / 2 + Math.sin(time + i * 1.3) * (50 + i * 10);
+        // 반짝이는 다이아몬드 효과
+        for (let i = 0; i < 12; i++) {
+            const x = this.canvas.width / 2 + Math.cos(time + i) * (100 + i * 15);
+            const y = this.canvas.height / 2 + Math.sin(time + i * 1.3) * (50 + i * 8);
             const alpha = Math.sin(time * 3 + i) * 0.5 + 0.5;
 
-            this.ctx.fillStyle = `rgba(255, 255, 0, ${alpha})`;
-            this.drawStar(x, y, 3, 1, 5);
+            this.ctx.save();
+            this.ctx.globalAlpha = alpha;
+            this.drawPixelDiamond(x, y, '#FFD700');
+            this.ctx.restore();
         }
     }
-
-    drawClassicGameTitle() {
-        // 1999년 클래식 게임 스타일 - 깔끔하고 심플한 디자인
-        const centerX = this.canvas.width / 2;
-
-        // 배경 그라데이션 (90년대 게임 특유의 부드러운 배경)
-        const gradient = this.ctx.createLinearGradient(0, 0, this.canvas.width, this.canvas.height);
-        gradient.addColorStop(0, '#1a1a2e');
-        gradient.addColorStop(0.5, '#16213e');
-        gradient.addColorStop(1, '#0f0f23');
-        this.ctx.fillStyle = gradient;
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height - 40); // 태스크바 제외
-
-        // 메인 게임 로고
-        this.ctx.save();
-        this.ctx.translate(centerX, 120);
-
-        // 로고 배경 원
-        this.ctx.fillStyle = '#ffd700';
-        this.ctx.beginPath();
-        this.ctx.arc(0, 0, 60, 0, Math.PI * 2);
-        this.ctx.fill();
-
-        // 로고 테두리
-        this.ctx.strokeStyle = '#ffffff';
-        this.ctx.lineWidth = 3;
-        this.ctx.stroke();
-
-        // HUNET 텍스트
-        this.ctx.fillStyle = '#000080';
-        this.ctx.font = 'bold 24px Arial';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText('HUNET', 0, -5);
-
-        // 26주년 텍스트
-        this.ctx.fillStyle = '#ff4500';
-        this.ctx.font = 'bold 16px Arial';
-        this.ctx.fillText('26TH', 0, 15);
-
-        this.ctx.restore();
-
-        // 게임 제목 (간단하고 임팩트 있게)
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.font = 'bold 36px Arial';
-        this.ctx.textAlign = 'center';
-        this.ctx.strokeStyle = '#000080';
-        this.ctx.lineWidth = 2;
-        this.ctx.strokeText('ANNIVERSARY', centerX, 220);
-        this.ctx.fillText('ANNIVERSARY', centerX, 220);
-
-        this.ctx.font = 'bold 24px Arial';
-        this.ctx.fillStyle = '#ffd700';
-        this.ctx.strokeStyle = '#000080';
-        this.ctx.lineWidth = 1;
-        this.ctx.strokeText('TREASURE HUNT', centerX, 250);
-        this.ctx.fillText('TREASURE HUNT', centerX, 250);
-
-        // 심플한 장식 라인
-        this.ctx.strokeStyle = '#ffd700';
-        this.ctx.lineWidth = 2;
-        this.ctx.beginPath();
-        this.ctx.moveTo(centerX - 150, 270);
-        this.ctx.lineTo(centerX + 150, 270);
-        this.ctx.stroke();
-
-        // 작은 별 장식
-        for (let i = 0; i < 5; i++) {
-            const x = centerX - 120 + (i * 60);
-            const y = 285;
-            this.drawSimpleStar(x, y, 8, '#ffd700');
-        }
-
-        // 저작권 정보 (하단에 심플하게)
-        this.ctx.fillStyle = '#cccccc';
-        this.ctx.font = '12px Arial';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText('© 1999 HUNET Corporation', centerX, this.canvas.height - 100);
-        this.ctx.fillText('Human Network', centerX, this.canvas.height - 85);
-    }
-
-    drawSimpleStar(x, y, size, color) {
-        this.ctx.save();
-        this.ctx.translate(x, y);
-        this.ctx.fillStyle = color;
-        this.ctx.beginPath();
-        for (let i = 0; i < 5; i++) {
-            const angle = (i * Math.PI * 2) / 5 - Math.PI / 2;
-            const px = Math.cos(angle) * size;
-            const py = Math.sin(angle) * size;
-            if (i === 0) {
-                this.ctx.moveTo(px, py);
-            } else {
-                this.ctx.lineTo(px, py);
-            }
-        }
-        this.ctx.closePath();
-        this.ctx.fill();
-        this.ctx.restore();
-    }
-
-    drawClassicButton(x, y, width, height, text, isSelected) {
-        // 1999년 클래식 게임 버튼 스타일
-
-        // 버튼 배경
-        if (isSelected) {
-            // 선택된 버튼 - 금색 그라데이션
-            const gradient = this.ctx.createLinearGradient(x, y, x, y + height);
-            gradient.addColorStop(0, '#ffd700');
-            gradient.addColorStop(1, '#b8860b');
-            this.ctx.fillStyle = gradient;
-        } else {
-            // 일반 버튼 - 은색 그라데이션
-            const gradient = this.ctx.createLinearGradient(x, y, x, y + height);
-            gradient.addColorStop(0, '#e0e0e0');
-            gradient.addColorStop(1, '#a0a0a0');
-            this.ctx.fillStyle = gradient;
-        }
-
-        this.ctx.fillRect(x, y, width, height);
-
-        // 버튼 테두리
-        this.ctx.strokeStyle = isSelected ? '#ffffff' : '#808080';
-        this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(x, y, width, height);
-
-        // 내부 하이라이트
-        this.ctx.strokeStyle = isSelected ? '#ffff80' : '#f0f0f0';
-        this.ctx.lineWidth = 1;
-        this.ctx.strokeRect(x + 1, y + 1, width - 2, height - 2);
-
-        // 버튼 텍스트
-        this.ctx.fillStyle = isSelected ? '#000080' : '#000000';
-        this.ctx.font = isSelected ? 'bold 18px Arial' : 'bold 16px Arial';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText(text, x + width/2, y + height/2 + 6);
-
-        // 선택된 버튼에 화살표 추가
-        if (isSelected) {
-            this.ctx.fillStyle = '#000080';
-            this.ctx.font = 'bold 16px Arial';
-            this.ctx.fillText('►', x + 20, y + height/2 + 5);
-            this.ctx.fillText('◄', x + width - 20, y + height/2 + 5);
-        }
-    }
-};
+}
