@@ -82,7 +82,10 @@ export class Minimap {
         // 맵 데이터 그리기
         this.drawMapContent(currentMapData, mapX, mapY, mapSize);
 
-        // 플레이어 위치 표시
+        // 게임 오브젝트들 그리기
+        this.drawMapObjects(currentMapData, gameState, mapX, mapY, mapSize);
+
+        // 플레이어 위치 표시 (맨 위에)
         this.drawPlayerPosition(player, currentMapData, mapX, mapY, mapSize);
 
         // 대형 지도일 때 추가 정보 표시
@@ -130,6 +133,114 @@ export class Minimap {
                 this.ctx.fillRect(drawX, drawY, cellSize, cellSize);
             }
         }
+    }
+
+    drawMapObjects(mapData, gameState, mapX, mapY, mapSize) {
+        if (!mapData || !mapData.data) return;
+
+        const mapWidth = mapData.data[0].length;
+        const mapHeight = mapData.data.length;
+        const cellSize = mapSize / Math.max(mapWidth, mapHeight);
+
+        // NPC 그리기
+        if (mapData.npcs) {
+            this.ctx.fillStyle = '#FFD700'; // 금색
+            for (let npc of mapData.npcs) {
+                const npcX = mapX + (npc.x * cellSize);
+                const npcY = mapY + (npc.y * cellSize);
+                
+                this.ctx.beginPath();
+                this.ctx.arc(npcX + cellSize/2, npcY + cellSize/2, cellSize/4, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // 대형 지도에서는 NPC 이름 표시
+                if (this.displayMode === 2 && npc.name) {
+                    this.ctx.fillStyle = '#FFFFFF';
+                    this.ctx.font = '10px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText(npc.name, npcX + cellSize/2, npcY - 2);
+                    this.ctx.fillStyle = '#FFD700'; // 색상 복원
+                }
+            }
+        }
+
+        // 아이템 그리기 (수집되지 않은 것만)
+        if (mapData.items) {
+            this.ctx.fillStyle = '#00FF00'; // 녹색
+            for (let item of mapData.items) {
+                if (!item.collected && !this.isItemCollected(item, gameState)) {
+                    const itemX = mapX + (item.x * cellSize);
+                    const itemY = mapY + (item.y * cellSize);
+                    
+                    this.ctx.fillRect(itemX + cellSize/3, itemY + cellSize/3, cellSize/3, cellSize/3);
+                    
+                    // 대형 지도에서는 아이템 이름 표시
+                    if (this.displayMode === 2 && item.name) {
+                        this.ctx.fillStyle = '#FFFFFF';
+                        this.ctx.font = '9px Arial';
+                        this.ctx.textAlign = 'center';
+                        this.ctx.fillText(item.name, itemX + cellSize/2, itemY - 2);
+                        this.ctx.fillStyle = '#00FF00'; // 색상 복원
+                    }
+                }
+            }
+        }
+
+        // 포털 그리기
+        if (mapData.portals) {
+            this.ctx.fillStyle = '#00AAFF'; // 파란색
+            for (let portal of mapData.portals) {
+                const portalX = mapX + (portal.x * cellSize);
+                const portalY = mapY + (portal.y * cellSize);
+                
+                this.ctx.fillRect(portalX, portalY, cellSize, cellSize);
+                
+                // 포털 테두리
+                this.ctx.strokeStyle = '#FFFFFF';
+                this.ctx.lineWidth = 1;
+                this.ctx.strokeRect(portalX, portalY, cellSize, cellSize);
+                
+                // 대형 지도에서는 포털 목적지 표시
+                if (this.displayMode === 2 && portal.targetMap) {
+                    this.ctx.fillStyle = '#FFFFFF';
+                    this.ctx.font = '9px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText(portal.targetMap, portalX + cellSize/2, portalY - 2);
+                    this.ctx.fillStyle = '#00AAFF'; // 색상 복원
+                }
+            }
+        }
+
+        // 엘리베이터 그리기
+        if (mapData.elevatorPanel) {
+            const elevator = mapData.elevatorPanel;
+            const elevatorX = mapX + (elevator.x * cellSize);
+            const elevatorY = mapY + (elevator.y * cellSize);
+            
+            this.ctx.fillStyle = '#FF8C00'; // 주황색
+            this.ctx.fillRect(elevatorX, elevatorY, cellSize, cellSize);
+            
+            // 엘리베이터 테두리
+            this.ctx.strokeStyle = '#FFD700';
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect(elevatorX, elevatorY, cellSize, cellSize);
+            
+            // 대형 지도에서는 "엘리베이터" 텍스트 표시
+            if (this.displayMode === 2) {
+                this.ctx.fillStyle = '#FFFFFF';
+                this.ctx.font = '10px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText('엘리베이터', elevatorX + cellSize/2, elevatorY - 2);
+            }
+        }
+    }
+
+    // 아이템이 이미 수집되었는지 확인
+    isItemCollected(item, gameState) {
+        if (!gameState || !gameState.inventory) return false;
+        return gameState.inventory.some(invItem => 
+            invItem.name === item.name && invItem.x === item.x && invItem.y === item.y
+        );
     }
 
     drawPlayerPosition(player, mapData, mapX, mapY, mapSize) {
