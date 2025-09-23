@@ -14,6 +14,8 @@ export class Minimap {
         // 0 → 1 → 2 → 0 순환
         this.displayMode = (this.displayMode + 1) % 3;
         
+        console.log('🗺️ M키 눌림! displayMode 변경:', this.displayMode);
+        
         switch(this.displayMode) {
             case 0:
                 Logger.debug('🗺️ 미니맵 완전 숨김');
@@ -46,16 +48,26 @@ export class Minimap {
         }
 
         const currentMapData = mapManager.getCurrentMap();
+        console.log('🗺️ 미니맵 디버그:', {
+            displayMode: this.displayMode,
+            currentMapData: currentMapData,
+            mapStructure: currentMapData ? Object.keys(currentMapData) : 'null',
+            hasData: currentMapData && currentMapData.data,
+            hasNpcs: currentMapData && currentMapData.npcs,
+            hasItems: currentMapData && currentMapData.items,
+            dataStructure: currentMapData && currentMapData.data ? `${currentMapData.data.length}x${currentMapData.data[0] ? currentMapData.data[0].length : 0}` : 'none'
+        });
+        
         if (!currentMapData) return;
 
         // 디스플레이 모드에 따른 설정
         let mapSize, mapX, mapY, showBackground = false;
         
         if (this.displayMode === 1) {
-            // 작은 미니맵 (우측 상단)
-            mapSize = 180;
-            mapX = this.canvas.width - mapSize - 15;
-            mapY = 15;
+            // 작은 미니맵 (우측 상단) - 세로형으로 조정
+            mapSize = Math.min(150, this.canvas.height * 0.25);
+            mapX = this.canvas.width - mapSize - 10;
+            mapY = 10;
         } else if (this.displayMode === 2) {
             // 대형 지도 (중앙)
             mapSize = Math.min(this.canvas.width * 0.8, this.canvas.height * 0.8);
@@ -70,12 +82,12 @@ export class Minimap {
             this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         }
 
-        // 미니맵 배경
-        this.ctx.fillStyle = this.displayMode === 2 ? 'rgba(50, 50, 50, 0.95)' : 'rgba(30, 30, 30, 0.85)';
+        // 미니맵 배경 (어두운 테마)
+        this.ctx.fillStyle = this.displayMode === 2 ? 'rgba(25, 25, 35, 0.95)' : 'rgba(20, 20, 30, 0.9)';
         this.ctx.fillRect(mapX, mapY, mapSize, mapSize);
 
         // 미니맵 테두리
-        this.ctx.strokeStyle = this.displayMode === 2 ? '#FFD700' : '#FFFFFF';
+        this.ctx.strokeStyle = this.displayMode === 2 ? '#FFD700' : '#87CEEB';
         this.ctx.lineWidth = this.displayMode === 2 ? 3 : 2;
         this.ctx.strokeRect(mapX, mapY, mapSize, mapSize);
 
@@ -95,51 +107,55 @@ export class Minimap {
     }
 
     drawMapContent(mapData, mapX, mapY, mapSize) {
-        if (!mapData || !mapData.data) return;
+        if (!mapData) return;
 
-        const mapWidth = mapData.data[0].length;
-        const mapHeight = mapData.data.length;
+        // 맵 크기 설정 (게임 맵 크기 기준)
+        const mapWidth = 40;  // CONSTANTS.MAP_WIDTH
+        const mapHeight = 30; // CONSTANTS.MAP_HEIGHT
         const cellSize = mapSize / Math.max(mapWidth, mapHeight);
 
-        // 맵 타일 그리기
-        for (let y = 0; y < mapHeight; y++) {
-            for (let x = 0; x < mapWidth; x++) {
-                const tile = mapData.data[y][x];
-                const drawX = mapX + (x * cellSize);
-                const drawY = mapY + (y * cellSize);
+        // 기본 바닥 그리기 (자연스러운 베이지색)
+        this.ctx.fillStyle = '#8B7355';
+        this.ctx.fillRect(mapX, mapY, mapSize, mapSize);
 
-                // 타일 타입에 따른 색상
-                let color = '#333333'; // 기본 어두운 색
-                
-                switch(tile) {
-                    case 0: // 벽
-                        color = '#666666';
-                        break;
-                    case 1: // 바닥
-                        color = '#cccccc';
-                        break;
-                    case 2: // 문
-                        color = '#8B4513';
-                        break;
-                    case 3: // 엘리베이터
-                        color = '#FFD700';
-                        break;
-                    case 4: // 특수 지역
-                        color = '#4169E1';
-                        break;
-                }
+        // 벽 그리기 (진한 회색)
+        if (mapData.walls) {
+            this.ctx.fillStyle = '#2F2F2F';
+            for (let wall of mapData.walls) {
+                const wallX = mapX + (wall.x * cellSize);
+                const wallY = mapY + (wall.y * cellSize);
+                this.ctx.fillRect(wallX, wallY, cellSize, cellSize);
+            }
+        }
 
-                this.ctx.fillStyle = color;
-                this.ctx.fillRect(drawX, drawY, cellSize, cellSize);
+        // 사무용품들을 벽처럼 표시 (갈색 계열)
+        if (mapData.officeItems) {
+            this.ctx.fillStyle = '#5D4E37';
+            
+            // 책상, 의자, 컴퓨터 등을 모두 표시
+            const allItems = [
+                ...(mapData.officeItems.desks || []),
+                ...(mapData.officeItems.chairs || []),
+                ...(mapData.officeItems.computers || []),
+                ...(mapData.officeItems.monitors || []),
+                ...(mapData.officeItems.printers || []),
+                ...(mapData.officeItems.meetingTables || [])
+            ];
+            
+            for (let item of allItems) {
+                const itemX = mapX + (item.x * cellSize);
+                const itemY = mapY + (item.y * cellSize);
+                this.ctx.fillRect(itemX, itemY, cellSize, cellSize);
             }
         }
     }
 
     drawMapObjects(mapData, gameState, mapX, mapY, mapSize) {
-        if (!mapData || !mapData.data) return;
+        if (!mapData) return;
 
-        const mapWidth = mapData.data[0].length;
-        const mapHeight = mapData.data.length;
+        // 맵 크기 설정 (게임 맵 크기 기준)
+        const mapWidth = 40;  // CONSTANTS.MAP_WIDTH
+        const mapHeight = 30; // CONSTANTS.MAP_HEIGHT
         const cellSize = mapSize / Math.max(mapWidth, mapHeight);
 
         // NPC 그리기
@@ -244,10 +260,11 @@ export class Minimap {
     }
 
     drawPlayerPosition(player, mapData, mapX, mapY, mapSize) {
-        if (!mapData || !mapData.data) return;
+        if (!mapData) return;
 
-        const mapWidth = mapData.data[0].length;
-        const mapHeight = mapData.data.length;
+        // 맵 크기 설정 (게임 맵 크기 기준)
+        const mapWidth = 40;  // CONSTANTS.MAP_WIDTH
+        const mapHeight = 30; // CONSTANTS.MAP_HEIGHT
         const cellSize = mapSize / Math.max(mapWidth, mapHeight);
 
         // 플레이어 위치 계산
@@ -257,10 +274,15 @@ export class Minimap {
         // 플레이어 표시 (빨간 점)
         this.ctx.fillStyle = '#FF0000';
         this.ctx.beginPath();
-        this.ctx.arc(playerX + cellSize/2, playerY + cellSize/2, cellSize/3, 0, Math.PI * 2);
+        this.ctx.arc(playerX + cellSize/2, playerY + cellSize/2, Math.max(cellSize/3, 3), 0, Math.PI * 2);
         this.ctx.fill();
 
-        // 플레이어 주변 하이라이트 (대형 지도에서만)
+        // 플레이어 테두리 (더 눈에 띄게)
+        this.ctx.strokeStyle = '#FFFFFF';
+        this.ctx.lineWidth = 2;
+        this.ctx.stroke();
+
+        // 대형 지도에서 플레이어 주변 하이라이트
         if (this.displayMode === 2) {
             this.ctx.strokeStyle = '#FF0000';
             this.ctx.lineWidth = 2;
