@@ -548,10 +548,15 @@ export class Game {
                     return;
                 }
                 
-                // 대화창이 없으면 상호작용
-                if (!this.currentDialog) {
-                    this.interact();
+                // 대화창이 있으면 대화 진행
+                if (this.currentDialog) {
+                    console.log('💬 대화창에서 스페이스바 처리 - 다음 대화로');
+                    this.continueDialog();
+                    return;
                 }
+                
+                // 대화창이 없으면 상호작용
+                this.interact();
                 break;
         }
     }
