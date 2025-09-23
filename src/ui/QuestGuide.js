@@ -289,19 +289,19 @@ export class QuestGuide {
                 locationDescription: '1층 로비 중앙'
             },
             'kim_deputy': {
-                name: '김 부장',
+                name: '김대리',
                 floor: 7,
-                locationDescription: '7층 복도'
+                locationDescription: '7층 복도 왼쪽'
             },
             'intern': {
                 name: '인턴',
                 floor: 7,
-                locationDescription: '7층 복도'
+                locationDescription: '7층 복도 중앙'
             },
             'office_worker_2': {
-                name: '직원',
+                name: '박직원',
                 floor: 7,
-                locationDescription: '7층 복도'
+                locationDescription: '7층 복도 오른쪽'
             },
             'manager_lee': {
                 name: '이 매니저',
