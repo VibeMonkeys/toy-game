@@ -11,6 +11,7 @@ export class Computer extends InteractableObject {
         this.isLoggedIn = false;
         this.currentScreen = 'login'; // 'login', 'desktop', 'email', 'game'
         this.showUI = false;
+        this.activeTimers = new Set(); // 타이머 관리
 
         // 이메일 시스템
         this.emails = this.generateEmails();
@@ -30,6 +31,22 @@ export class Computer extends InteractableObject {
         this.powerOn = true;
         this.loginAttempts = 0;
         this.password = '1234'; // 간단한 패스워드
+    }
+
+    // 안전한 타이머 설정 함수
+    setSafeTimeout(callback, delay) {
+        const timerId = setTimeout(() => {
+            this.activeTimers.delete(timerId);
+            callback();
+        }, delay);
+        this.activeTimers.add(timerId);
+        return timerId;
+    }
+
+    // 타이머 정리 함수
+    clearAllTimers() {
+        this.activeTimers.forEach(timerId => clearTimeout(timerId));
+        this.activeTimers.clear();
     }
 
     generateEmails() {
@@ -133,7 +150,7 @@ export class Computer extends InteractableObject {
 
             if (this.loginAttempts >= 3) {
                 this.powerOn = false;
-                setTimeout(() => {
+                this.setSafeTimeout(() => {
                     this.powerOn = true;
                     this.loginAttempts = 0;
                 }, 10000); // 10초 후 재부팅

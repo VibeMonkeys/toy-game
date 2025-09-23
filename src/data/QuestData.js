@@ -2,6 +2,14 @@ import { CONSTANTS } from '../utils/Constants.js';
 
 // 휴넷 26주년 기념 게임 - 메인 퀘스트 데이터
 // 1998년부터 2024년까지, 26년간의 성장 여정을 따라가는 스토리
+// 미니게임 챌린지 요구사항 정의
+export const MINIGAME_CHALLENGES = {
+    MEMORY_MATCH: 'memory_match',
+    SNAKE_SCORE: 'snake_score',
+    TETRIS_LINES: 'tetris_lines',
+    BREAKOUT_WIN: 'breakout_win',
+    FLAPPY_SCORE: 'flappy_score'
+};
 export const QUEST_DATA = [
     // === 1층 로비: 여정의 시작 (1998년 창립 정신) ===
     {
@@ -87,7 +95,13 @@ export const QUEST_DATA = [
         connectionMessage: "📈 김대리의 신뢰를 얻었습니다! 이제 IT 혁신 작업에 참여해보세요.",
         storyContext: "휴넷의 e-러닝 플랫폼이 처음 개발되던 시기, 젊은 개발자들의 열정이 가득했습니다.",
         prerequisites: ["김대리 추천서"],
-        nextStep: "계열사와의 협력을 통해 사업 확장 기반을 마련하세요"
+        nextStep: "계열사와의 협력을 통해 사업 확장 기반을 마련하세요",
+        minigameChallenge: {
+            type: MINIGAME_CHALLENGES.MEMORY_MATCH,
+            description: "인턴의 기억력 테스트: 메모리 매치 게임을 완료하세요",
+            required: true,
+            completed: false
+        }
     },
     {
         id: 4,
@@ -130,7 +144,14 @@ export const QUEST_DATA = [
         connectionMessage: "🏢 7층에서 기반을 다졌습니다! 이제 8층에서 휴넷의 황금기 성장 전략을 경험하세요.",
         storyContext: "2010년대, 휴넷이 다양한 교육 솔루션으로 시장을 선도하며 급성장하던 황금기입니다.",
         prerequisites: ["박직원 도장"],
-        nextStep: "교육서비스본부에서 혁신적인 교육 콘텐츠 개발에 참여하세요"
+        nextStep: "교육서비스본부에서 혁신적인 교육 콘텐츠 개발에 참여하세요",
+        minigameChallenge: {
+            type: MINIGAME_CHALLENGES.TETRIS_LINES,
+            description: "전략적 사고 테스트: 테트리스에서 10줄 이상 클리어하세요",
+            required: true,
+            completed: false,
+            targetScore: 10
+        }
     },
     {
         id: 6,
@@ -151,7 +172,13 @@ export const QUEST_DATA = [
         connectionMessage: "📈 전략 회의 성공! 이제 휴넷의 핵심인 교육 혁신 업무에 참여해보세요.",
         storyContext: "휴넷이 개발한 혁신적인 교육 방법론들이 대한민국 교육 시장을 변화시키던 시기입니다.",
         prerequisites: ["팀장 승인서"],
-        nextStep: "9층 CEO실로 올라가 휴넷의 미래 비전을 확인하세요"
+        nextStep: "9층 CEO실로 올라가 휴넷의 미래 비전을 확인하세요",
+        minigameChallenge: {
+            type: MINIGAME_CHALLENGES.BREAKOUT_WIN,
+            description: "혁신적 사고 테스트: 브레이크아웃 게임을 완전히 클리어하세요",
+            required: true,
+            completed: false
+        }
     },
     // === 9층: 미래 비전 (2020년대, AI·디지털 혁신 및 26주년) ===
     {

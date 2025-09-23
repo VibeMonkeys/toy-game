@@ -12,6 +12,7 @@ export class Printer extends InteractableObject {
         this.inkLevel = 80; // 잉크 잔량 (0-100)
         this.status = 'ready'; // 'ready', 'printing', 'jammed', 'out_of_paper', 'error'
         this.showUI = false;
+        this.activeTimers = new Set(); // 타이머 관리
 
         // 출력 대기열
         this.printQueue = [];
@@ -28,6 +29,22 @@ export class Printer extends InteractableObject {
 
         // 출력 가능한 문서들
         this.availableDocuments = this.getAvailableDocuments();
+    }
+
+    // 안전한 타이머 설정 함수
+    setSafeTimeout(callback, delay) {
+        const timerId = setTimeout(() => {
+            this.activeTimers.delete(timerId);
+            callback();
+        }, delay);
+        this.activeTimers.add(timerId);
+        return timerId;
+    }
+
+    // 타이머 정리 함수
+    clearAllTimers() {
+        this.activeTimers.forEach(timerId => clearTimeout(timerId));
+        this.activeTimers.clear();
     }
 
     getAvailableDocuments() {
@@ -155,7 +172,7 @@ export class Printer extends InteractableObject {
         }
 
         // 출력 완료 후 처리
-        setTimeout(() => {
+        this.setSafeTimeout(() => {
             this.completePrint(document, gameState, audioManager);
         }, document.pages * 1000);
 
@@ -243,7 +260,7 @@ export class Printer extends InteractableObject {
                 this.jamGame.active = false;
 
                 // 5초 후 프린터 복구
-                setTimeout(() => {
+                this.setSafeTimeout(() => {
                     this.status = 'ready';
                     this.jamGame = {
                         active: false,

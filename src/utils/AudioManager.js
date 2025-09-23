@@ -6,6 +6,7 @@ export class AudioManager {
         this.sounds = new Map();
         this.initialized = false;
         this.soundEnabled = true;
+        this.activeTimers = new Set(); // 타이머 관리
     }
 
     init() {
@@ -21,6 +22,22 @@ export class AudioManager {
 
     setSoundEnabled(enabled) {
         this.soundEnabled = enabled;
+    }
+
+    // 안전한 타이머 설정 함수
+    setSafeTimeout(callback, delay) {
+        const timerId = setTimeout(() => {
+            this.activeTimers.delete(timerId);
+            callback();
+        }, delay);
+        this.activeTimers.add(timerId);
+        return timerId;
+    }
+
+    // 모든 타이머 정리 함수
+    clearAllTimers() {
+        this.activeTimers.forEach(timerId => clearTimeout(timerId));
+        this.activeTimers.clear();
     }
 
     playBeep(frequency = 440, duration = 200) {
@@ -64,25 +81,25 @@ export class AudioManager {
 
     playQuestComplete() {
         // 성공적인 퀘스트 완료 사운드
-        setTimeout(() => this.playBeep(523, 150), 0);   // C5
-        setTimeout(() => this.playBeep(659, 150), 150); // E5
-        setTimeout(() => this.playBeep(784, 300), 300); // G5
+        this.setSafeTimeout(() => this.playBeep(523, 150), 0);   // C5
+        this.setSafeTimeout(() => this.playBeep(659, 150), 150); // E5
+        this.setSafeTimeout(() => this.playBeep(784, 300), 300); // G5
     }
 
     playLevelUp() {
         // 레벨업/진행 사운드
-        setTimeout(() => this.playBeep(440, 100), 0);   // A4
-        setTimeout(() => this.playBeep(554, 100), 100); // C#5
-        setTimeout(() => this.playBeep(659, 200), 200); // E5
-        setTimeout(() => this.playBeep(880, 300), 400); // A5
+        this.setSafeTimeout(() => this.playBeep(440, 100), 0);   // A4
+        this.setSafeTimeout(() => this.playBeep(554, 100), 100); // C#5
+        this.setSafeTimeout(() => this.playBeep(659, 200), 200); // E5
+        this.setSafeTimeout(() => this.playBeep(880, 300), 400); // A5
     }
 
     playGameComplete() {
         // 게임 완료 축하 사운드
-        setTimeout(() => this.playBeep(523, 200), 0);   // C5
-        setTimeout(() => this.playBeep(659, 200), 200); // E5
-        setTimeout(() => this.playBeep(784, 200), 400); // G5
-        setTimeout(() => this.playBeep(1047, 400), 600); // C6
+        this.setSafeTimeout(() => this.playBeep(523, 200), 0);   // C5
+        this.setSafeTimeout(() => this.playBeep(659, 200), 200); // E5
+        this.setSafeTimeout(() => this.playBeep(784, 200), 400); // G5
+        this.setSafeTimeout(() => this.playBeep(1047, 400), 600); // C6
     }
 
     playError() {
@@ -124,18 +141,18 @@ export class AudioManager {
 
     playSystemStartup() {
         // 90년대 컴퓨터 시스템 시작 사운드 시퀀스
-        setTimeout(() => this.playBeep(1000, 200), 0);    // POST 비프
-        setTimeout(() => this.playBeep(800, 150), 500);   // 하드웨어 확인
-        setTimeout(() => this.playBeep(600, 100), 800);   // 메모리 테스트
-        setTimeout(() => this.playBeep(900, 250), 1200);  // OS 로딩 시작
+        this.setSafeTimeout(() => this.playBeep(1000, 200), 0);    // POST 비프
+        this.setSafeTimeout(() => this.playBeep(800, 150), 500);   // 하드웨어 확인
+        this.setSafeTimeout(() => this.playBeep(600, 100), 800);   // 메모리 테스트
+        this.setSafeTimeout(() => this.playBeep(900, 250), 1200);  // OS 로딩 시작
     }
 
     playWindowsStartup() {
         // Windows 98 시작 사운드 (TA-DA! 멜로디 재현)
-        setTimeout(() => this.playBeep(523, 150), 0);     // C5
-        setTimeout(() => this.playBeep(659, 150), 150);   // E5
-        setTimeout(() => this.playBeep(784, 150), 300);   // G5
-        setTimeout(() => this.playBeep(1047, 400), 450);  // C6 (길게)
+        this.setSafeTimeout(() => this.playBeep(523, 150), 0);     // C5
+        this.setSafeTimeout(() => this.playBeep(659, 150), 150);   // E5
+        this.setSafeTimeout(() => this.playBeep(784, 150), 300);   // G5
+        this.setSafeTimeout(() => this.playBeep(1047, 400), 450);  // C6 (길게)
     }
 
     playDiskActivity() {
@@ -145,23 +162,23 @@ export class AudioManager {
         };
 
         for (let i = 0; i < 8; i++) {
-            setTimeout(diskSound, i * 80);
+            this.setSafeTimeout(diskSound, i * 80);
         }
     }
 
     playModemDialup() {
         // 90년대 모뎀 다이얼업 소리 (짧은 버전)
-        setTimeout(() => this.playBeep(2100, 300), 0);    // 다이얼톤
-        setTimeout(() => this.playBeep(1800, 200), 400);  // 연결음
-        setTimeout(() => this.playBeep(1200, 150), 700);  // 핸드셰이크
-        setTimeout(() => this.playBeep(2400, 100), 900);  // 연결 완료
+        this.setSafeTimeout(() => this.playBeep(2100, 300), 0);    // 다이얼톤
+        this.setSafeTimeout(() => this.playBeep(1800, 200), 400);  // 연결음
+        this.setSafeTimeout(() => this.playBeep(1200, 150), 700);  // 핸드셰이크
+        this.setSafeTimeout(() => this.playBeep(2400, 100), 900);  // 연결 완료
     }
 
     playCRTMonitorOn() {
         // CRT 모니터 켜지는 소리
-        setTimeout(() => this.playBeep(6000, 80), 0);     // 고주파 휘파람
-        setTimeout(() => this.playBeep(4500, 60), 80);    // 전자음
-        setTimeout(() => this.playBeep(3200, 40), 160);   // 안정화
+        this.setSafeTimeout(() => this.playBeep(6000, 80), 0);     // 고주파 휘파람
+        this.setSafeTimeout(() => this.playBeep(4500, 60), 80);    // 전자음
+        this.setSafeTimeout(() => this.playBeep(3200, 40), 160);   // 안정화
     }
 
     playKeyboardClick() {
@@ -177,18 +194,18 @@ export class AudioManager {
 
     playGameLoading() {
         // 게임 로딩 사운드 (90년대 게임 스타일)
-        setTimeout(() => this.playBeep(440, 100), 0);     // A4
-        setTimeout(() => this.playBeep(523, 100), 150);   // C5
-        setTimeout(() => this.playBeep(659, 100), 300);   // E5
-        setTimeout(() => this.playBeep(784, 200), 450);   // G5
+        this.setSafeTimeout(() => this.playBeep(440, 100), 0);     // A4
+        this.setSafeTimeout(() => this.playBeep(523, 100), 150);   // C5
+        this.setSafeTimeout(() => this.playBeep(659, 100), 300);   // E5
+        this.setSafeTimeout(() => this.playBeep(784, 200), 450);   // G5
     }
 
     playRetroSuccess() {
         // 90년대 스타일 성공음
-        setTimeout(() => this.playBeep(659, 150), 0);     // E5
-        setTimeout(() => this.playBeep(784, 150), 150);   // G5
-        setTimeout(() => this.playBeep(988, 150), 300);   // B5
-        setTimeout(() => this.playBeep(1319, 300), 450);  // E6
+        this.setSafeTimeout(() => this.playBeep(659, 150), 0);     // E5
+        this.setSafeTimeout(() => this.playBeep(784, 150), 150);   // G5
+        this.setSafeTimeout(() => this.playBeep(988, 150), 300);   // B5
+        this.setSafeTimeout(() => this.playBeep(1319, 300), 450);  // E6
     }
 
     playDOSCommand() {
@@ -198,16 +215,16 @@ export class AudioManager {
 
     playFlopgyDiskInsert() {
         // 플로피 디스크 삽입 소리
-        setTimeout(() => this.playBeep(300, 100), 0);     // 삽입
-        setTimeout(() => this.playBeep(250, 150), 200);   // 고정
+        this.setSafeTimeout(() => this.playBeep(300, 100), 0);     // 삽입
+        this.setSafeTimeout(() => this.playBeep(250, 150), 200);   // 고정
     }
 
     playSystemShutdown() {
         // Windows 98 시스템 종료 사운드
-        setTimeout(() => this.playBeep(1047, 200), 0);    // C6
-        setTimeout(() => this.playBeep(784, 200), 200);   // G5
-        setTimeout(() => this.playBeep(659, 200), 400);   // E5
-        setTimeout(() => this.playBeep(523, 400), 600);   // C5 (길게)
+        this.setSafeTimeout(() => this.playBeep(1047, 200), 0);    // C6
+        this.setSafeTimeout(() => this.playBeep(784, 200), 200);   // G5
+        this.setSafeTimeout(() => this.playBeep(659, 200), 400);   // E5
+        this.setSafeTimeout(() => this.playBeep(523, 400), 600);   // C5 (길게)
     }
 
     destroy() {

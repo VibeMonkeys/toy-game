@@ -9,11 +9,28 @@ export class VendingMachine extends InteractableObject {
         this.machineType = machineType;
         this.cooldown = 3000; // 3초 쿨다운
         this.isOperating = false;
+        this.activeTimers = new Set(); // 타이머 관리
 
         // 상품 목록
         this.products = this.getProductList();
         this.selectedProduct = 0;
         this.showUI = false;
+    }
+
+    // 안전한 타이머 설정 함수
+    setSafeTimeout(callback, delay) {
+        const timerId = setTimeout(() => {
+            this.activeTimers.delete(timerId);
+            callback();
+        }, delay);
+        this.activeTimers.add(timerId);
+        return timerId;
+    }
+
+    // 타이머 정리 함수
+    clearAllTimers() {
+        this.activeTimers.forEach(timerId => clearTimeout(timerId));
+        this.activeTimers.clear();
     }
 
     getProductList() {
@@ -121,11 +138,11 @@ export class VendingMachine extends InteractableObject {
 
         if (audioManager) {
             audioManager.playItemCollect();
-            setTimeout(() => audioManager.playUIClick(), 800); // 자판기 소리
+            this.setSafeTimeout(() => audioManager.playUIClick(), 800); // 자판기 소리
         }
 
         this.isOperating = true;
-        setTimeout(() => {
+        this.setSafeTimeout(() => {
             this.isOperating = false;
         }, 2000);
 

@@ -13,6 +13,7 @@ import { Inventory } from '../ui/Inventory.js';
 import { PauseMenu } from '../ui/PauseMenu.js';
 import { ElevatorUI } from '../ui/ElevatorUI.js';
 import { MiniGameSystem } from '../ui/MiniGameSystem.js';
+import { MINIGAME_CHALLENGES } from '../data/QuestData.js';
 import { TutorialSystem } from '../ui/TutorialSystem.js';
 import { IntroScreen } from '../ui/IntroScreen.js';
 import { CertificateScreen } from '../ui/CertificateScreen.js';
@@ -40,7 +41,7 @@ export class Game {
         this.audioManager = new AudioManager();
         this.player = new Player();
         this.gameState = new GameState();
-        this.questSystem = new QuestSystem(this.audioManager);
+        this.questSystem = new QuestSystem(this.audioManager, this);
 
         // 게임 상태 관리
         this.gameMode = CONSTANTS.GAME_MODES.LOADING;
@@ -76,7 +77,7 @@ export class Game {
         this.inventory = new Inventory(this.canvas, this.ctx);
         this.pauseMenu = new PauseMenu(this.canvas, this.ctx, this.audioManager);
         this.elevatorUI = new ElevatorUI(this.canvas, this.ctx, this.audioManager);
-        this.miniGameSystem = new MiniGameSystem(this.canvas, this.ctx, this.audioManager);
+        this.miniGameSystem = new MiniGameSystem(this.canvas, this.ctx, this.audioManager, this);
         this.tutorialSystem = new TutorialSystem(this.canvas, this.ctx);
         this.introScreen = new IntroScreen(this.canvas, this.ctx, this.audioManager);
         this.certificateScreen = new CertificateScreen(this.canvas, this.ctx);
@@ -87,6 +88,10 @@ export class Game {
         // 퀘스트 피드백 시스템
         this.currentQuestFeedback = null;
         this.nextStepInfo = null;
+
+        // 타이머 관리 (메모리 누수 방지)
+        this.activeTimers = new Set();
+        this.nextStepTimer = null;
 
         // 대화 선택지 시스템
         this.showingChoices = false;
@@ -125,6 +130,142 @@ export class Game {
 
         // 초기화
         this.init();
+    }
+    // 미니게임 챌린지 완료 체크
+    checkMinigameChallenge(npcId) {
+        const quest = this.questSystem.questManager.getQuestByNPC(npcId);
+        if (!quest || !quest.minigameChallenge || !quest.minigameChallenge.required) {
+            return { canProceed: true };
+        }
+
+        // 퀘스트가 시작되지 않았으면 미니게임 챌린지 불필요
+        if (!quest.started) {
+            return { canProceed: true };
+        }
+
+        if (quest.minigameChallenge.completed) {
+            return { canProceed: true };
+        }
+
+        return {
+            canProceed: false,
+            challengeType: quest.minigameChallenge.type,
+            description: quest.minigameChallenge.description,
+            quest: quest
+        };
+    }
+
+    // 미니게임 완료 시 호출되는 함수
+    onMinigameCompleted(gameType, score = 0, lines = 0) {
+        // 안전성 체크
+        if (!this.questSystem?.questManager?.quests) {
+            console.warn('QuestSystem이 초기화되지 않았습니다.');
+            return false;
+        }
+
+        // 현재 진행 중인 퀘스트들 중에서 해당 미니게임이 필요한 퀘스트 찾기
+        const allQuests = this.questSystem.questManager.quests;
+        
+        for (let quest of allQuests) {
+            if (quest.minigameChallenge && 
+                quest.minigameChallenge.type === gameType && 
+                quest.started && 
+                !quest.minigameChallenge.completed) {
+                
+                let challengeMet = false;
+
+                switch (gameType) {
+                    case 'memory_match':
+                        challengeMet = true; // 메모리 게임은 완료하면 성공
+                        break;
+                    case 'tetris_lines':
+                        challengeMet = lines >= (quest.minigameChallenge.targetScore || 10);
+                        break;
+                    case 'breakout_win':
+                        challengeMet = true; // 브레이크아웃은 승리하면 성공
+                        break;
+                    case 'snake_score':
+                        challengeMet = score >= (quest.minigameChallenge.targetScore || 100);
+                        break;
+                    case 'flappy_score':
+                        challengeMet = score >= (quest.minigameChallenge.targetScore || 10);
+                        break;
+                    default:
+                        console.warn(`알 수 없는 게임 타입: ${gameType}`);
+                        return false;
+                }
+
+                if (challengeMet) {
+                    quest.minigameChallenge.completed = true;
+                    
+                    // 파티클 효과 생성 (안전성 체크)
+                    if (this.particleSystem?.createQuestCompleteEffect) {
+                        this.particleSystem.createQuestCompleteEffect(
+                            this.canvas.width / 2, 
+                            this.canvas.height / 2,
+                            `${quest.minigameChallenge.description} 완료!`
+                        );
+                    }
+
+                    // 성공 메시지 표시 (안전성 체크)
+                    if (this.showDialog) {
+                        this.showDialog([
+                            '🎮 미니게임 챌린지 완료!',
+                            quest.minigameChallenge.description,
+                            '이제 퀘스트를 진행할 수 있습니다!'
+                        ]);
+                    }
+
+                    // 오디오 재생 (안전성 체크)
+                    this.audioManager?.playGameComplete?.();
+                    
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    // 안전한 타이머 설정 함수
+    setSafeTimeout(callback, delay) {
+        const timerId = setTimeout(() => {
+            this.activeTimers.delete(timerId);
+            callback();
+        }, delay);
+        this.activeTimers.add(timerId);
+        return timerId;
+    }
+
+    // 타이머 정리 함수
+    clearAllTimers() {
+        // 활성 타이머들 정리
+        for (const timerId of this.activeTimers) {
+            clearTimeout(timerId);
+        }
+        this.activeTimers.clear();
+
+        // 특정 타이머들 정리
+        if (this.nextStepTimer) {
+            clearTimeout(this.nextStepTimer);
+            this.nextStepTimer = null;
+        }
+    }
+
+    // 다음 단계 정보 표시 (메모리 누수 방지 버전)
+    showNextStepInfo(stepInfo, duration = 5000) {
+        // 기존 타이머 정리
+        if (this.nextStepTimer) {
+            clearTimeout(this.nextStepTimer);
+        }
+
+        this.nextStepInfo = stepInfo;
+        
+        // 새 타이머 설정
+        this.nextStepTimer = this.setSafeTimeout(() => {
+            this.nextStepInfo = null;
+            this.nextStepTimer = null;
+        }, duration);
     }
 
     async init() {
@@ -266,14 +407,14 @@ export class Game {
             if (this.secretClickCount === 10) {
                 this.audioManager.playGameComplete();
                 this.titleScreen.showSecretMessage = true;
-                setTimeout(() => {
+                this.setSafeTimeout(() => {
                     this.titleScreen.showSecretMessage = false;
                 }, 5000);
             } else if (this.secretClickCount === 26) {
                 // 26번 클릭 시 특별 메시지
                 this.audioManager.playGameComplete();
                 this.titleScreen.specialMessage = '🎉 휴넷 26주년 특별 메시지: 미래를 함께 만들어갑시다! 🎉';
-                setTimeout(() => {
+                this.setSafeTimeout(() => {
                     this.titleScreen.specialMessage = null;
                 }, 8000);
             }
@@ -530,7 +671,7 @@ export class Game {
         ];
         
         birthdayMessages.forEach((message, index) => {
-            setTimeout(() => {
+            this.setSafeTimeout(() => {
                 this.inventory.showItemNotification({ name: message });
                 if (index === 0) this.audioManager.playGameComplete();
             }, index * 1500);
@@ -540,7 +681,7 @@ export class Game {
         this.createBirthdayParticles();
         
         // 5분 후 자동 비활성화
-        setTimeout(() => {
+        this.setSafeTimeout(() => {
             this.easterEggs.birthdayMode = false;
             this.inventory.showItemNotification({ name: '🎈 생일 축하 모드가 종료되었습니다!' });
         }, 300000);
@@ -551,7 +692,7 @@ export class Game {
     // 26주년 기념 파티클 효과
     createBirthdayParticles() {
         for (let i = 0; i < 26; i++) {
-            setTimeout(() => {
+            this.setSafeTimeout(() => {
                 const x = Math.random() * this.canvas.width;
                 const y = Math.random() * this.canvas.height;
                 this.particleSystem.createRewardEffect(x, y, '🎉');
@@ -597,7 +738,7 @@ export class Game {
         ];
         
         specialEvent.forEach((message, index) => {
-            setTimeout(() => {
+            this.setSafeTimeout(() => {
                 this.inventory.showItemNotification({ name: message });
                 if (index === 1) this.audioManager.playGameComplete();
             }, index * 2000);
@@ -611,7 +752,7 @@ export class Game {
     createSpecialTimeline() {
         const years = [1998, 2024];
         years.forEach((year, index) => {
-            setTimeout(() => {
+            this.setSafeTimeout(() => {
                 for (let i = 0; i < 10; i++) {
                     const x = 100 + (index * 600) + (Math.random() * 200);
                     const y = 200 + (Math.random() * 300);
@@ -633,7 +774,7 @@ export class Game {
         };
         
         if (achievements[totalFound]) {
-            setTimeout(() => {
+            this.setSafeTimeout(() => {
                 this.inventory.showItemNotification({ name: achievements[totalFound] });
                 this.audioManager.playMenuSelect();
             }, 1000);
@@ -924,6 +1065,21 @@ export class Game {
             // 메인 퀘스트 아이템 자동 제출 확인
             const submission = this.questSystem.canSubmitToNPC(this.nearbyNPC.id, this.gameState.inventory);
 
+            // 미니게임 챌린지 체크 (퀘스트 제출 전에)
+            const minigameCheck = this.checkMinigameChallenge(this.nearbyNPC.id);
+            if (!minigameCheck.canProceed) {
+                this.currentDialog = [
+                    '잠깐! 먼저 챌린지를 완료해야 합니다.',
+                    minigameCheck.description,
+                    '미니게임을 플레이해서 챌린지를 완료하세요!'
+                ];
+                this.currentNPC = this.nearbyNPC;
+                this.dialogIndex = 0;
+                this.audioManager.playDialogOpen();
+                this.showDialog();
+                return;
+            }
+
             // 서브 퀘스트 아이템 자동 제출 확인
             const subSubmission = this.questSystem.canSubmitToSubQuestGiver(this.nearbyNPC.id, this.gameState.inventory);
 
@@ -968,9 +1124,7 @@ export class Game {
                     if (result.nextStepInfo) {
                         this.nextStepInfo = result.nextStepInfo;
                         // 5초 후에 다음 단계 정보 자동 숨김
-                        setTimeout(() => {
-                            this.nextStepInfo = null;
-                        }, 5000);
+                        this.showNextStepInfo(result.nextStepInfo);
                     }
 
                     // 알림도 표시
@@ -1152,7 +1306,7 @@ export class Game {
             this.gameCompleted = true;
 
             // 잠시 후 인증서 화면으로 전환
-            setTimeout(() => {
+            this.setSafeTimeout(() => {
                 this.showCertificate();
             }, 3000); // 3초 후에 인증서 화면
         }
@@ -1285,123 +1439,245 @@ export class Game {
     }
 
     // 경비 아저씨 상황별 대화
-    getGuardContextualDialog(quest, completedQuests) {
-        if (!quest || quest.completed) {
-            // 퀘스트 완료 후
-            if (completedQuests >= 6) {
+    getGuardContextualDialog(npcQuest, completedQuests) {
+        // 퀘스트 완료 후 재방문 대화들
+        const questCompleteDialogs = [
+            '26년간 이 회사를 지켜왔는데, 당신 같은 직원이 있어 든든합니다!',
+            '보안이 제일 중요한데, 당신은 정말 신뢰할 만한 분이에요.',
+            '휴넷의 미래가 밝아 보이네요. 당신 덕분입니다!',
+            '이런 열정적인 신입사원은 처음 봐요. 정말 자랑스럽습니다.',
+            '26주년이니까... 옛날 얘기 하나 해드릴까요? 처음엔 정말 작은 회사였어요.'
+        ];
+
+        // 시간대별 대화
+        const hour = new Date().getHours();
+        const timeBasedDialogs = {
+            morning: '좋은 아침입니다! 오늘도 안전한 하루 되세요.',
+            afternoon: '점심 드셨나요? 오후에도 화이팅하세요!',
+            evening: '하루 종일 수고 많으셨어요. 내일 뵙겠습니다!'
+        };
+
+        // 퀘스트 상태에 따른 대화
+        if (npcQuest && !npcQuest.completed && !npcQuest.started) {
+            return [
+                '안녕하세요! 휴넷의 새로운 직원이시군요.',
+                '출입증을 발급받으셔야 이 건물을 자유롭게 돌아다니실 수 있어요.',
+                '로비 바닥에 황금색으로 빛나는 입장 패스를 찾아서 가져다주세요!'
+            ];
+        } else if (npcQuest && npcQuest.started && !npcQuest.completed) {
+            return [
+                '입장 패스를 찾고 계시는군요!',
+                '로비를 잘 살펴보시면 분명 찾으실 수 있을 거예요.',
+                '26년 경력의 직감으로는... 분명 어딘가에 있습니다!'
+            ];
+        } else if (completedQuests === 0) {
+            return [
+                '아직 첫 퀘스트도 완료 안 하셨군요.',
+                '천천히 하세요. 26년 동안 여기 있었는데 하루 이틀이 뭐 대수겠어요!'
+            ];
+        } else if (completedQuests >= 1) {
+            // 재방문 시 랜덤 대화
+            const randomDialog = questCompleteDialogs[Math.floor(Math.random() * questCompleteDialogs.length)];
+            
+            // 시간대별 추가 대화
+            let timeDialog = '';
+            if (hour >= 6 && hour < 12) {
+                timeDialog = timeBasedDialogs.morning;
+            } else if (hour >= 12 && hour < 18) {
+                timeDialog = timeBasedDialogs.afternoon;
+            } else {
+                timeDialog = timeBasedDialogs.evening;
+            }
+
+            // 특별한 업적 대화
+            if (completedQuests >= 5) {
                 return [
-                    "휴넷의 26년 여정을 모두 체험하셨군요!",
-                    "정말 대단하세요. 저도 26년간 이 회사와 함께 했는데...",
-                    "이렇게 열정적으로 우리 회사를 탐험해주셔서 감사해요!"
+                    '와! 벌써 ' + completedQuests + '개나 완료하셨군요!',
+                    '이런 열정적인 직원은 26년 만에 처음 봅니다.',
+                    '휴넷의 미래가 정말 밝아 보이네요!'
                 ];
             } else if (completedQuests >= 3) {
                 return [
-                    "벌써 여러 부서를 탐험하셨네요!",
-                    "휴넷의 성장 과정을 직접 체험하고 계시는군요.",
-                    "계속해서 좋은 경험 쌓으시길 바라요!"
+                    randomDialog,
+                    '벌써 절반 이상 완료하셨네요. 대단해요!',
+                    timeDialog
                 ];
-            } else if (completedQuests >= 1) {
+            } else {
                 return [
-                    "출입증 발급 잘 받으셨죠?",
-                    "이제 휴넷의 각 부서들을 자유롭게 탐험하세요!",
-                    "26년간의 성장 스토리가 기다리고 있답니다."
+                    randomDialog,
+                    timeDialog
                 ];
             }
-        } else if (quest && !quest.itemSubmitted) {
-            // 퀘스트 진행 중 - 아이템 미제출
-            return [
-                "휴넷 26주년 기념 게임에 오신 걸 환영합니다!",
-                "출입증 발급을 위해 '입장 패스'를 찾아주세요.",
-                "1층 로비 어딘가에 황금색으로 빛나는 패스가 있을 거예요!"
-            ];
         }
-        return null;
+
+        return [
+            '무엇을 도와드릴까요?',
+            '오늘도 안전한 하루 되세요!'
+        ];
     }
 
     // 안내 데스크 상황별 대화
-    getReceptionContextualDialog(quest, completedQuests) {
-        const firstQuestCompleted = this.questSystem.questManager.getQuestById(0)?.completed;
+    getReceptionContextualDialog(npcQuest, completedQuests) {
+        // 퀘스트 완료 후 재방문 대화들
+        const questCompleteDialogs = [
+            '정확한 정보를 드리는 게 제 역할인데, 당신은 정말 모범적이에요!',
+            '26주년 기념 이벤트가 성공적으로 진행되고 있어요. 다 당신 덕분이죠!',
+            '휴넷 직원들 중에서도 당신만큼 열심히 하는 분은 드물어요.',
+            '제가 안내 데스크에서 일한 지 10년인데, 이렇게 성실한 분은 처음이에요!',
+            '다른 층 직원들도 당신 얘기를 많이 해요. 좋은 의미로요!'
+        ];
 
-        if (!quest || quest.completed) {
-            // 퀘스트 완료 후
-            if (completedQuests >= 6) {
+        // 업무 관련 팁들
+        const workTips = [
+            '💡 팁: 각 층마다 특색이 달라요. 7층은 실무진, 8층은 본부, 9층은 경영진이죠.',
+            '💡 팁: 엘리베이터는 출입증이 있어야 이용할 수 있어요.',
+            '💡 팁: 미니게임을 통해 직원들과 친해질 수 있어요!',
+            '💡 팁: 퀘스트를 빨리 완료할수록 좋은 평가를 받을 수 있어요.',
+            '💡 팁: 각 부서마다 고유한 문화가 있으니 잘 관찰해보세요.'
+        ];
+
+        // 방문 횟수 추적 (간단한 카운터)
+        if (!this.gameState.npcVisitCount) {
+            this.gameState.npcVisitCount = {};
+        }
+        if (!this.gameState.npcVisitCount['reception']) {
+            this.gameState.npcVisitCount['reception'] = 0;
+        }
+        this.gameState.npcVisitCount['reception']++;
+
+        const visitCount = this.gameState.npcVisitCount['reception'];
+
+        // 퀘스트 상태에 따른 대화
+        if (npcQuest && !npcQuest.completed && !npcQuest.started) {
+            return [
+                '26주년 기념 메달을 찾고 계시는군요!',
+                '정확한 정보를 드리자면, 로비 바닥 어딘가에 있을 거예요.',
+                '황금색으로 반짝이니 놓치기 어려울 것 같은데요?'
+            ];
+        } else if (npcQuest && npcQuest.started && !npcQuest.completed) {
+            return [
+                '26주년 기념 메달, 아직 못 찾으셨나요?',
+                '제가 정확히 안내해드릴게요. 로비를 샅샅이 둘러보세요!',
+                '26년 역사의 소중한 메달이니까 꼭 찾으실 거예요.'
+            ];
+        } else if (completedQuests === 0) {
+            return [
+                '아직 시작 단계시군요. 천천히 하세요!',
+                '정확한 정보가 필요하시면 언제든 말씀해주세요.'
+            ];
+        } else if (completedQuests >= 1) {
+            // 재방문 특별 대화
+            if (visitCount <= 3) {
+                const randomDialog = questCompleteDialogs[Math.floor(Math.random() * questCompleteDialogs.length)];
+                const randomTip = workTips[Math.floor(Math.random() * workTips.length)];
+                
                 return [
-                    "와! 휴넷의 26년 여정을 모두 완주하셨네요!",
-                    "CEO님까지 만나셨다니 정말 놀라워요.",
-                    "휴넷 가족이 되신 걸 진심으로 환영합니다!"
+                    randomDialog,
+                    randomTip
                 ];
-            } else if (completedQuests >= 3) {
+            } else if (visitCount <= 7) {
                 return [
-                    "상위층까지 올라가셨군요! 정말 대단해요.",
-                    "휴넷의 경영진들과도 좋은 시간 보내셨길 바라요.",
-                    "계속해서 흥미진진한 여정을 즐기세요!"
-                ];
-            } else if (firstQuestCompleted) {
-                return [
-                    "출입증 발급받으셨군요! 축하드려요.",
-                    "이제 엘리베이터를 이용해서 상위층을 탐험하실 수 있어요.",
-                    "각 층마다 흥미로운 이야기들이 기다리고 있답니다!"
-                ];
-            }
-        } else if (quest && !quest.itemSubmitted) {
-            if (!firstQuestCompleted) {
-                return [
-                    "안녕하세요! 먼저 경비 아저씨에게서 출입증을 발급받으세요.",
-                    "그 다음에 26주년 기념 메달을 가져오시면 엘리베이터 이용권을 드릴게요!",
-                    "순서를 지켜주시면 더 원활한 게임 진행이 가능해요."
+                    '또 오셨네요! 뭔가 궁금한 게 있으신가 봐요.',
+                    '제가 정확한 정보를 드릴 수 있는 건 언제든 물어보세요!',
+                    '이 정도 열정이면 곧 모든 퀘스트를 완료하실 것 같아요.'
                 ];
             } else {
+                // 자주 방문하는 경우 특별 대화
                 return [
-                    "출입증 발급 완료! 이제 26주년 기념 메달만 있으면 돼요.",
-                    "1층 로비에서 황금빛으로 빛나는 기념 메달을 찾아주세요!",
-                    "그러면 휴넷의 각 부서로 향하는 엘리베이터를 이용하실 수 있어요."
+                    '정말 자주 오시네요! 저와 친해지고 싶으신 건가요? 😊',
+                    '이렇게 소통을 자주 하는 직원은 처음이에요.',
+                    '혹시 저희 안내 데스크 팀에 관심 있으시면 언제든 말씀하세요!'
                 ];
             }
         }
-        return null;
+
+        // 기본 대화
+        return [
+            '안녕하세요! 무엇을 도와드릴까요?',
+            '정확한 정보를 제공하는 것이 제 역할입니다!'
+        ];
     }
 
     // 김대리 상황별 대화
-    getKimDeputyContextualDialog(quest, completedQuests) {
-        if (!quest || quest.completed) {
-            // 퀘스트 완료 후
-            if (completedQuests >= 6) {
+    getKimDeputyContextualDialog(npcQuest, completedQuests) {
+        // 김대리의 성격 반영 대화들
+        const casualDialogs = [
+            '이야, 진짜 열심히 하시네요! 저도 배워야겠어요.',
+            '요즘 신입사원들 중에 이렇게 적극적인 분은 드물어요.',
+            '7층 생활 어때요? 적응 잘 되시나요?',
+            '커피 한 잔 하면서 얘기할까요? 아, 지금은 바쁘시구나.',
+            '대리 생활 5년째인데, 당신 보면서 초심을 되찾게 되네요.'
+        ];
+
+        const workAdvice = [
+            '💼 대리 꿀팁: 상사한테 보고할 때는 결론부터 말하세요.',
+            '💼 대리 꿀팁: 점심시간 30분 전에 미리 계획 세우면 좋아요.',
+            '💼 대리 꿀팁: 회의록은 당일에 정리해야 기억이 생생해요.',
+            '💼 대리 꿀팁: 업무는 우선순위를 정해서 하는 게 중요해요.',
+            '💼 대리 꿀팁: 동료들과 친해지면 일이 훨씬 수월해져요.'
+        ];
+
+        // 스트레스 레벨에 따른 대화 (랜덤하게 변함)
+        const stressLevel = Math.floor(Math.random() * 3); // 0: 좋음, 1: 보통, 2: 스트레스
+
+        // 퀘스트 상태 확인
+        if (npcQuest && !npcQuest.completed && !npcQuest.started) {
+            return [
+                '어? 새로운 팀원이네요! 반가워요.',
+                '제가 김대리라고 해요. 앞으로 잘 부탁드려요!',
+                '일단 저한테 맡겨진 업무부터 도와주실 수 있나요?'
+            ];
+        } else if (npcQuest && npcQuest.started && !npcQuest.completed) {
+            return [
+                '아직 업무 진행 중이시군요!',
+                '처음이라 어려우실 텐데, 천천히 하세요.',
+                '궁금한 거 있으면 언제든 물어보세요!'
+            ];
+        } else if (completedQuests >= 1) {
+            // 재방문 시 스트레스 레벨에 따른 대화
+            if (stressLevel === 0) { // 좋은 상태
+                const randomDialog = casualDialogs[Math.floor(Math.random() * casualDialogs.length)];
+                const randomAdvice = workAdvice[Math.floor(Math.random() * workAdvice.length)];
+                
                 return [
-                    "CEO님까지 만나고 오셨다니! 정말 대단하세요.",
-                    "26년간의 성장 스토리를 몸소 체험하셨군요.",
-                    "이제 진정한 휴넷 가족이 되신 거예요!"
+                    randomDialog,
+                    randomAdvice,
+                    '오늘 컨디션이 좋네요! 같이 화이팅해요!'
                 ];
-            } else if (completedQuests >= 4) {
+            } else if (stressLevel === 1) { // 보통 상태
                 return [
-                    "벌써 상위층까지 다녀오셨군요!",
-                    "8층 경영진들과도 좋은 만남 있으셨나요?",
-                    "정말 열정적이시네요. 저도 배워야겠어요!"
+                    '오늘 업무량이 좀 많네요. 그래도 할 만해요.',
+                    '당신도 바쁘실 텐데 들러주셔서 고마워요.',
+                    '서로 힘내자고요!'
                 ];
-            } else {
+            } else { // 스트레스 상태
                 return [
-                    "업무 보고서 잘 전달해주셔서 감사했어요!",
-                    "덕분에 팀 업무가 원활하게 진행되고 있어요.",
-                    "계속해서 휴넷의 다른 부서들도 탐험해보세요!"
-                ];
-            }
-        } else if (quest && !quest.itemSubmitted) {
-            // 퀘스트 진행 중
-            const hasElevatorAccess = this.questSystem.questManager.getQuestById(1)?.completed;
-            if (!hasElevatorAccess) {
-                return [
-                    "안녕하세요! 7층에 오시려면 먼저 1층에서 엘리베이터 이용권이 필요해요.",
-                    "안내 데스크에서 26주년 기념 메달을 전달하시면 받으실 수 있어요!",
-                    "그 다음에 다시 오셔서 함께 일해봐요."
-                ];
-            } else {
-                return [
-                    "7층에 오신 걸 환영해요! 저는 영업팀 김대리입니다.",
-                    "팀 업무 정리를 위해 '업무 보고서'가 필요해요.",
-                    "7층 어딘가에 있을 텐데, 찾아서 가져다 주시겠어요?"
+                    '아... 오늘 진짜 바빠 죽겠어요. 😅',
+                    '상사가 갑자기 급한 업무를 맡기셔서...',
+                    '그래도 당신 얼굴 보니까 좀 나아지네요. 고마워요!'
                 ];
             }
         }
-        return null;
+
+        // 완료한 퀘스트 수에 따른 특별 대화
+        if (completedQuests >= 5) {
+            return [
+                '와! 벌써 그렇게 많이 하셨어요?',
+                '저도 당신만큼 일 잘하고 싶네요.',
+                '혹시 비결이 있나요? 진짜 궁금해요!'
+            ];
+        } else if (completedQuests >= 3) {
+            return [
+                '진짜 대단하세요! 저보다 일 잘하시는 것 같아요.',
+                '이런 팀원이 있어서 7층이 든든하네요.',
+                '앞으로도 잘 부탁드려요!'
+            ];
+        }
+
+        return [
+            '안녕하세요! 오늘도 화이팅이에요!',
+            '7층에서 뭔가 도움 필요한 거 있으면 말씀하세요.'
+        ];
     }
 
     // 이과장 (8층 팀장) 상황별 대화
@@ -1640,7 +1916,7 @@ export class Game {
         Logger.debug('플레이어 생성:', this.player.x, this.player.y);
 
         this.gameState = new GameState();
-        this.questSystem = new QuestSystem(this.audioManager);
+        this.questSystem = new QuestSystem(this.audioManager, this);
         
         // QuestManager에 gameState 설정
         this.questSystem.questManager.setGameState(this.gameState);
@@ -1671,12 +1947,12 @@ export class Game {
         });
 
         // 튜토리얼 자동 시작
-        setTimeout(() => {
+        this.setSafeTimeout(() => {
             this.tutorialSystem.start();
         }, 1000);
         
         // 시간 기반 이스터 에그 체크
-        setTimeout(() => {
+        this.setSafeTimeout(() => {
             this.checkTimeBasedEasterEggs();
         }, 3000);
 

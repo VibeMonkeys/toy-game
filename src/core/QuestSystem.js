@@ -3,8 +3,9 @@ import { QuestManager } from './QuestManager.js';
 import { QUEST_TYPES } from '../data/QuestData.js';
 
 export class QuestSystem {
-    constructor(audioManager = null) {
+    constructor(audioManager = null, gameInstance = null) {
         this.audioManager = audioManager;
+        this.gameInstance = gameInstance;
         this.questManager = new QuestManager();
         this.showQuestUI = true;
 
@@ -74,7 +75,7 @@ export class QuestSystem {
         if (result.success && this.audioManager) {
             this.audioManager.playQuestComplete();
             if (this.questManager.currentQuest < this.questManager.quests.length - 1) {
-                setTimeout(() => this.audioManager.playLevelUp(), 800);
+                this.gameInstance?.setSafeTimeout(() => this.audioManager.playLevelUp(), 800);
             }
         }
 
