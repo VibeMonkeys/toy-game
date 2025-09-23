@@ -1,5 +1,7 @@
 import { Logger } from '../utils/Logger.js';
 
+import { QUEST_DATA } from '../data/QuestData.js';
+
 export class QuestGuide {
     constructor(canvas, ctx) {
         this.canvas = canvas;
@@ -99,42 +101,197 @@ export class QuestGuide {
         return this.questDataCache.data;
     }
 
-    getGuideText(quest, gameState) {
-        const playerInventory = gameState?.collectedItems || [];
-        const currentMap = gameState?.currentMap || 'lobby';
+    getGuideText(gameState, currentMapId) {
+        if (!gameState || !currentMapId) return '';
 
-        // 디버깅 로그
-        const inventoryNames = playerInventory.map(item => item.name).join(', ');
-        if (inventoryNames !== this.lastInventoryState) {
-            Logger.debug('인벤토리 변경 감지:', inventoryNames || '(비어있음)');
-            this.lastInventoryState = inventoryNames;
+        // 진행 중인 퀘스트 찾기
+        const activeQuest = this.getQuestData(gameState);
+        if (!activeQuest) return '🎊 모든 퀘스트를 완료했습니다!';
+
+        Logger.debug(`🎯 현재 활성 퀘스트: ${activeQuest.title}, started: ${activeQuest.started}, completed: ${activeQuest.completed}`);
+
+        // 퀘스트 단계 판단
+        const questPhase = this.determineQuestPhase(activeQuest, gameState);
+        Logger.debug(`📍 퀘스트 단계: ${questPhase}`);
+
+        switch (questPhase) {
+            case 'NEED_TO_RECEIVE':
+                return this.getQuestReceiveGuide(activeQuest, currentMapId);
+            
+            case 'NEED_TO_COLLECT':
+                return this.getItemCollectionGuide(activeQuest, currentMapId);
+            
+            case 'NEED_TO_SUBMIT':
+                return this.getItemSubmissionGuide(activeQuest, currentMapId);
+            
+            case 'COMPLETED':
+                return this.getNextQuestGuide(activeQuest, gameState);
+            
+            default:
+                return `📋 ${activeQuest.hint}`;
         }
+    }
 
-        // 필요한 아이템이 있는 경우
-        if (quest.requiredItem || quest.requiredItems) {
-            const requiredItems = quest.requiredItems || [quest.requiredItem];
+    // 퀘스트 단계 판단 메서드
+    determineQuestPhase(quest, gameState) {
+        // 퀘스트가 완료된 경우
+        if (quest.completed) {
+            return 'COMPLETED';
+        }
+        
+        // 퀘스트를 아직 받지 않은 경우
+        if (!quest.started) {
+            return 'NEED_TO_RECEIVE';
+        }
+        
+        // 퀘스트를 받았지만 아이템을 아직 수집하지 않은 경우
+        const hasRequiredItem = this.hasRequiredItems(quest, gameState.inventory);
+        if (!hasRequiredItem) {
+            return 'NEED_TO_COLLECT';
+        }
+        
+        // 아이템은 있지만 아직 제출하지 않은 경우
+        if (!quest.itemSubmitted) {
+            return 'NEED_TO_SUBMIT';
+        }
+        
+        return 'COMPLETED';
+    }
 
-            // 아직 수집하지 못한 아이템 찾기
-            const missingItems = requiredItems.filter(item =>
-                !playerInventory.some(invItem => invItem.name === item)
+    // 필요한 아이템을 가지고 있는지 확인
+    hasRequiredItems(quest, inventory) {
+        if (quest.requiredItem) {
+            return inventory.some(item => item.name === quest.requiredItem);
+        }
+        
+        if (quest.requiredItems) {
+            return quest.requiredItems.every(requiredItem => 
+                inventory.some(item => item.name === requiredItem)
             );
+        }
+        
+        return false;
+    }
 
-            if (missingItems.length > 0) {
-                // 첫 번째 미수집 아이템에 대한 가이드
-                const firstMissingItem = missingItems[0];
-                const guideText = this.getLocationGuide(firstMissingItem, currentMap);
-                Logger.debug('아이템 수집 가이드:', firstMissingItem, '->', guideText);
-                return guideText;
-            } else {
-                // 모든 아이템을 수집했으면 제출 가이드
-                const guideText = this.getSubmissionGuide(quest, currentMap);
-                Logger.debug('제출 가이드:', quest.questGiver, '->', guideText);
-                return guideText;
-            }
+    // 1. 퀘스트 받기 단계 가이드
+    getQuestReceiveGuide(quest, currentMapId) {
+        const npcInfo = this.getNPCLocationInfo(quest.questGiver);
+        
+        if (!npcInfo) {
+            return `🎯 ${quest.questGiver}을(를) 찾아가서 퀘스트를 받으세요`;
         }
 
-        // 기본 가이드
-        return "퀘스트를 확인하고 목표를 달성하세요!";
+        const currentFloor = this.getCurrentFloor(currentMapId);
+        
+        // 같은 층에 있는 경우
+        if (currentFloor === npcInfo.floor) {
+            return `🗣️ ${npcInfo.locationDescription}에서 ${npcInfo.name}과(와) 대화하여 퀘스트를 받으세요`;
+        }
+        
+        // 다른 층에 있는 경우
+        return `🚀 ${npcInfo.floor}층으로 이동 → ${npcInfo.locationDescription}에서 ${npcInfo.name}과(와) 대화하여 퀘스트를 받으세요`;
+    }
+
+    // 2. 아이템 수집 단계 가이드 
+    getItemCollectionGuide(quest, currentMapId) {
+        const itemName = quest.requiredItem || (quest.requiredItems && quest.requiredItems[0]);
+        if (!itemName) {
+            return `📦 필요한 아이템을 수집하세요`;
+        }
+
+        // 기존 위치 가이드 로직 활용
+        const locationGuide = this.getLocationGuide(itemName, currentMapId);
+        return `📦 아이템 수집 필요: ${itemName}\n${locationGuide}`;
+    }
+
+    // 3. 아이템 제출 단계 가이드
+    getItemSubmissionGuide(quest, currentMapId) {
+        const npcInfo = this.getNPCLocationInfo(quest.questGiver);
+        const itemName = quest.requiredItem || (quest.requiredItems && quest.requiredItems.join(', '));
+        
+        if (!npcInfo) {
+            return `✅ ${itemName}을(를) ${quest.questGiver}에게 제출하세요`;
+        }
+
+        const currentFloor = this.getCurrentFloor(currentMapId);
+        
+        // 같은 층에 있는 경우
+        if (currentFloor === npcInfo.floor) {
+            return `✅ ${itemName}을(를) 가지고 ${npcInfo.locationDescription}의 ${npcInfo.name}에게 제출하세요`;
+        }
+        
+        // 다른 층에 있는 경우
+        return `✅ ${itemName}을(를) 가지고 ${npcInfo.floor}층 → ${npcInfo.locationDescription}의 ${npcInfo.name}에게 제출하세요`;
+    }
+
+    // 4. 다음 퀘스트 안내
+    getNextQuestGuide(completedQuest, gameState) {
+        // 다음 퀘스트 확인
+        const nextQuest = QUEST_DATA.find(q => !q.completed && !q.started);
+        
+        if (!nextQuest) {
+            return '🎊 축하합니다! 모든 퀘스트를 완료했습니다!';
+        }
+        
+        const npcInfo = this.getNPCLocationInfo(nextQuest.questGiver);
+        if (!npcInfo) {
+            return `🎯 다음 퀘스트: ${nextQuest.title}`;
+        }
+        
+        return `🎯 다음 퀘스트: ${nextQuest.title}\n🗣️ ${npcInfo.floor}층 ${npcInfo.locationDescription}에서 ${npcInfo.name}과(와) 대화하세요`;
+    }
+
+    // NPC 위치 정보 가져오기
+    getNPCLocationInfo(npcId) {
+        const npcLocationMap = {
+            'guard': {
+                name: '경비 아저씨',
+                floor: 1,
+                locationDescription: '1층 로비 오른쪽'
+            },
+            'reception': {
+                name: '안내 데스크',
+                floor: 1,
+                locationDescription: '1층 로비 중앙'
+            },
+            'kim_deputy': {
+                name: '김 부장',
+                floor: 7,
+                locationDescription: '7층 복도'
+            },
+            'intern': {
+                name: '인턴',
+                floor: 7,
+                locationDescription: '7층 복도'
+            },
+            'office_worker_2': {
+                name: '직원',
+                floor: 7,
+                locationDescription: '7층 복도'
+            },
+            'manager_lee': {
+                name: '이 매니저',
+                floor: 8,
+                locationDescription: '8층 복도'
+            },
+            'education_manager': {
+                name: '교육 매니저',
+                floor: 8,
+                locationDescription: '8층 복도'
+            },
+            'secretary_jung': {
+                name: '정 비서',
+                floor: 9,
+                locationDescription: '9층 복도'
+            },
+            'ceo_kim': {
+                name: '김 대표',
+                floor: 9,
+                locationDescription: '9층 CEO실'
+            }
+        };
+        
+        return npcLocationMap[npcId];
     }
 
     getLocationGuide(itemName, currentMap) {
