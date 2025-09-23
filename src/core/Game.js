@@ -28,6 +28,7 @@ import { ParticleSystem } from '../effects/ParticleSystem.js';
 import { NPCRelationshipSystem } from './NPCRelationshipSystem.js';
 import { DynamicQuestHints } from './DynamicQuestHints.js';
 import { TransitionManager } from '../effects/TransitionManager.js';
+import { FloorAtmosphereSystem } from '../systems/FloorAtmosphereSystem.js';
 
 export class Game {
     constructor() {
@@ -92,6 +93,9 @@ export class Game {
         // 타이머 관리 (메모리 누수 방지)
         this.activeTimers = new Set();
         this.nextStepTimer = null;
+
+        // 층별 분위기 시스템
+        this.floorAtmosphereSystem = new FloorAtmosphereSystem(this.audioManager);
 
         // 대화 선택지 시스템
         this.showingChoices = false;
@@ -250,6 +254,9 @@ export class Game {
             clearTimeout(this.nextStepTimer);
             this.nextStepTimer = null;
         }
+
+        // 분위기 시스템 정리
+        this.floorAtmosphereSystem?.clearAllTimers();
     }
 
     // 다음 단계 정보 표시 (메모리 누수 방지 버전)
@@ -342,6 +349,11 @@ export class Game {
         document.addEventListener('keydown', this.boundKeyDownHandler);
         this.canvas.addEventListener('mousemove', this.boundMouseMoveHandler);
         this.canvas.addEventListener('click', this.boundClickHandler);
+        
+        // 분위기 이벤트 리스너
+        window.addEventListener('floorAtmosphereEvent', (event) => {
+            this.handleAtmosphereEvent(event.detail);
+        });
     }
 
     onCanvasMouseMove(event) {
@@ -974,6 +986,9 @@ export class Game {
                     // 포털 사용 효과음
                     this.audioManager.playPortalSound();
 
+                    // 층별 분위기 변경
+                    this.floorAtmosphereSystem.changeFloor(portal.targetMap);
+
                     // 맵 이동 알림
                     const mapName = this.mapManager.getCurrentMap().name;
                     this.inventory.showItemNotification({ name: `${mapName}(으)로 이동했습니다!` });
@@ -982,6 +997,95 @@ export class Game {
             600, // 0.6초 전환
             'rgba(0, 20, 40, 1)' // 어두운 파란색
         );
+    }
+
+    // 분위기 이벤트 처리
+    handleAtmosphereEvent(eventDetail) {
+        if (this.gameMode !== CONSTANTS.GAME_MODES.PLAYING) return;
+        
+        const { type, message, duration, floor } = eventDetail;
+        
+        // 인벤토리 알림으로 이벤트 표시
+        this.inventory.showItemNotification({ 
+            name: message,
+            duration: Math.min(duration, 4000) // 최대 4초로 제한
+        });
+        
+        // 특정 이벤트에 대한 추가 효과
+        switch(type) {
+            case 'visitor_arrival':
+                // 방문객 도착 시 파티클 효과
+                this.particleSystem.createRewardEffect(
+                    this.canvas.width / 2, 
+                    this.canvas.height / 4, 
+                    '👥'
+                );
+                break;
+                
+            case 'urgent_call':
+                // 긴급 전화 시 화면 깜빡임 효과
+                this.createUrgentCallEffect();
+                break;
+                
+            case 'presentation_prep':
+                // 프레젠테이션 준비 시 집중 효과
+                this.createFocusEffect();
+                break;
+                
+            case 'weather_change':
+                // 날씨 변화 시 전체 파티클 효과
+                this.createWeatherEffect();
+                break;
+        }
+        
+        Logger.info(`🎭 분위기 이벤트: ${message} (${floor})`);
+    }
+
+    // 긴급 전화 시각 효과
+    createUrgentCallEffect() {
+        let flashCount = 0;
+        const maxFlashes = 3;
+        
+        const flash = () => {
+            if (flashCount >= maxFlashes) return;
+            
+            // 화면 테두리 붉은색 깜빡임
+            this.ctx.save();
+            this.ctx.strokeStyle = '#ff4444';
+            this.ctx.lineWidth = 8;
+            this.ctx.strokeRect(0, 0, this.canvas.width, this.canvas.height);
+            this.ctx.restore();
+            
+            flashCount++;
+            this.setSafeTimeout(() => {
+                if (flashCount < maxFlashes) {
+                    this.setSafeTimeout(flash, 200);
+                }
+            }, 200);
+        };
+        
+        this.setSafeTimeout(flash, 100);
+    }
+
+    // 집중 효과 (프레젠테이션 준비)
+    createFocusEffect() {
+        // 중앙에 집중 아이콘 파티클
+        this.particleSystem.createQuestCompleteEffect(
+            this.canvas.width / 2,
+            this.canvas.height / 2
+        );
+    }
+
+    // 날씨 변화 효과
+    createWeatherEffect() {
+        // 여러 위치에서 날씨 파티클 생성
+        for (let i = 0; i < 8; i++) {
+            this.setSafeTimeout(() => {
+                const x = Math.random() * this.canvas.width;
+                const y = Math.random() * this.canvas.height * 0.3; // 상단에서만
+                this.particleSystem.createRewardEffect(x, y, '🌤️');
+            }, i * 150);
+        }
     }
 
     collectItem(item) {
@@ -1911,6 +2015,9 @@ export class Game {
 
         const mapSet = this.mapManager.setCurrentMap(CONSTANTS.MAPS.LOBBY);
         Logger.debug('맵 설정 결과:', mapSet, '현재 맵:', this.mapManager.getCurrentMapId());
+
+        // 로비 분위기 시작
+        this.floorAtmosphereSystem.changeFloor(CONSTANTS.MAPS.LOBBY);
 
         this.player = new Player(33, 15);
         Logger.debug('플레이어 생성:', this.player.x, this.player.y);
