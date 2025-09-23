@@ -109,7 +109,7 @@ export class IntroScreen {
         const lines = [
             'HUNET COMPUTER CO., LTD.',
             'System BIOS Version 2.04.08',
-            'Copyright (C) 1999 HUNET Corp.',
+            'Copyright (C) 1999-2025 HUNET Corp. (26th Anniversary)',
             '',
             'Memory Test: 64MB OK',
             '',

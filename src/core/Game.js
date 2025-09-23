@@ -289,8 +289,8 @@ export class Game {
         this.loadingScreen.show();
         Logger.debug('✅ 로딩 화면 초기화 완료');
 
-        // 타이틀 옵션 설정 (새 게임만)
-        const titleOptions = ['새 게임 시작'];
+        // 타이틀 옵션 설정
+        const titleOptions = ['새 게임 시작', '게임 정보', '크레딧'];
         this.titleScreen.setMenuOptions(titleOptions);
         Logger.debug('✅ 타이틀 화면 옵션 설정 완료');
 

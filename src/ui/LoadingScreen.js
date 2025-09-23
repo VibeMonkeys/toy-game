@@ -24,7 +24,7 @@ export class LoadingScreen {
         // DOS 스타일 블록 문자 애니메이션
         this.dosBlocks = [];
         this.blockChars = ['█', '▓', '▒', '░'];
-        this.scrollingText = 'HUNET Corporation 1999 - Loading Anniversary Game Data...';
+        this.scrollingText = 'HUNET Corporation Since 1999 - Loading 26th Anniversary Game Data...';
         this.scrollOffset = 0;
         this.lastScrollTime = 0;
 

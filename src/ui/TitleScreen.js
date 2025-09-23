@@ -8,12 +8,13 @@ export class TitleScreen {
         this.menuOptions = [];
         this.animationTime = 0;
         this.showGameInfo = false;
+        this.showCredits = false;
         this.menuAreas = [];
 
         // 응답하라 1999 스타일 요소들
         this.titleText = '휴넷 26주년 기념 게임에 오신 것을 환영합니다';
         this.subtitleText = '휴넷 에듀테크 어드벤처 RPG v1.0';
-        this.companyText = '(c)1999 휴넷 코퍼레이션 - 인간 네트워크';
+        this.companyText = '(c)1999-2025 휴넷 코퍼레이션 - 인간 네트워크 (26주년)';
 
         this.showSecretMessage = false;
         this.specialMessage = null;
@@ -69,6 +70,10 @@ export class TitleScreen {
 
         if (this.showGameInfo) {
             this.drawGameInfo();
+        }
+
+        if (this.showCredits) {
+            this.drawCreditsScreen();
         }
 
         if (this.showSecretMessage) {
@@ -248,17 +253,17 @@ export class TitleScreen {
 
         this.ctx.fillStyle = '#FFD700';
         this.ctx.font = '14px "Courier New", monospace';
-        this.ctx.fillText('Since 1999 • Educational Technology Leader', centerX, footerY + 20);
+        this.ctx.fillText('Since 1999 • 26주년 • Educational Technology Leader', centerX, footerY + 20);
 
         this.ctx.fillStyle = '#FFA500';
         this.ctx.font = '12px "Courier New", monospace';
-        this.ctx.fillText('© 1999 HUNET Corporation. All Rights Reserved.', centerX, footerY + 40);
+        this.ctx.fillText('© 1999-2025 HUNET Corporation. All Rights Reserved. (26th Anniversary)', centerX, footerY + 40);
     }
 
     drawMenu() {
         this.menuAreas = [];
-        const startY = 360;
-        const spacing = 60;
+        const startY = 320;
+        const spacing = 65;
 
         this.ctx.font = 'bold 16px "Courier New", monospace';
         this.ctx.textAlign = 'center';
@@ -267,7 +272,7 @@ export class TitleScreen {
             const y = startY + i * spacing;
             const isSelected = i === this.menuIndex;
             const buttonWidth = 280;
-            const buttonHeight = 50;
+            const buttonHeight = 60;
             const buttonX = this.canvas.width / 2 - buttonWidth / 2;
             const buttonY = y - 25;
 
@@ -288,8 +293,9 @@ export class TitleScreen {
         this.ctx.fillStyle = '#D2691E';
         this.ctx.font = '14px "Courier New", monospace';
         this.ctx.textAlign = 'center';
-        this.ctx.fillText('↑↓ 선택 | ENTER 확인 | ESC 정보', this.canvas.width / 2, this.canvas.height - 60);
+        this.ctx.fillText('↑↓ 선택 | ENTER 확인 | ESC 정보', this.canvas.width / 2, this.canvas.height - 40);
     }
+
 
     drawClassicButton(x, y, width, height, text, isSelected) {
         // 로그라이크 스타일 픽셀 버튼
@@ -450,10 +456,91 @@ export class TitleScreen {
         this.ctx.fillText('[ESC] 돌아가기', this.canvas.width / 2, boxY + boxHeight - 30);
     }
 
+    drawCreditsScreen() {
+        // 반투명 배경
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // 정보 박스
+        const boxWidth = Math.min(600, this.canvas.width - 80);
+        const boxHeight = 400;
+        const boxX = (this.canvas.width - boxWidth) / 2;
+        const boxY = (this.canvas.height - boxHeight) / 2;
+
+        // 박스 배경
+        this.ctx.fillStyle = 'rgba(50, 30, 20, 0.95)';
+        this.ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+
+        // 박스 테두리
+        this.ctx.strokeStyle = '#FFD700';
+        this.ctx.lineWidth = 3;
+        this.ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+
+        // 제목
+        this.ctx.fillStyle = '#FFD700';
+        this.ctx.font = 'bold 24px "Courier New", monospace';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('=== 크레딧 ===', this.canvas.width / 2, boxY + 50);
+
+        // 크레딧 정보
+        this.ctx.font = '18px "Courier New", monospace';
+        this.ctx.textAlign = 'left';
+        this.ctx.fillStyle = '#D2691E';
+
+        const creditText = [
+            '',
+            '> 개발자의 한마디',
+            '  "휴넷 26주년을 기념하여 제작된 이 게임이',
+            '   여러분께 즐거움을 드리길 바랍니다."',
+            '',
+            '> 개발팀',
+            '  개발자: 최진안, 김경훈(기획)',
+            '  기획자: 인경실 직원 일동',
+            '',
+            '> 특별 감사',
+            '  • 26년간 휴넷과 함께해 주신 모든 임직원분들',
+            '  • 게임 개발에 아이디어를 제공해 주신 분들',
+            '  • 베타 테스트에 참여해 주신 모든 분들'
+        ];
+
+        let textY = boxY + 90;
+        for (let line of creditText) {
+            if (line.startsWith('>')) {
+                this.ctx.fillStyle = '#FFD700';
+                this.ctx.font = 'bold 18px "Courier New", monospace';
+            } else if (line.startsWith('  •')) {
+                this.ctx.fillStyle = '#FFA500';
+                this.ctx.font = '16px "Courier New", monospace';
+            } else if (line.startsWith('  ')) {
+                this.ctx.fillStyle = '#FF6347';
+                this.ctx.font = '16px "Courier New", monospace';
+            } else {
+                this.ctx.fillStyle = '#D2691E';
+                this.ctx.font = '16px "Courier New", monospace';
+            }
+            this.ctx.fillText(line, boxX + 30, textY);
+            textY += 18;
+        }
+
+        // 닫기 안내
+        this.ctx.fillStyle = '#FFD700';
+        this.ctx.font = 'bold 16px "Courier New", monospace';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('[ESC] 돌아가기', this.canvas.width / 2, boxY + boxHeight - 30);
+    }
+
     handleKeyDown(event) {
         if (this.showGameInfo) {
             if (event.key === 'Escape') {
                 this.showGameInfo = false;
+                this.audioManager?.playMenuSelect();
+            }
+            return;
+        }
+
+        if (this.showCredits) {
+            if (event.key === 'Escape') {
+                this.showCredits = false;
                 this.audioManager?.playMenuSelect();
             }
             return;
@@ -501,6 +588,12 @@ export class TitleScreen {
             return null;
         }
 
+        if (this.showCredits) {
+            this.showCredits = false;
+            this.audioManager?.playMenuSelect();
+            return null;
+        }
+
         const rect = this.canvas.getBoundingClientRect();
         const mouseX = event.clientX - rect.left;
         const mouseY = event.clientY - rect.top;
@@ -521,6 +614,11 @@ export class TitleScreen {
 
         if (selectedOption === '게임 정보') {
             this.showGameInfo = true;
+            return null;
+        }
+
+        if (selectedOption === '크레딧') {
+            this.showCredits = true;
             return null;
         }
 
