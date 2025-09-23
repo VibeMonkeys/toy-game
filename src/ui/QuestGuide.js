@@ -12,13 +12,17 @@ export class QuestGuide {
     }
 
     draw(questSystem, gameState) {
-        const currentQuest = questSystem.getCurrentQuest();
+        // 현재 활성 퀘스트 가져오기
+        const currentQuest = this.getQuestData(gameState);
         if (!currentQuest) return;
 
         this.animationTime += 16; // 대략 60fps 기준
 
-        // 캐시된 계산 재사용
-        const questData = this.getQuestData(currentQuest, gameState);
+        // 현재 맵 ID 가져오기
+        const currentMapId = gameState?.currentMap || 'lobby';
+        
+        // 가이드 텍스트 생성
+        const guideText = this.getGuideText(gameState, currentMapId);
 
         // 가이드 박스 설정
         const boxWidth = 600;
@@ -45,7 +49,7 @@ export class QuestGuide {
         // 현재 해야 할 일 가이드
         this.ctx.fillStyle = '#ffffff';
         this.ctx.font = '14px Arial';
-        this.ctx.fillText(questData.guideText, boxX + boxWidth / 2, boxY + 45);
+        this.ctx.fillText(guideText, boxX + boxWidth / 2, boxY + 45);
 
         // 진행도 표시
         const progressText = `${currentQuest.progress}/${currentQuest.maxProgress}`;
@@ -53,18 +57,61 @@ export class QuestGuide {
         this.ctx.font = 'bold 12px Arial';
         this.ctx.fillText(progressText, boxX + boxWidth / 2, boxY + 65);
 
-        // 아이템 수집 상황 (간단히)
-        if (questData.hasItems) {
-            this.ctx.fillStyle = questData.collectedCount === questData.requiredItems.length ? '#00ff00' : '#ffaa00';
-            this.ctx.font = '12px Arial';
-            this.ctx.fillText(`📦 ${questData.collectedCount}/${questData.requiredItems.length}`, boxX + boxWidth - 60, boxY + 25);
+        // 퀘스트 상태 표시
+        let statusText = '';
+        let statusColor = '#ffffff';
+        
+        if (!currentQuest.started) {
+            statusText = '📝 퀘스트 받기 필요';
+            statusColor = '#ffaa00';
+        } else if (currentQuest.completed) {
+            statusText = '✅ 완료됨';
+            statusColor = '#00ff00';
+        } else {
+            const hasRequiredItem = this.hasRequiredItems(currentQuest, gameState?.inventory || []);
+            if (hasRequiredItem) {
+                statusText = '📤 제출 가능';
+                statusColor = '#00ff00';
+            } else {
+                statusText = '📦 수집 중';
+                statusColor = '#ffaa00';
+            }
         }
+        
+        this.ctx.fillStyle = statusColor;
+        this.ctx.font = '12px Arial';
+        this.ctx.textAlign = 'right';
+        this.ctx.fillText(statusText, boxX + boxWidth - 20, boxY + 25);
+        this.ctx.textAlign = 'center';
     }
 
     // 퀘스트 데이터 캐싱 및 중복 계산 방지
-    getQuestData(quest, gameState) {
-        const questId = quest.id;
-        const inventoryKey = gameState?.collectedItems?.map(i => i.name).join(',') || '';
+    getQuestData(gameState) {
+        // 현재 진행 중인 퀘스트 찾기 - 시작되지 않았거나 완료되지 않은 첫 번째 퀘스트
+        const activeQuest = QUEST_DATA.find(quest => {
+            if (quest.completed) return false;
+            
+            // 전제 조건이 있는 경우 확인
+            if (quest.prerequisites && quest.prerequisites.length > 0) {
+                const hasPrerequisites = quest.prerequisites.every(prereq => 
+                    gameState?.inventory?.some(item => item.name === prereq) ||
+                    gameState?.collectedItems?.some(item => item.name === prereq)
+                );
+                if (!hasPrerequisites) return false;
+            }
+            
+            return true;
+        });
+
+        if (!activeQuest) {
+            Logger.debug('🎊 모든 퀘스트 완료됨');
+            return null;
+        }
+
+        Logger.debug(`🎯 활성 퀘스트 발견: ${activeQuest.title} (ID: ${activeQuest.id})`);
+        
+        const questId = activeQuest.id;
+        const inventoryKey = gameState?.inventory?.map(i => i.name).join(',') || '';
         const cacheKey = `${questId}-${inventoryKey}`;
 
         // 캐시 확인
@@ -73,32 +120,25 @@ export class QuestGuide {
         }
 
         // 새로운 데이터 계산
-        const playerInventory = gameState?.collectedItems || [];
-        const hasItems = quest.requiredItem || quest.requiredItems;
+        const playerInventory = gameState?.inventory || [];
+        const hasItems = activeQuest.requiredItem || activeQuest.requiredItems;
         let requiredItems = [];
         let collectedCount = 0;
 
         if (hasItems) {
-            requiredItems = quest.requiredItems || [quest.requiredItem];
+            requiredItems = activeQuest.requiredItems || [activeQuest.requiredItem];
             collectedCount = requiredItems.filter(item =>
                 playerInventory.some(invItem => invItem.name === item)
             ).length;
         }
 
-        const guideText = this.getGuideText(quest, gameState);
-
-        // 캐시 저장
+        // 캐시 저장 (activeQuest 객체 전체를 반환하도록 수정)
         this.questDataCache = {
             key: cacheKey,
-            data: {
-                hasItems,
-                requiredItems,
-                collectedCount,
-                guideText
-            }
+            data: activeQuest
         };
 
-        return this.questDataCache.data;
+        return activeQuest;
     }
 
     getGuideText(gameState, currentMapId) {
