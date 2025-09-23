@@ -48,31 +48,30 @@ export class Minimap {
         }
 
         const currentMapData = mapManager.getCurrentMap();
-        console.log('🗺️ 미니맵 디버그:', {
-            displayMode: this.displayMode,
-            currentMapData: currentMapData,
-            mapStructure: currentMapData ? Object.keys(currentMapData) : 'null',
-            hasData: currentMapData && currentMapData.data,
-            hasNpcs: currentMapData && currentMapData.npcs,
-            hasItems: currentMapData && currentMapData.items,
-            dataStructure: currentMapData && currentMapData.data ? `${currentMapData.data.length}x${currentMapData.data[0] ? currentMapData.data[0].length : 0}` : 'none'
-        });
-        
         if (!currentMapData) return;
 
-        // 디스플레이 모드에 따른 설정
-        let mapSize, mapX, mapY, showBackground = false;
+        // 디스플레이 모드에 따른 설정 (40:30 비율 맞춤)
+        let mapWidth, mapHeight, mapX, mapY, showBackground = false;
+        const mapRatio = 40 / 30; // 게임 맵 비율
         
         if (this.displayMode === 1) {
-            // 작은 미니맵 (우측 상단) - 세로형으로 조정
-            mapSize = Math.min(150, this.canvas.height * 0.25);
-            mapX = this.canvas.width - mapSize - 10;
-            mapY = 10;
+            // 작은 미니맵 (우측 상단) - 비율에 맞는 직사각형
+            mapHeight = Math.min(120, this.canvas.height * 0.2);
+            mapWidth = mapHeight * mapRatio;
+            mapX = this.canvas.width - mapWidth - 10;
+            mapY = 30; // 맵 이름 공간 확보
         } else if (this.displayMode === 2) {
-            // 대형 지도 (중앙)
-            mapSize = Math.min(this.canvas.width * 0.8, this.canvas.height * 0.8);
-            mapX = (this.canvas.width - mapSize) / 2;
-            mapY = (this.canvas.height - mapSize) / 2;
+            // 대형 지도 (중앙) - 비율에 맞는 직사각형
+            const maxSize = Math.min(this.canvas.width * 0.7, this.canvas.height * 0.6);
+            if (mapRatio > 1) {
+                mapWidth = maxSize;
+                mapHeight = maxSize / mapRatio;
+            } else {
+                mapHeight = maxSize;
+                mapWidth = maxSize * mapRatio;
+            }
+            mapX = (this.canvas.width - mapWidth) / 2;
+            mapY = (this.canvas.height - mapHeight) / 2;
             showBackground = true;
         }
 
@@ -82,49 +81,53 @@ export class Minimap {
             this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         }
 
+        // 맵 이름 표시 (미니맵 상단)
+        this.drawMapName(currentMapData, mapX, mapY, mapWidth);
+
         // 미니맵 배경 (어두운 테마)
         this.ctx.fillStyle = this.displayMode === 2 ? 'rgba(25, 25, 35, 0.95)' : 'rgba(20, 20, 30, 0.9)';
-        this.ctx.fillRect(mapX, mapY, mapSize, mapSize);
+        this.ctx.fillRect(mapX, mapY, mapWidth, mapHeight);
 
         // 미니맵 테두리
         this.ctx.strokeStyle = this.displayMode === 2 ? '#FFD700' : '#87CEEB';
         this.ctx.lineWidth = this.displayMode === 2 ? 3 : 2;
-        this.ctx.strokeRect(mapX, mapY, mapSize, mapSize);
+        this.ctx.strokeRect(mapX, mapY, mapWidth, mapHeight);
 
         // 맵 데이터 그리기
-        this.drawMapContent(currentMapData, mapX, mapY, mapSize);
+        this.drawMapContent(currentMapData, mapX, mapY, mapWidth, mapHeight);
 
         // 게임 오브젝트들 그리기
-        this.drawMapObjects(currentMapData, gameState, mapX, mapY, mapSize);
+        this.drawMapObjects(currentMapData, gameState, mapX, mapY, mapWidth, mapHeight);
 
         // 플레이어 위치 표시 (맨 위에)
-        this.drawPlayerPosition(player, currentMapData, mapX, mapY, mapSize);
+        this.drawPlayerPosition(player, currentMapData, mapX, mapY, mapWidth, mapHeight);
 
         // 대형 지도일 때 추가 정보 표시
         if (this.displayMode === 2) {
-            this.drawMapInfo(currentMapData, mapX, mapY, mapSize);
+            this.drawMapInfo(currentMapData, mapX, mapY, mapWidth, mapHeight);
         }
     }
 
-    drawMapContent(mapData, mapX, mapY, mapSize) {
+    drawMapContent(mapData, mapX, mapY, mapWidth, mapHeight) {
         if (!mapData) return;
 
         // 맵 크기 설정 (게임 맵 크기 기준)
-        const mapWidth = 40;  // CONSTANTS.MAP_WIDTH
-        const mapHeight = 30; // CONSTANTS.MAP_HEIGHT
-        const cellSize = mapSize / Math.max(mapWidth, mapHeight);
+        const gameMapWidth = 40;  // CONSTANTS.MAP_WIDTH
+        const gameMapHeight = 30; // CONSTANTS.MAP_HEIGHT
+        const cellWidth = mapWidth / gameMapWidth;
+        const cellHeight = mapHeight / gameMapHeight;
 
         // 기본 바닥 그리기 (자연스러운 베이지색)
         this.ctx.fillStyle = '#8B7355';
-        this.ctx.fillRect(mapX, mapY, mapSize, mapSize);
+        this.ctx.fillRect(mapX, mapY, mapWidth, mapHeight);
 
         // 벽 그리기 (진한 회색)
         if (mapData.walls) {
             this.ctx.fillStyle = '#2F2F2F';
             for (let wall of mapData.walls) {
-                const wallX = mapX + (wall.x * cellSize);
-                const wallY = mapY + (wall.y * cellSize);
-                this.ctx.fillRect(wallX, wallY, cellSize, cellSize);
+                const wallX = mapX + (wall.x * cellWidth);
+                const wallY = mapY + (wall.y * cellHeight);
+                this.ctx.fillRect(wallX, wallY, cellWidth, cellHeight);
             }
         }
 
@@ -143,30 +146,31 @@ export class Minimap {
             ];
             
             for (let item of allItems) {
-                const itemX = mapX + (item.x * cellSize);
-                const itemY = mapY + (item.y * cellSize);
-                this.ctx.fillRect(itemX, itemY, cellSize, cellSize);
+                const itemX = mapX + (item.x * cellWidth);
+                const itemY = mapY + (item.y * cellHeight);
+                this.ctx.fillRect(itemX, itemY, cellWidth, cellHeight);
             }
         }
     }
 
-    drawMapObjects(mapData, gameState, mapX, mapY, mapSize) {
+    drawMapObjects(mapData, gameState, mapX, mapY, mapWidth, mapHeight) {
         if (!mapData) return;
 
         // 맵 크기 설정 (게임 맵 크기 기준)
-        const mapWidth = 40;  // CONSTANTS.MAP_WIDTH
-        const mapHeight = 30; // CONSTANTS.MAP_HEIGHT
-        const cellSize = mapSize / Math.max(mapWidth, mapHeight);
+        const gameMapWidth = 40;  // CONSTANTS.MAP_WIDTH
+        const gameMapHeight = 30; // CONSTANTS.MAP_HEIGHT
+        const cellWidth = mapWidth / gameMapWidth;
+        const cellHeight = mapHeight / gameMapHeight;
 
         // NPC 그리기
         if (mapData.npcs) {
             this.ctx.fillStyle = '#FFD700'; // 금색
             for (let npc of mapData.npcs) {
-                const npcX = mapX + (npc.x * cellSize);
-                const npcY = mapY + (npc.y * cellSize);
+                const npcX = mapX + (npc.x * cellWidth);
+                const npcY = mapY + (npc.y * cellHeight);
                 
                 this.ctx.beginPath();
-                this.ctx.arc(npcX + cellSize/2, npcY + cellSize/2, cellSize/4, 0, Math.PI * 2);
+                this.ctx.arc(npcX + cellWidth/2, npcY + cellHeight/2, Math.max(cellWidth/4, 2), 0, Math.PI * 2);
                 this.ctx.fill();
                 
                 // 대형 지도에서는 NPC 이름 표시
@@ -174,7 +178,7 @@ export class Minimap {
                     this.ctx.fillStyle = '#FFFFFF';
                     this.ctx.font = '10px Arial';
                     this.ctx.textAlign = 'center';
-                    this.ctx.fillText(npc.name, npcX + cellSize/2, npcY - 2);
+                    this.ctx.fillText(npc.name, npcX + cellWidth/2, npcY - 2);
                     this.ctx.fillStyle = '#FFD700'; // 색상 복원
                 }
             }
@@ -185,17 +189,17 @@ export class Minimap {
             this.ctx.fillStyle = '#00FF00'; // 녹색
             for (let item of mapData.items) {
                 if (!item.collected && !this.isItemCollected(item, gameState)) {
-                    const itemX = mapX + (item.x * cellSize);
-                    const itemY = mapY + (item.y * cellSize);
+                    const itemX = mapX + (item.x * cellWidth);
+                    const itemY = mapY + (item.y * cellHeight);
                     
-                    this.ctx.fillRect(itemX + cellSize/3, itemY + cellSize/3, cellSize/3, cellSize/3);
+                    this.ctx.fillRect(itemX + cellWidth/3, itemY + cellHeight/3, cellWidth/3, cellHeight/3);
                     
                     // 대형 지도에서는 아이템 이름 표시
                     if (this.displayMode === 2 && item.name) {
                         this.ctx.fillStyle = '#FFFFFF';
                         this.ctx.font = '9px Arial';
                         this.ctx.textAlign = 'center';
-                        this.ctx.fillText(item.name, itemX + cellSize/2, itemY - 2);
+                        this.ctx.fillText(item.name, itemX + cellWidth/2, itemY - 2);
                         this.ctx.fillStyle = '#00FF00'; // 색상 복원
                     }
                 }
@@ -206,22 +210,22 @@ export class Minimap {
         if (mapData.portals) {
             this.ctx.fillStyle = '#00AAFF'; // 파란색
             for (let portal of mapData.portals) {
-                const portalX = mapX + (portal.x * cellSize);
-                const portalY = mapY + (portal.y * cellSize);
+                const portalX = mapX + (portal.x * cellWidth);
+                const portalY = mapY + (portal.y * cellHeight);
                 
-                this.ctx.fillRect(portalX, portalY, cellSize, cellSize);
+                this.ctx.fillRect(portalX, portalY, cellWidth, cellHeight);
                 
                 // 포털 테두리
                 this.ctx.strokeStyle = '#FFFFFF';
                 this.ctx.lineWidth = 1;
-                this.ctx.strokeRect(portalX, portalY, cellSize, cellSize);
+                this.ctx.strokeRect(portalX, portalY, cellWidth, cellHeight);
                 
                 // 대형 지도에서는 포털 목적지 표시
                 if (this.displayMode === 2 && portal.targetMap) {
                     this.ctx.fillStyle = '#FFFFFF';
                     this.ctx.font = '9px Arial';
                     this.ctx.textAlign = 'center';
-                    this.ctx.fillText(portal.targetMap, portalX + cellSize/2, portalY - 2);
+                    this.ctx.fillText(portal.targetMap, portalX + cellWidth/2, portalY - 2);
                     this.ctx.fillStyle = '#00AAFF'; // 색상 복원
                 }
             }
@@ -230,23 +234,23 @@ export class Minimap {
         // 엘리베이터 그리기
         if (mapData.elevatorPanel) {
             const elevator = mapData.elevatorPanel;
-            const elevatorX = mapX + (elevator.x * cellSize);
-            const elevatorY = mapY + (elevator.y * cellSize);
+            const elevatorX = mapX + (elevator.x * cellWidth);
+            const elevatorY = mapY + (elevator.y * cellHeight);
             
             this.ctx.fillStyle = '#FF8C00'; // 주황색
-            this.ctx.fillRect(elevatorX, elevatorY, cellSize, cellSize);
+            this.ctx.fillRect(elevatorX, elevatorY, cellWidth, cellHeight);
             
             // 엘리베이터 테두리
             this.ctx.strokeStyle = '#FFD700';
             this.ctx.lineWidth = 2;
-            this.ctx.strokeRect(elevatorX, elevatorY, cellSize, cellSize);
+            this.ctx.strokeRect(elevatorX, elevatorY, cellWidth, cellHeight);
             
             // 대형 지도에서는 "엘리베이터" 텍스트 표시
             if (this.displayMode === 2) {
                 this.ctx.fillStyle = '#FFFFFF';
                 this.ctx.font = '10px Arial';
                 this.ctx.textAlign = 'center';
-                this.ctx.fillText('엘리베이터', elevatorX + cellSize/2, elevatorY - 2);
+                this.ctx.fillText('엘리베이터', elevatorX + cellWidth/2, elevatorY - 2);
             }
         }
     }
@@ -259,22 +263,23 @@ export class Minimap {
         );
     }
 
-    drawPlayerPosition(player, mapData, mapX, mapY, mapSize) {
+    drawPlayerPosition(player, mapData, mapX, mapY, mapWidth, mapHeight) {
         if (!mapData) return;
 
         // 맵 크기 설정 (게임 맵 크기 기준)
-        const mapWidth = 40;  // CONSTANTS.MAP_WIDTH
-        const mapHeight = 30; // CONSTANTS.MAP_HEIGHT
-        const cellSize = mapSize / Math.max(mapWidth, mapHeight);
+        const gameMapWidth = 40;  // CONSTANTS.MAP_WIDTH
+        const gameMapHeight = 30; // CONSTANTS.MAP_HEIGHT
+        const cellWidth = mapWidth / gameMapWidth;
+        const cellHeight = mapHeight / gameMapHeight;
 
         // 플레이어 위치 계산
-        const playerX = mapX + (player.x * cellSize);
-        const playerY = mapY + (player.y * cellSize);
+        const playerX = mapX + (player.x * cellWidth);
+        const playerY = mapY + (player.y * cellHeight);
 
-        // 플레이어 표시 (빨간 점)
+        // 플레이어 표시 (빨간 원)
         this.ctx.fillStyle = '#FF0000';
         this.ctx.beginPath();
-        this.ctx.arc(playerX + cellSize/2, playerY + cellSize/2, Math.max(cellSize/3, 3), 0, Math.PI * 2);
+        this.ctx.arc(playerX + cellWidth/2, playerY + cellHeight/2, Math.max(cellWidth/3, 3), 0, Math.PI * 2);
         this.ctx.fill();
 
         // 플레이어 테두리 (더 눈에 띄게)
@@ -287,23 +292,56 @@ export class Minimap {
             this.ctx.strokeStyle = '#FF0000';
             this.ctx.lineWidth = 2;
             this.ctx.setLineDash([5, 5]);
-            this.ctx.strokeRect(playerX, playerY, cellSize, cellSize);
+            this.ctx.strokeRect(playerX, playerY, cellWidth, cellHeight);
             this.ctx.setLineDash([]);
         }
     }
 
-    drawMapInfo(mapData, mapX, mapY, mapSize) {
-        // 맵 이름 표시
-        this.ctx.fillStyle = '#FFFFFF';
-        this.ctx.font = 'bold 20px Arial';
-        this.ctx.textAlign = 'center';
-        
-        const mapName = mapData.name || '알 수 없는 지역';
-        this.ctx.fillText(mapName, mapX + mapSize/2, mapY - 10);
+    drawMapName(mapData, mapX, mapY, mapWidth) {
+        if (!mapData || !mapData.name) return;
 
-        // 조작 가이드 표시
-        this.ctx.font = '14px Arial';
-        this.ctx.fillStyle = '#CCCCCC';
-        this.ctx.fillText('M키를 눌러 닫기', mapX + mapSize/2, mapY + mapSize + 25);
+        // 맵 이름을 한국어로 변환
+        const koreanNames = {
+            'Lobby': '1층 로비',
+            'Floor_7_Corridor': '7층 복도', 
+            'Floor_7_709_Affiliates': '7층 709호 계열사',
+            'Floor_7_710_Main_IT': '7층 710호 본사IT',
+            'Floor_8_Corridor': '8층 복도',
+            'Floor_8_IT_Division': '8층 IT본부',
+            'Floor_8_HR_Office': '8층 인경실',
+            'Floor_8_AI_Research': '8층 인공지능연구소',
+            'Floor_8_Education_Service': '8층 교육서비스본부',
+            'Floor_8_Sales_Support': '8층 영업+교육지원본부',
+            'Floor_9_Corridor': '9층 복도',
+            'Floor_9_CEO_Office': '9층 CEO실',
+            'Rooftop': '옥상'
+        };
+
+        const displayName = koreanNames[mapData.name] || mapData.name;
+
+        // 맵 이름 배경 (반투명 박스)
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        const textWidth = this.ctx.measureText(displayName).width + 20;
+        const textHeight = this.displayMode === 2 ? 25 : 20;
+        const nameX = mapX + (mapWidth - textWidth) / 2;
+        const nameY = mapY - textHeight - 5;
+        
+        this.ctx.fillRect(nameX, nameY, textWidth, textHeight);
+
+        // 맵 이름 테두리
+        this.ctx.strokeStyle = this.displayMode === 2 ? '#FFD700' : '#87CEEB';
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeRect(nameX, nameY, textWidth, textHeight);
+
+        // 맵 이름 텍스트
+        this.ctx.fillStyle = '#FFFFFF';
+        this.ctx.font = this.displayMode === 2 ? 'bold 14px Arial' : 'bold 12px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText(displayName, mapX + mapWidth/2, nameY + textHeight - 5);
+    }
+
+    drawMapInfo(mapData, mapX, mapY, mapWidth, mapHeight) {
+        // 대형 지도에서는 추가 정보를 표시할 수 있지만, 현재는 맵 이름만 표시
+        // 추후 확장 가능: 층 정보, 특수 구역 정보 등
     }
 }
