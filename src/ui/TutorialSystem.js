@@ -181,7 +181,7 @@ export class TutorialSystem {
         // 각 단계별 조건 체크 (한글 키보드 지원)
         switch(step.action) {
             case "press_Q":
-                if ((key === 'q' || key === 'Q' || key === 'ㅂ')) {
+                if ((key === 'q' || key === 'Q' || key === 'ㅂ' || key === 'ㅃ')) {
                     if (questSystemVisible) {
                         step.completed = true;
                         return true;
@@ -189,7 +189,7 @@ export class TutorialSystem {
                 }
                 break;
             case "press_I":
-                if ((key === 'i' || key === 'I' || key === 'ㅑ')) {
+                if ((key === 'i' || key === 'I' || key === 'ㅑ' || key === 'ㅣ')) {
                     if (inventoryVisible) {
                         step.completed = true;
                         return true;

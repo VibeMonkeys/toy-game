@@ -1,5 +1,4 @@
 import { Logger } from '../utils/Logger.js';
-
 import { QUEST_DATA } from '../data/QuestData.js';
 
 export class QuestGuide {
@@ -8,10 +7,25 @@ export class QuestGuide {
         this.ctx = ctx;
         this.animationTime = 0;
         this.lastInventoryState = ''; // 디버깅용 상태 추적
+        this.visible = true; // 게임 시작과 함께 표시
         // Logger는 static 클래스이므로 인스턴스 생성 불필요
+    }
+    show() {
+        this.visible = true;
+    }
+
+    hide() {
+        this.visible = false;
+    }
+
+    isVisible() {
+        return this.visible;
     }
 
     draw(questSystem, gameState) {
+        // 가이드가 숨겨진 상태면 렌더링하지 않음
+        if (!this.visible) return;
+        
         // QuestManager 접근
         const questManager = questSystem?.questManager;
         

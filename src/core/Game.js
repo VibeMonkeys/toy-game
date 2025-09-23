@@ -29,6 +29,7 @@ import { NPCRelationshipSystem } from './NPCRelationshipSystem.js';
 import { DynamicQuestHints } from './DynamicQuestHints.js';
 import { TransitionManager } from '../effects/TransitionManager.js';
 import { FloorAtmosphereSystem } from '../systems/FloorAtmosphereSystem.js';
+import { SpecialNPCSystem } from '../systems/SpecialNPCSystem.js';
 
 export class Game {
     constructor() {
@@ -96,6 +97,9 @@ export class Game {
 
         // 층별 분위기 시스템
         this.floorAtmosphereSystem = new FloorAtmosphereSystem(this.audioManager);
+        
+        // 특별 NPC 시스템
+        this.specialNPCSystem = new SpecialNPCSystem(this);
 
         // 대화 선택지 시스템
         this.showingChoices = false;
@@ -257,6 +261,9 @@ export class Game {
 
         // 분위기 시스템 정리
         this.floorAtmosphereSystem?.clearAllTimers();
+        
+        // 특별 NPC 시스템 정리
+        this.specialNPCSystem?.destroy();
     }
 
     // 다음 단계 정보 표시 (메모리 누수 방지 버전)
@@ -441,50 +448,21 @@ export class Game {
         }
     }
 
-    handleGameInput(event) {
-        // 튜토리얼이 활성화되어 있을 때는 대부분의 입력을 튜토리얼에서 먼저 처리
-        if (this.tutorialSystem.isVisible()) {
-            // UI 토글 키들은 먼저 처리하고 튜토리얼에 알림
-            if (event.key === 'q' || event.key === 'Q' || event.key === 'ㅂ') {
-                this.questSystem.toggleQuestUI();
-                const handled = this.tutorialSystem.handleKeyPress(
-                    'Q', // 한글키도 영어키로 통일해서 전달
-                    this.questSystem.showQuestUI,
-                    this.inventory.isVisible,
-                    this.minimap.isVisible
-                );
-                return;
-            }
-            if (event.key === 'i' || event.key === 'I' || event.key === 'ㅑ') {
-                this.inventory.toggle();
-                const handled = this.tutorialSystem.handleKeyPress(
-                    'I', // 한글키도 영어키로 통일해서 전달
-                    this.questSystem.showQuestUI,
-                    this.inventory.isVisible,
-                    this.minimap.isVisible
-                );
-                return;
-            }
-            if (event.key === 'm' || event.key === 'M' || event.key === 'ㅡ') {
-                this.minimap.toggle();
-                const handled = this.tutorialSystem.handleKeyPress(
-                    'M', // 한글키도 영어키로 통일해서 전달
-                    this.questSystem.showQuestUI,
-                    this.inventory.isVisible,
-                    this.minimap.isVisible
-                );
-                return;
-            }
-
-            // 다른 키 입력들
-            const handled = this.tutorialSystem.handleKeyPress(
-                event.key,
+    // 튜토리얼에 UI 상태 업데이트 (UI 토글 후 호출)
+    updateTutorialAfterKeyPress(key) {
+        if (this.tutorialSystem && this.tutorialSystem.isVisible()) {
+            // UI 토글 후 업데이트된 상태를 튜토리얼에 전달
+            this.tutorialSystem.handleKeyPress(
+                key,
                 this.questSystem.showQuestUI,
                 this.inventory.isVisible,
                 this.minimap.isVisible
             );
-            if (handled) return;
         }
+    }
+
+    handleGameInput(event) {
+        // 튜토리얼은 UI 토글 후에 별도로 업데이트됨
 
         // 코나미 코드 체크
         this.checkKonamiCode(event);
@@ -513,82 +491,41 @@ export class Game {
         // 일시정지 메뉴가 열려있을 때
         const pauseResult = this.pauseMenu.handleKeyDown(event);
         if (pauseResult) {
-            this.handlePauseMenuAction(pauseResult);
-            return;
+            return; // 일시정지 메뉴에서 처리됨
         }
 
-        // ESC 키로 일시정지 메뉴 열기
-        if (event.key === 'Escape') {
-            this.pauseMenu.show();
-            return;
-        }
-
-        // 선택지 표시 중일 때
-        if (this.showingChoices) {
-            if (event.key === 'ArrowUp') {
-                this.navigateChoices('up');
+        // UI 토글 먼저 처리
+        switch(event.key) {
+            case 'q':
+            case 'Q':
+            case 'ㅂ':
+            case 'ㅃ':
+                this.questSystem.toggleQuestUI();
+                this.updateTutorialAfterKeyPress('q');
                 return;
-            }
-            if (event.key === 'ArrowDown') {
-                this.navigateChoices('down');
+                
+            case 'i':
+            case 'I':
+            case 'ㅑ':
+            case 'ㅣ':
+                this.inventory.toggle();
+                this.updateTutorialAfterKeyPress('i');
                 return;
-            }
-            if (event.key === 'Enter') {
-                this.confirmChoice();
+                
+            case 'm':
+            case 'M':
+            case 'ㅡ':
+                this.minimap.toggle();
+                this.updateTutorialAfterKeyPress('m');
                 return;
-            }
-            if (event.key === 'Escape') {
-                this.cancelChoices();
+                
+            case 'Escape':
+                this.pauseMenu.toggle();
                 return;
-            }
-            return; // 선택지 중에는 다른 입력 무시
         }
 
-        // 다이얼로그 처리
-        if (this.currentDialog) {
-            if (event.key === ' ' || event.key === 'Enter') {
-                this.continueDialog();
-                return;
-            }
-            return; // 대화 중에는 다른 입력 무시
-        }
-
-        // UI 토글 기능들 (한글 키보드 지원)
-        if (event.key === 'i' || event.key === 'I' || event.key === 'ㅑ') {
-            this.inventory.toggle();
-            return;
-        }
-
-        if (event.key === 'q' || event.key === 'Q' || event.key === 'ㅂ') {
-            this.questSystem.toggleQuestUI();
-            return;
-        }
-
-        // 퀘스트 UI가 열려있을 때는 이동 차단
-        if (this.questSystem.showQuestUI) {
-            this.questUI.handleKeyPress(event.code);
-            return; // 퀘스트 UI가 열려있으면 다른 입력 차단
-        }
-
-        if (event.key === 'm' || event.key === 'M' || event.key === 'ㅡ') {
-            this.minimap.toggle();
-            return;
-        }
-
-        // 히든 기능들
-        if (event.key === 'h' || event.key === 'H') {
-            this.showHiddenMessage();
-            return;
-        }
-
-        if (event.key === 'd' || event.key === 'D') {
-            this.toggleDebugMode();
-            return;
-        }
-
-
-        // 일반 게임 입력
-        switch (event.key) {
+        // 플레이어 이동 및 상호작용
+        switch(event.key) {
             case 'ArrowUp':
                 this.movePlayer(0, -1);
                 break;
@@ -602,6 +539,16 @@ export class Game {
                 this.movePlayer(1, 0);
                 break;
             case ' ':
+                console.log('🔍 스페이스바 눌림! currentDialog:', this.currentDialog, 'nearbyNPC:', this.nearbyNPC, 'tutorial:', this.tutorialSystem.isVisible());
+                
+                // 튜토리얼이 활성화되어 있으면 튜토리얼 처리
+                if (this.tutorialSystem.isVisible()) {
+                    console.log('📚 튜토리얼 모드에서 스페이스바 처리');
+                    this.tutorialSystem.nextStep();
+                    return;
+                }
+                
+                // 대화창이 없으면 상호작용
                 if (!this.currentDialog) {
                     this.interact();
                 }
@@ -1123,6 +1070,9 @@ export class Game {
 
     checkNearbyNPC() {
         this.nearbyNPC = this.mapManager.getNearbyNPC(this.player.x, this.player.y);
+        if (this.nearbyNPC) {
+            console.log('🤖 NPC 감지됨:', this.nearbyNPC.id, '위치:', this.nearbyNPC.x, this.nearbyNPC.y, '플레이어:', this.player.x, this.player.y);
+        }
         this.updateInteractionHint();
     }
 
@@ -1153,13 +1103,69 @@ export class Game {
         this.showInteractionHint = this.nearbyNPC !== null || this.nearbyPortal !== null || this.nearbyElevator !== null || this.nearbyObject !== null;
     }
 
+    // 특별 NPC 상호작용 처리
+    handleSpecialNPCInteraction(npc) {
+        const dialogue = this.specialNPCSystem.interactWithSpecialNPC(npc.id);
+        if (!dialogue) return;
+
+        // 선택지가 있는 대화
+        if (dialogue.choices) {
+            this.showingChoices = true;
+            this.selectedChoice = 0;
+            this.currentChoiceNPC = npc;
+            this.currentDialog = [dialogue.text];
+            this.currentChoices = dialogue.choices;
+        } else {
+            // 일반 대화
+            this.currentDialog = [dialogue.text];
+            this.currentChoices = null;
+            this.showingChoices = false;
+        }
+
+        this.currentNPC = npc;
+        this.dialogIndex = 0;
+        this.audioManager.playDialogOpen();
+        this.showDialog();
+
+        // 특별 NPC 발견 파티클 효과
+        if (npc.rarity === 'legendary') {
+            this.particleSystem.createRewardEffect(
+                this.canvas.width / 2,
+                this.canvas.height / 3,
+                '💫'
+            );
+        }
+    }
+
+    // 특별 NPC 선택지 처리
+    handleSpecialNPCChoice(choiceResponse) {
+        if (!this.currentChoiceNPC) return;
+
+        const dialogue = this.specialNPCSystem.processChoice(this.currentChoiceNPC.id, choiceResponse);
+        if (dialogue) {
+            this.currentDialog = [dialogue.text];
+            this.currentChoices = null;
+            this.showingChoices = false;
+            this.dialogIndex = 0;
+            this.showDialog();
+        }
+    }
+
     interact() {
+        console.log('🎯 interact() 호출됨! nearbyNPC:', this.nearbyNPC, '플레이어 위치:', this.player.x, this.player.y);
+        
         // 튜토리얼에 상호작용 알림
         if (this.tutorialSystem.isVisible()) {
             this.tutorialSystem.handleInteraction();
         }
 
         if (this.nearbyNPC) {
+            console.log('✅ nearbyNPC 발견:', this.nearbyNPC.id, this.nearbyNPC.name);
+            // 특별 NPC 처리
+            if (this.nearbyNPC.isSpecial) {
+                this.handleSpecialNPCInteraction(this.nearbyNPC);
+                return;
+            }
             // 특별한 액션이 있는 NPC 체크
             if (this.nearbyNPC.specialAction === 'arcade') {
                 this.miniGameSystem.show();
@@ -1946,6 +1952,14 @@ export class Game {
     confirmChoice() {
         if (!this.showingChoices || !this.currentChoiceNPC) return;
         
+        // 특별 NPC 선택지 처리
+        if (this.currentChoiceNPC.isSpecial && this.currentChoices) {
+            const choice = this.currentChoices[this.selectedChoice];
+            this.handleSpecialNPCChoice(choice.response);
+            return;
+        }
+        
+        // 기존 일반 NPC 선택지 처리
         const choice = this.currentChoiceNPC.dialogChoices.choices[this.selectedChoice];
         
         // 선택된 응답으로 대화 시작
@@ -2033,6 +2047,11 @@ export class Game {
         
         // 동적 퀘스트 힌트 시스템 초기화
         this.dynamicQuestHints = new DynamicQuestHints(this.gameState, this.questSystem.questManager, this.mapManager);
+        
+        // UI 시스템들 재초기화 (questGuide는 생성자에서 이미 초기화됨)
+        this.uiRenderer = new GameUIRenderer(this.canvas, this.ctx);
+        this.dialogRenderer = new DialogRenderer(this.canvas, this.ctx);
+        this.tutorialSystem = new TutorialSystem(this.canvas, this.ctx);
 
         this.camera.update(this.player.x, this.player.y);
         Logger.debug('카메라 업데이트 완료');
@@ -2040,10 +2059,13 @@ export class Game {
         this.gameMode = CONSTANTS.GAME_MODES.PLAYING;
         Logger.debug('게임 모드 변경:', this.gameMode);
 
-        // 게임 시작 시 모든 UI 닫기
+        // 게임 시작 시 모든 UI 닫기 (퀘스트 가이드는 제외)
         this.questSystem.hideQuestUIPanel();
         this.inventory.hide();
         this.minimap.hide();
+        
+        // 퀘스트 가이드는 게임 시작과 함께 즉시 표시 (이미 기본값이 true이므로 별도 호출 불필요)
+        // this.questGuide.show(); // 임시 주석 처리
 
         this.inventory.showItemNotification({ name: '동전 5,000원을 지급받았습니다.' });
         this.inventory.showItemNotification({ name: '휴넷 26주년 게임을 시작합니다!' });
@@ -2051,6 +2073,7 @@ export class Game {
         // 튜토리얼 완료 콜백 설정
         this.tutorialSystem.setOnComplete(() => {
             Logger.info('✅ 튜토리얼 완료! 정상적인 게임플레이 시작');
+            // 퀘스트 가이드는 이미 표시되어 있음
         });
 
         // 튜토리얼 자동 시작
@@ -2203,24 +2226,16 @@ export class Game {
             // 게임 안내 메시지
             this.uiRenderer.drawGameInstructions(this.debugMode, this.konamiActivated);
 
-            // 퀘스트 가이드 (화면 상단)
-            if (!this.tutorialSystem.isVisible()) {
-                // 현재 맵 정보를 gameState에 추가해서 전달
-                const gameStateWithMap = {
-                    ...this.gameState,
-                    currentMap: this.mapManager.getCurrentMapId()
-                };
-                this.questGuide.draw(this.questSystem, gameStateWithMap);
-            }
-
-            // UI 렌더링
-            // QuestUI도 현재 맵 정보가 포함된 gameState 전달
+            // 퀘스트 가이드 (화면 상단) - 항상 호출 (내부에서 visible 체크)
             const gameStateWithMap = {
                 ...this.gameState,
                 currentMap: this.mapManager.getCurrentMapId()
             };
+            this.questGuide.draw(this.questSystem, gameStateWithMap);
+
+            // UI 렌더링 (gameStateWithMap은 위에서 이미 선언됨)
             this.questUI.draw(this.questSystem, gameStateWithMap);
-            this.minimap.draw(this.player, this.mapManager.getCurrentMapId(), this.mapManager.maps, this.gameState);
+            this.minimap.draw(this.player, this.mapManager, this.gameState);
             this.inventory.draw(this.gameState);
 
             // 튜토리얼 렌더링 (모든 UI 위에)
@@ -2275,6 +2290,11 @@ export class Game {
 
             // 파티클 시스템 렌더링
             this.particleSystem.draw();
+
+            // 튜토리얼 시스템 렌더링 (최상위)
+            if (this.tutorialSystem && this.tutorialSystem.isVisible()) {
+                this.tutorialSystem.draw();
+            }
 
             // 전환 효과 렌더링 (최상위)
             this.transitionManager.drawTransitions();
