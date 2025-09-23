@@ -21,19 +21,24 @@ export const CONSTANTS = {
     },
 
     QUEST_TARGETS: {
+        // 메인 퀘스트 타겟
+        START_GAME: 'start_game',
+        COLLECT_MEDAL: 'collect_medal',
         TALK_TO_KIM: 'talk_to_kim',
         TALK_TO_PARK: 'talk_to_park',
         TALK_TO_LEE: 'talk_to_lee',
         TALK_TO_CEO: 'talk_to_ceo',
+        COLLECT_EDUCATION: 'collect_education',
+        EXPLORE_OFFICE_1: 'explore_office_1',
+        FIND_HIDDEN_DOCUMENT: 'find_hidden_document',
+        HELP_INTERN: 'help_intern',
+        COMPLETE_MEETING_TASK: 'complete_meeting_task',
+
+        // 기존 컬렉션 퀘스트
         COLLECT_26TH_ITEMS: 'collect_26th_items',
         DISCOVER_HISTORY: 'discover_history',
         COLLECT_MESSAGES: 'collect_messages',
         COLLECT_ALL_ITEMS: 'collect_all_items',
-        EXPLORE_OFFICE_1: 'explore_office_1',
-        EXPLORE_OFFICE_2: 'explore_office_2',
-        FIND_HIDDEN_DOCUMENT: 'find_hidden_document',
-        HELP_INTERN: 'help_intern',
-        COMPLETE_MEETING_TASK: 'complete_meeting_task',
 
         // 새로운 서브 퀘스트들
         DELIVER_PACKAGE: 'deliver_package',
@@ -105,5 +110,13 @@ export const CONSTANTS = {
         ROOFTOP: 'R'
     },
 
-    ELEVATOR_FLOORS: [1, 7, 8, 9, 'R']
+    ELEVATOR_FLOORS: [1, 7, 8, 9, 'R'],
+
+    OBJECT_TYPES: {
+        VENDING_MACHINE: 'vending_machine',
+        COMPUTER: 'computer',
+        PRINTER: 'printer',
+        WHITEBOARD: 'whiteboard',
+        COFFEE_MACHINE: 'coffee_machine'
+    }
 };

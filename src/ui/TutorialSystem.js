@@ -241,6 +241,13 @@ export class TutorialSystem {
         this.isActive = false;
         this.currentStep = 0;
         // 게임에 튜토리얼 완료 알림
+        if (this.onComplete) {
+            this.onComplete();
+        }
+    }
+
+    setOnComplete(callback) {
+        this.onComplete = callback;
     }
 
     skip() {

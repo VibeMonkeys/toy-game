@@ -19,7 +19,18 @@
       "Bash(pkill:*)",
       "Bash(npm run build:*)",
       "Bash(git merge:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(git checkout:*)",
+      "Bash(python:*)",
+      "WebSearch",
+      "WebFetch(domain:opengameart.org)",
+      "Bash(unzip:*)",
+      "WebFetch(domain:liberatedpixelcup.github.io)",
+      "WebFetch(domain:itch.io)",
+      "WebFetch(domain:craftpix.net)",
+      "Bash(mv:*)",
+      "Bash(kill:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

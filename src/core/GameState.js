@@ -6,6 +6,7 @@ export class GameState {
         this.completedQuests = [];
         this.inventory = [];
         this.collectedItems = []; // UI에서 참조하는 수집된 아이템 목록
+        this.coins = 5000; // 기본 지급 동전
     }
 
     addItem(item) {
@@ -41,7 +42,8 @@ export class GameState {
             visitedMaps: [...this.visitedMaps],
             completedQuests: [...this.completedQuests],
             inventory: [...this.inventory],
-            collectedItems: [...this.collectedItems]
+            collectedItems: [...this.collectedItems],
+            coins: this.coins
         };
     }
 
@@ -52,5 +54,26 @@ export class GameState {
         this.completedQuests = data.completedQuests || [];
         this.inventory = data.inventory || [];
         this.collectedItems = data.collectedItems || data.inventory || []; // 하위 호환성
+        this.coins = typeof data.coins === 'number' ? data.coins : 0;
+    }
+
+    getCoins() {
+        return this.coins;
+    }
+
+    addCoins(amount) {
+        this.coins = Math.max(0, this.coins + amount);
+    }
+
+    hasEnoughCoins(amount) {
+        return this.coins >= amount;
+    }
+
+    spendCoins(amount) {
+        if (!this.hasEnoughCoins(amount)) {
+            return false;
+        }
+        this.coins -= amount;
+        return true;
     }
 };

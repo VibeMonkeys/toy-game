@@ -5,13 +5,14 @@ export class QuestUI {
         this.currentTab = 'main'; // 메인 퀘스트만 사용
         this.selectedQuestIndex = 0;
         this.scrollOffset = 0;
+        this.questItemCache = null; // 성능 최적화를 위한 캐시
     }
 
     draw(questSystem, gameState) {
         if (!questSystem.showQuestUI) return;
 
         const currentQuest = questSystem.getCurrentQuest();
-        const activeSubQuests = questSystem.getAvailableSubQuests().filter(q => q.progress > 0 && !q.completed);
+        const activeSubQuests = []; // 서브 퀘스트 제거됨
 
         // UI 크기 설정 - 화면 중앙에 배치
         const uiWidth = 500;
@@ -99,10 +100,11 @@ export class QuestUI {
 
         currentY += 30;
 
-        // 퀘스트 설명
+        // 퀘스트 설명 (동적으로 변경)
         this.ctx.fillStyle = '#cccccc';
         this.ctx.font = '14px Arial';
-        this.drawWrappedText(currentQuest.description, x + 20, currentY, width - 40, 18);
+        const dynamicDescription = this.getDynamicQuestDescription(currentQuest, gameState);
+        this.drawWrappedText(dynamicDescription, x + 20, currentY, width - 40, 18);
 
         currentY += 60;
 
@@ -136,26 +138,21 @@ export class QuestUI {
 
         currentY += 25;
 
+        // 캐시된 아이템 데이터 사용
+        const itemData = this.getQuestItemData(currentQuest, gameState);
+
         // 수집 상황 요약 표시
-        if (currentQuest.requiredItem || currentQuest.requiredItems) {
-            const requiredItems = currentQuest.requiredItems || [currentQuest.requiredItem];
-            const playerInventory = gameState?.collectedItems || [];
-
-
-            const collectedCount = requiredItems.filter(item =>
-                playerInventory.some(invItem => invItem.name === item)
-            ).length;
-
+        if (itemData.hasItems) {
             this.ctx.fillStyle = '#87CEEB';
             this.ctx.font = 'bold 12px Arial';
             this.ctx.textAlign = 'center';
-            this.ctx.fillText(`아이템 수집: ${collectedCount}/${requiredItems.length}`, x + 20 + progressBarWidth/2, currentY + 14);
+            this.ctx.fillText(`아이템 수집: ${itemData.collectedCount}/${itemData.requiredItems.length}`, x + 20 + progressBarWidth/2, currentY + 14);
         }
 
         currentY += 25;
 
         // 필요 아이템
-        if (currentQuest.requiredItem || currentQuest.requiredItems) {
+        if (itemData.hasItems) {
             this.ctx.fillStyle = '#ffaa00';
             this.ctx.font = 'bold 14px Arial';
             this.ctx.textAlign = 'left';
@@ -163,25 +160,18 @@ export class QuestUI {
 
             currentY += 20;
 
-            const requiredItems = currentQuest.requiredItems || [currentQuest.requiredItem];
-            requiredItems.forEach(item => {
-                if (item) {
-                    // 플레이어 인벤토리에서 아이템 보유 여부 확인
-                    const playerInventory = gameState?.collectedItems || [];
-                    const hasItem = playerInventory.some(invItem => invItem.name === item);
-
-                    // 아이템 보유 상태에 따른 색상 설정
-                    if (hasItem) {
-                        this.ctx.fillStyle = '#00ff00'; // 초록색 - 수집 완료
-                        this.ctx.font = 'bold 12px Arial';
-                        this.ctx.fillText(`✅ ${item}`, x + 30, currentY);
-                    } else {
-                        this.ctx.fillStyle = '#ffccaa'; // 주황색 - 미수집
-                        this.ctx.font = '12px Arial';
-                        this.ctx.fillText(`❌ ${item}`, x + 30, currentY);
-                    }
-                    currentY += 16;
+            // 캐시된 아이템 상태 사용
+            itemData.itemStates.forEach(itemState => {
+                if (itemState.hasItem) {
+                    this.ctx.fillStyle = '#00ff00'; // 초록색 - 수집 완료
+                    this.ctx.font = 'bold 12px Arial';
+                    this.ctx.fillText(`✅ ${itemState.name}`, x + 30, currentY);
+                } else {
+                    this.ctx.fillStyle = '#ffccaa'; // 주황색 - 미수집
+                    this.ctx.font = '12px Arial';
+                    this.ctx.fillText(`❌ ${itemState.name}`, x + 30, currentY);
                 }
+                currentY += 16;
             });
         }
     }
@@ -373,6 +363,86 @@ export class QuestUI {
                 currentX += spacing;
             }
         });
+    }
+
+    // 퀘스트 아이템 데이터 캐싱 및 성능 최적화
+    getDynamicQuestDescription(quest, gameState) {
+        const playerInventory = gameState?.collectedItems || [];
+        const hasRequiredItem = quest.requiredItem ?
+            playerInventory.some(item => item.name === quest.requiredItem) : false;
+
+        const hasAllRequiredItems = quest.requiredItems ?
+            quest.requiredItems.every(reqItem =>
+                playerInventory.some(item => item.name === reqItem)
+            ) : true;
+
+        // 아이템을 모두 가지고 있으면 NPC에게 가져가라고 안내
+        if ((quest.requiredItem && hasRequiredItem) ||
+            (quest.requiredItems && hasAllRequiredItems)) {
+            const npcName = this.getNPCNameByQuestGiver(quest.questGiver);
+            return `✅ 아이템 수집 완료! → ${npcName}에게 가져가세요! (📕 아이콘을 찾으세요)`;
+        }
+
+        // 아이템이 없으면 원래 설명 표시
+        return quest.description;
+    }
+
+    getNPCNameByQuestGiver(questGiverId) {
+        const npcNames = {
+            'guard': '경비 아저씨',
+            'reception': '안내 데스크 직원',
+            'kim_deputy': '김대리',
+            'intern': '인턴',
+            'office_worker_2': '박직원',
+            'manager_lee': '팀장 이씨',
+            'education_manager': '교육팀장',
+            'secretary_jung': '비서 정씨',
+            'ceo_kim': 'CEO 김대표'
+        };
+        return npcNames[questGiverId] || questGiverId;
+    }
+
+    getQuestItemData(quest, gameState) {
+        const questId = quest.id;
+        const inventoryKey = gameState?.collectedItems?.map(i => i.name).join(',') || '';
+        const cacheKey = `${questId}-${inventoryKey}`;
+
+        // 캐시 확인
+        if (this.questItemCache && this.questItemCache.key === cacheKey) {
+            return this.questItemCache.data;
+        }
+
+        // 새로운 데이터 계산
+        const playerInventory = gameState?.collectedItems || [];
+        const hasItems = quest.requiredItem || quest.requiredItems;
+        let requiredItems = [];
+        let collectedCount = 0;
+        let itemStates = [];
+
+        if (hasItems) {
+            requiredItems = quest.requiredItems || [quest.requiredItem];
+
+            // 각 아이템의 수집 상태 계산
+            itemStates = requiredItems.map(item => ({
+                name: item,
+                hasItem: playerInventory.some(invItem => invItem.name === item)
+            }));
+
+            collectedCount = itemStates.filter(state => state.hasItem).length;
+        }
+
+        // 캐시 저장
+        this.questItemCache = {
+            key: cacheKey,
+            data: {
+                hasItems,
+                requiredItems,
+                collectedCount,
+                itemStates
+            }
+        };
+
+        return this.questItemCache.data;
     }
 
     // 키 입력 처리 (서브퀘스트 제거로 단순화)
