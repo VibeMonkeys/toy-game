@@ -12,8 +12,11 @@ export class QuestGuide {
     }
 
     draw(questSystem, gameState) {
-        // 현재 활성 퀘스트 가져오기
-        const currentQuest = this.getQuestData(gameState);
+        // QuestManager 접근
+        const questManager = questSystem?.questManager;
+        
+        // 현재 활성 퀘스트 가져오기 (실시간 상태 반영)
+        const currentQuest = this.getQuestData(gameState, questManager);
         if (!currentQuest) return;
 
         this.animationTime += 16; // 대략 60fps 기준
@@ -21,8 +24,8 @@ export class QuestGuide {
         // 현재 맵 ID 가져오기
         const currentMapId = gameState?.currentMap || 'lobby';
         
-        // 가이드 텍스트 생성
-        const guideText = this.getGuideText(gameState, currentMapId);
+        // 가이드 텍스트 생성 (questManager 전달)
+        const guideText = this.getGuideText(gameState, currentMapId, questManager);
 
         // 가이드 박스 설정
         const boxWidth = 600;
@@ -86,8 +89,17 @@ export class QuestGuide {
     }
 
     // 퀘스트 데이터 캐싱 및 중복 계산 방지
-    getQuestData(gameState) {
-        // 현재 진행 중인 퀘스트 찾기 - 시작되지 않았거나 완료되지 않은 첫 번째 퀘스트
+    getQuestData(gameState, questManager) {
+        // QuestManager를 통해 현재 활성 퀘스트 가져오기 (실시간 상태 반영)
+        if (questManager) {
+            const activeQuest = questManager.getCurrentActiveQuest();
+            if (activeQuest) {
+                Logger.debug(`🎯 QuestManager에서 활성 퀘스트 가져옴: ${activeQuest.title}, started: ${activeQuest.started}`);
+                return activeQuest;
+            }
+        }
+
+        // 폴백: QUEST_DATA에서 직접 찾기
         const activeQuest = QUEST_DATA.find(quest => {
             if (quest.completed) return false;
             
@@ -108,44 +120,15 @@ export class QuestGuide {
             return null;
         }
 
-        Logger.debug(`🎯 활성 퀘스트 발견: ${activeQuest.title} (ID: ${activeQuest.id})`);
-        
-        const questId = activeQuest.id;
-        const inventoryKey = gameState?.inventory?.map(i => i.name).join(',') || '';
-        const cacheKey = `${questId}-${inventoryKey}`;
-
-        // 캐시 확인
-        if (this.questDataCache && this.questDataCache.key === cacheKey) {
-            return this.questDataCache.data;
-        }
-
-        // 새로운 데이터 계산
-        const playerInventory = gameState?.inventory || [];
-        const hasItems = activeQuest.requiredItem || activeQuest.requiredItems;
-        let requiredItems = [];
-        let collectedCount = 0;
-
-        if (hasItems) {
-            requiredItems = activeQuest.requiredItems || [activeQuest.requiredItem];
-            collectedCount = requiredItems.filter(item =>
-                playerInventory.some(invItem => invItem.name === item)
-            ).length;
-        }
-
-        // 캐시 저장 (activeQuest 객체 전체를 반환하도록 수정)
-        this.questDataCache = {
-            key: cacheKey,
-            data: activeQuest
-        };
-
+        Logger.debug(`🎯 QUEST_DATA에서 활성 퀘스트 가져옴: ${activeQuest.title}, started: ${activeQuest.started}`);
         return activeQuest;
     }
 
-    getGuideText(gameState, currentMapId) {
+    getGuideText(gameState, currentMapId, questManager) {
         if (!gameState || !currentMapId) return '';
 
-        // 진행 중인 퀘스트 찾기
-        const activeQuest = this.getQuestData(gameState);
+        // 진행 중인 퀘스트 찾기 (실시간 상태 반영)
+        const activeQuest = this.getQuestData(gameState, questManager);
         if (!activeQuest) return '🎊 모든 퀘스트를 완료했습니다!';
 
         Logger.debug(`🎯 현재 활성 퀘스트: ${activeQuest.title}, started: ${activeQuest.started}, completed: ${activeQuest.completed}`);
@@ -174,27 +157,38 @@ export class QuestGuide {
 
     // 퀘스트 단계 판단 메서드
     determineQuestPhase(quest, gameState) {
+        Logger.debug(`🔍 퀘스트 단계 판별 시작: ${quest.title}`);
+        Logger.debug(`📊 퀘스트 상태 - completed: ${quest.completed}, started: ${quest.started}, itemSubmitted: ${quest.itemSubmitted}`);
+        Logger.debug(`🎒 인벤토리:`, gameState?.inventory?.map(item => item.name) || []);
+        
         // 퀘스트가 완료된 경우
         if (quest.completed) {
+            Logger.debug(`✅ 퀘스트 완료됨 → COMPLETED`);
             return 'COMPLETED';
         }
         
         // 퀘스트를 아직 받지 않은 경우
         if (!quest.started) {
+            Logger.debug(`📝 퀘스트 시작 안됨 → NEED_TO_RECEIVE`);
             return 'NEED_TO_RECEIVE';
         }
         
         // 퀘스트를 받았지만 아이템을 아직 수집하지 않은 경우
-        const hasRequiredItem = this.hasRequiredItems(quest, gameState.inventory);
+        const hasRequiredItem = this.hasRequiredItems(quest, gameState.inventory || []);
+        Logger.debug(`📦 필요 아이템 보유 여부: ${hasRequiredItem}`);
+        
         if (!hasRequiredItem) {
+            Logger.debug(`📦 아이템 수집 필요 → NEED_TO_COLLECT`);
             return 'NEED_TO_COLLECT';
         }
         
         // 아이템은 있지만 아직 제출하지 않은 경우
         if (!quest.itemSubmitted) {
+            Logger.debug(`📤 아이템 제출 필요 → NEED_TO_SUBMIT`);
             return 'NEED_TO_SUBMIT';
         }
         
+        Logger.debug(`🎯 모든 조건 완료 → COMPLETED`);
         return 'COMPLETED';
     }
 

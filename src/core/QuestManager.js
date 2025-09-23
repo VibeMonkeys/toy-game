@@ -181,6 +181,40 @@ export class QuestManager {
         };
     }
 
+    // 현재 활성 퀘스트 가져오기 (실시간 상태 반영)
+    getCurrentActiveQuest() {
+        // 시작되었지만 완료되지 않은 퀘스트 찾기
+        let activeQuest = this.quests.find(quest => quest.started && !quest.completed);
+        
+        if (activeQuest) {
+            Logger.debug(`🎯 진행 중인 퀘스트 발견: ${activeQuest.title}`);
+            return activeQuest;
+        }
+        
+        // 시작되지 않은 퀘스트 중 전제 조건을 만족하는 첫 번째 퀘스트
+        activeQuest = this.quests.find(quest => {
+            if (quest.completed || quest.started) return false;
+            
+            // 전제 조건 확인
+            if (quest.prerequisites && quest.prerequisites.length > 0) {
+                const hasPrerequisites = quest.prerequisites.every(prereq => 
+                    this.gameState?.inventory?.some(item => item.name === prereq)
+                );
+                if (!hasPrerequisites) return false;
+            }
+            
+            return true;
+        });
+        
+        if (activeQuest) {
+            Logger.debug(`🆕 다음 시작 가능한 퀘스트: ${activeQuest.title}`);
+        } else {
+            Logger.debug(`🎊 모든 퀘스트 완료됨`);
+        }
+        
+        return activeQuest;
+    }
+
     // 퀘스트 기버인지 확인
     isQuestGiver(npcId) {
         const quest = this.getQuestByNPC(npcId);
