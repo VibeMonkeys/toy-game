@@ -93,8 +93,17 @@ export class Inventory {
 
         const alpha = Math.min(1, this.notificationTimer / 60);
 
-        // 화면 중앙 상단에 큰 알림창 표시
-        const notifWidth = 500;
+        // 텍스트 길이에 따른 동적 크기 계산
+        const message = this.itemNotification.name || '알림';
+        this.ctx.font = 'bold 18px Arial';
+        const textWidth = this.ctx.measureText(message).width;
+        
+        // 최소/최대 크기 설정
+        const minWidth = 300;
+        const maxWidth = 700;
+        const padding = 60; // 좌우 여백
+        
+        const notifWidth = Math.max(minWidth, Math.min(maxWidth, textWidth + padding));
         const notifHeight = 80;
         const notifX = (this.canvas.width - notifWidth) / 2;
         const notifY = 100;

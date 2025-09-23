@@ -6,7 +6,7 @@ export class QuestGuide {
         this.ctx = ctx;
         this.animationTime = 0;
         this.lastInventoryState = ''; // 디버깅용 상태 추적
-        this.logger = new Logger('QuestGuide');
+        // Logger는 static 클래스이므로 인스턴스 생성 불필요
     }
 
     draw(questSystem, gameState) {
@@ -106,7 +106,7 @@ export class QuestGuide {
         // 디버깅 로그
         const inventoryNames = playerInventory.map(item => item.name).join(', ');
         if (inventoryNames !== this.lastInventoryState) {
-            this.logger.log('인벤토리 변경 감지:', inventoryNames || '(비어있음)');
+            Logger.debug('인벤토리 변경 감지:', inventoryNames || '(비어있음)');
             this.lastInventoryState = inventoryNames;
         }
 
@@ -123,12 +123,12 @@ export class QuestGuide {
                 // 첫 번째 미수집 아이템에 대한 가이드
                 const firstMissingItem = missingItems[0];
                 const guideText = this.getLocationGuide(firstMissingItem, currentMap);
-                this.logger.log('아이템 수집 가이드:', firstMissingItem, '->', guideText);
+                Logger.debug('아이템 수집 가이드:', firstMissingItem, '->', guideText);
                 return guideText;
             } else {
                 // 모든 아이템을 수집했으면 제출 가이드
                 const guideText = this.getSubmissionGuide(quest, currentMap);
-                this.logger.log('제출 가이드:', quest.questGiver, '->', guideText);
+                Logger.debug('제출 가이드:', quest.questGiver, '->', guideText);
                 return guideText;
             }
         }
@@ -146,7 +146,7 @@ export class QuestGuide {
 
             // 7층 아이템
             '업무 보고서': { floor: 7, map: 'floor_7_corridor', detail: '7층 복도' },
-            '프로젝트 파일': { floor: 7, map: 'floor_7_710_main_it', detail: '710호 본사IT' },
+            '프로젝트 파일': { floor: 7, map: 'floor_7_710_main_it', detail: '710호 본사IT', specific: '710호 문을 열고 들어가서 바닥의 파일을 수집하세요' },
             '중요 계약서': { floor: 7, map: 'floor_7_709_affiliates', detail: '709호 계열사' },
 
             // 8층 아이템
@@ -193,9 +193,71 @@ export class QuestGuide {
         const targetMap = targetLocation.map;
         const targetDetail = targetLocation.detail;
 
-        // 이미 목표 맵에 있는 경우
+        // 디버그 로그 추가
+        Logger.debug(`🔍 QuestGuide Debug: currentMap=${currentMap}, targetMap=${targetMap}, itemName=${itemName}`);
+
+        // 이미 목표 맵에 있는 경우 - 더 구체적인 안내
         if (currentMap === targetMap) {
-            return `📍 현재 위치에서 ${itemName}을(를) 찾으세요! 주변을 둘러보세요.`;
+            Logger.debug(`✅ 목표 맵에 도착! specific 안내 적용`);
+            if (targetLocation.specific) {
+                return `✨ ${targetLocation.specific}`;
+            }
+            return `💎 ${itemName}이(가) 이 방에 있습니다! 바닥을 클릭해서 수집하세요`;
+        }
+
+        // 프로젝트 파일 전용 상세 가이드 - 현재 위치에 따라 다른 안내
+        if (itemName === '프로젝트 파일') {
+            Logger.debug(`📁 프로젝트 파일 가이드: currentMap=${currentMap}`);
+            if (currentMap === 'floor_7_corridor') {
+                return `🚪 7층 복도에서 오른쪽으로 이동 → 710호 본사IT 문을 클릭하여 입장하세요`;
+            } else if (currentMap === 'floor_7_710_main_it') {
+                Logger.debug(`🎯 710호 안에 있음! 파일 수집 안내`);
+                return `📁 710호 본사IT 사무실 내부에서 바닥의 프로젝트 파일을 클릭하여 수집하세요!`;
+            } else {
+                return `🎯 7층으로 이동 → 복도에서 오른쪽 → 710호 본사IT에 입장 → 파일 수집`;
+            }
+        }
+
+        // 중요 계약서 전용 가이드
+        if (itemName === '중요 계약서') {
+            if (currentMap === 'floor_7_corridor') {
+                return `🚪 7층 복도에서 왼쪽으로 이동 → 709호 계열사 문을 클릭하여 입장하세요`;
+            } else if (currentMap === 'floor_7_709_affiliates') {
+                return `📄 709호 계열사 사무실 내부에서 바닥의 중요 계약서를 클릭하여 수집하세요!`;
+            } else {
+                return `🎯 7층으로 이동 → 복도에서 왼쪽 → 709호 계열사에 입장 → 계약서 수집`;
+            }
+        }
+
+        // 업무 보고서 전용 가이드
+        if (itemName === '업무 보고서') {
+            if (currentMap === 'floor_7_corridor') {
+                return `📋 7층 복도 바닥을 탐색하여 업무 보고서를 수집하세요 (바닥 클릭)`;
+            } else {
+                return `🎯 7층 복도로 이동하여 업무 보고서를 찾으세요`;
+            }
+        }
+
+        // 교육 매뉴얼 전용 가이드
+        if (itemName === '교육 매뉴얼') {
+            if (currentMap === 'floor_8_corridor') {
+                return `🚪 8층 복도에서 오른쪽 위 '교육서비스본부' 문으로 들어가세요`;
+            } else if (currentMap === 'floor_8_education_service') {
+                return `📚 교육서비스본부 사무실 내부에서 바닥의 교육 매뉴얼을 클릭하여 수집하세요!`;
+            } else {
+                return `🎯 8층으로 이동 → 교육서비스본부에 입장 → 매뉴얼 수집`;
+            }
+        }
+
+        // 기밀 문서 전용 가이드
+        if (itemName === '기밀 문서') {
+            if (currentMap === 'floor_9_corridor') {
+                return `🚪 9층 복도에서 CEO실 문으로 들어가세요`;
+            } else if (currentMap === 'floor_9_ceo_office') {
+                return `🔒 CEO실 내부에서 바닥의 기밀 문서를 클릭하여 수집하세요!`;
+            } else {
+                return `🎯 9층 CEO실로 이동하여 기밀 문서를 찾으세요`;
+            }
         }
 
         // 같은 층 내에서 이동
@@ -304,7 +366,7 @@ export class QuestGuide {
         if (currentFloor === targetFloor) {
             // 이미 목표 맵에 있는 경우
             if (currentMap === submissionLocation.map) {
-                return `✅ ${npcName}를 찾아서 대화하세요! ${submissionLocation.icon} 아이콘을 찾으세요 (스페이스바로 대화)`;
+                return `🎯 ${npcName}를 찾아서 대화하세요! ${submissionLocation.icon} 아이콘을 찾으세요 (스페이스바로 대화)`;
             }
 
             // 같은 층 내에서 이동

@@ -57,6 +57,16 @@ export class QuestSystem {
         return this.questManager.canSubmitItems(npcId, playerInventory);
     }
 
+    // NPC로부터 퀘스트 시작
+    startQuestFromNPC(npcId) {
+        return this.questManager.startQuestFromNPC(npcId);
+    }
+
+    // 퀘스트 기버인지 확인
+    isQuestGiver(npcId) {
+        return this.questManager.isQuestGiver(npcId);
+    }
+
     // NPC에게 아이템 제출
     submitItemsToNPC(npcId, playerInventory, gameState) {
         const result = this.questManager.submitItems(npcId, playerInventory, gameState);

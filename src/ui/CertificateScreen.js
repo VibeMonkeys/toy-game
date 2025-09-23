@@ -105,7 +105,7 @@ export class CertificateScreen {
         const statsX = certX + 80;
         this.ctx.fillText(`⏱️ 완료 시간: ${this.completionTime}`, statsX, statsY);
         this.ctx.fillText(`📦 수집한 아이템: ${this.itemsCollected}개`, statsX, statsY + 30);
-        this.ctx.fillText(`✅ 완료한 퀘스트: ${this.questsCompleted}개`, statsX, statsY + 60);
+        this.ctx.fillText(`🎯 완료한 퀘스트: ${this.questsCompleted}개`, statsX, statsY + 60);
 
         // 특별 메시지
         this.ctx.fillStyle = `rgba(255, 140, 0, ${alpha})`;

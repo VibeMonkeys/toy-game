@@ -6,6 +6,12 @@ export class QuestManager {
     constructor() {
         this.quests = JSON.parse(JSON.stringify(QUEST_DATA)); // 깊은 복사
         this.currentQuest = 0;
+        this.gameState = null; // Game.js에서 설정됨
+    }
+
+    // 게임 상태 설정 (Game.js에서 호출)
+    setGameState(gameState) {
+        this.gameState = gameState;
     }
 
     // 현재 활성 퀘스트 반환
@@ -18,16 +24,41 @@ export class QuestManager {
         return this.quests.find(quest => quest.id === id) || null;
     }
 
-    // NPC별 퀘스트 반환
+    // NPC별 퀘스트 반환 (전제조건 체크 포함)
     getQuestByNPC(npcId) {
         Logger.debug(`🔍 NPC ${npcId}에 대한 퀘스트 검색`);
-        const quest = this.quests.find(quest => quest.questGiver === npcId && !quest.completed);
+        const quest = this.quests.find(quest => 
+            quest.questGiver === npcId && 
+            !quest.completed && 
+            this.checkPrerequisites(quest)
+        );
         if (quest) {
             Logger.debug(`✅ 퀘스트 발견: ${quest.title} (ID: ${quest.id})`);
         } else {
             Logger.debug(`❌ NPC ${npcId}에 대한 활성 퀘스트 없음`);
         }
         return quest || null;
+    }
+
+    // 퀘스트 전제조건 체크
+    checkPrerequisites(quest) {
+        if (!quest.prerequisites || quest.prerequisites.length === 0) {
+            return true; // 전제조건이 없으면 활성화 가능
+        }
+
+        // 현재 인벤토리에서 전제조건 아이템들이 모두 있는지 확인
+        const playerInventory = this.gameState?.collectedItems || [];
+        const hasAllPrerequisites = quest.prerequisites.every(prereqItem =>
+            playerInventory.some(invItem => invItem.name === prereqItem)
+        );
+
+        Logger.debug(`🔍 퀘스트 "${quest.title}" 전제조건 체크:`, {
+            prerequisites: quest.prerequisites,
+            inventory: playerInventory.map(item => item.name),
+            satisfied: hasAllPrerequisites
+        });
+
+        return hasAllPrerequisites;
     }
 
     // 완료된 퀘스트 수 반환
@@ -89,6 +120,12 @@ export class QuestManager {
             return { canSubmit: false, reason: '이미 완료된 퀘스트입니다.' };
         }
 
+        // ⭐ 핵심: 퀘스트를 아직 시작하지 않았으면 제출 불가능
+        if (!quest.started) {
+            Logger.debug(`🚫 퀘스트를 아직 받지 않았습니다: ${quest.title}`);
+            return { canSubmit: false, reason: '퀘스트를 먼저 받으세요.' };
+        }
+
         Logger.debug('📋 발견된 퀘스트:', quest.title, '필요 아이템:', quest.requiredItem || quest.requiredItems);
 
         if (!QUEST_VALIDATION.canComplete(quest, inventory)) {
@@ -103,6 +140,51 @@ export class QuestManager {
 
         Logger.debug('✅ 퀘스트 완료 가능!');
         return { canSubmit: true, quest: quest };
+    }
+
+    // NPC와 대화할 때 퀘스트 시작
+    startQuestFromNPC(npcId) {
+        const quest = this.getQuestByNPC(npcId);
+        if (!quest) {
+            Logger.debug(`❌ ${npcId}에 대한 퀘스트가 없습니다.`);
+            return { success: false, message: '받을 수 있는 퀘스트가 없습니다.' };
+        }
+
+        if (quest.completed) {
+            Logger.debug(`⭐ 퀘스트 이미 완료됨: ${quest.title}`);
+            return { success: false, message: '이미 완료된 퀘스트입니다.' };
+        }
+
+        if (quest.started) {
+            Logger.debug(`🔄 퀘스트 이미 진행 중: ${quest.title}`);
+            return { success: false, message: '이미 진행 중인 퀘스트입니다.' };
+        }
+
+        // 전제 조건 확인
+        if (!this.checkPrerequisites(quest)) {
+            const missingPrereqs = QUEST_VALIDATION.getMissingPrerequisites(quest, this.gameState?.inventory || []);
+            Logger.debug(`🚫 전제 조건 부족:`, missingPrereqs);
+            return { 
+                success: false, 
+                message: `먼저 필요한 것: ${missingPrereqs.join(', ')}` 
+            };
+        }
+
+        // 퀘스트 시작!
+        quest.started = true;
+        Logger.debug(`🎯 퀘스트 시작: ${quest.title}`);
+        
+        return { 
+            success: true, 
+            quest: quest,
+            message: `새로운 퀘스트를 받았습니다: ${quest.title}` 
+        };
+    }
+
+    // 퀘스트 기버인지 확인
+    isQuestGiver(npcId) {
+        const quest = this.getQuestByNPC(npcId);
+        return quest && !quest.completed && !quest.started;
     }
 
     // 아이템 제출 처리
@@ -132,14 +214,20 @@ export class QuestManager {
         Logger.info(`✅ 퀘스트 완료: ${quest.title}`);
 
         // 다음 퀘스트로 이동 (순차적으로)
+        const previousQuest = quest.id;
         if (quest.id === this.currentQuest) {
             this.currentQuest = Math.min(this.currentQuest + 1, this.quests.length - 1);
             Logger.debug(`➡️ 다음 퀘스트로 이동: ${this.currentQuest}`);
         }
 
+        // 완료 메시지와 연결성 설명 생성
+        const completionMessage = this._generateCompletionMessage(quest, previousQuest);
+        const nextStepInfo = this._generateNextQuestInfo(previousQuest);
+
         return {
             success: true,
-            message: `퀘스트 완료! '${quest.rewardItem}'을(를) 받았습니다.`,
+            message: completionMessage,
+            nextStepInfo: nextStepInfo,
             quest: quest
         };
     }
@@ -193,7 +281,10 @@ export class QuestManager {
         // 현재 퀘스트 진행도 업데이트
         const currentQuest = this.getCurrentQuest();
         if (currentQuest && !currentQuest.completed) {
-            this._updateQuestProgressForItem(currentQuest, item, gameState);
+            const feedback = this._updateQuestProgressForItem(currentQuest, item, gameState);
+            if (feedback) {
+                return feedback;
+            }
         }
 
         // 모든 퀘스트에 대해 진행도 확인 (수집형 퀘스트용)
@@ -202,6 +293,8 @@ export class QuestManager {
                 this._updateQuestProgressForItem(quest, item, gameState);
             }
         });
+
+        return null;
     }
 
     // 특정 아이템에 대한 퀘스트 진행도 업데이트 (private)
@@ -215,6 +308,7 @@ export class QuestManager {
                 gameState.collectedItems.some(collectedItem => collectedItem.name === neededItem)
             );
 
+            const previousProgress = quest.progress;
             quest.progress = collectedNeededItems.length;
 
             // progress가 maxProgress를 초과하지 않도록 제한
@@ -222,11 +316,112 @@ export class QuestManager {
 
             Logger.debug(`📈 퀘스트 "${quest.title}" 진행도: ${quest.progress}/${quest.maxProgress}`);
 
-            // 완료 체크는 제거 - 아이템 제출 시에만 완료 처리
-            // if (quest.progress >= quest.maxProgress) {
-            //     quest.completed = true;
-            // }
+            // 진행도 변화가 있을 때 피드백 메시지 생성
+            if (quest.progress > previousProgress) {
+                const feedback = {
+                    type: 'progress',
+                    questTitle: quest.title,
+                    itemName: item.name,
+                    progress: quest.progress,
+                    maxProgress: quest.maxProgress,
+                    message: this._generateProgressMessage(quest, item),
+                    hint: this._generateNextStepHint(quest)
+                };
+
+                Logger.info(`✨ 퀘스트 진행: ${feedback.message}`);
+                return feedback;
+            }
         }
+
+        return null;
+    }
+
+    // 퀘스트 진행 메시지 생성 (private)
+    _generateProgressMessage(quest, item) {
+        const progressPercentage = Math.round((quest.progress / quest.maxProgress) * 100);
+        
+        if (quest.progress >= quest.maxProgress) {
+            return `🎉 "${quest.title}" 완료 준비됨! 모든 아이템을 수집했습니다.`;
+        } else if (quest.maxProgress === 1) {
+            return `✅ "${item.name}" 획득! "${quest.title}" 완료 가능합니다.`;
+        } else {
+            const remaining = quest.maxProgress - quest.progress;
+            return `📋 "${item.name}" 획득! "${quest.title}" ${progressPercentage}% 완료 (${remaining}개 더 필요)`;
+        }
+    }
+
+    // 다음 단계 힌트 생성 (private)
+    _generateNextStepHint(quest) {
+        if (quest.progress >= quest.maxProgress) {
+            if (quest.questGiver) {
+                const npcNames = {
+                    'guard': '경비 아저씨',
+                    'reception': '안내 데스크 직원',
+                    'kim_deputy': '김대리',
+                    'intern': '인턴',
+                    'office_worker_2': '박직원',
+                    'manager_lee': '팀장 이씨',
+                    'education_manager': '교육팀장',
+                    'secretary_jung': '비서 정씨',
+                    'ceo_kim': 'CEO 김대표'
+                };
+                const npcName = npcNames[quest.questGiver] || quest.questGiver;
+                return `💡 ${npcName}에게 가서 아이템을 제출하세요!`;
+            }
+            return `💡 퀘스트 완료 조건을 만족했습니다!`;
+        } else {
+            const missingItems = this._getMissingItemsForQuest(quest);
+            if (missingItems.length > 0) {
+                return `🔍 다음 아이템을 찾아보세요: ${missingItems.join(', ')}`;
+            }
+            return `🔍 ${quest.hint || '계속 탐험해보세요!'}`;
+        }
+    }
+
+    // 퀘스트에 부족한 아이템 목록 반환 (private)
+    _getMissingItemsForQuest(quest) {
+        const itemsNeeded = quest.requiredItems || (quest.requiredItem ? [quest.requiredItem] : []);
+        const collectedItems = this.gameState?.collectedItems || [];
+        
+        return itemsNeeded.filter(neededItem =>
+            !collectedItems.some(collectedItem => collectedItem.name === neededItem)
+        );
+    }
+
+    // 퀘스트 완료 메시지 생성 (private)
+    _generateCompletionMessage(quest, questId) {
+        const baseMessage = `🎉 퀘스트 완료! "${quest.rewardItem}"을(를) 받았습니다.`;
+        
+        const questMessages = {
+            0: `${baseMessage}\n🏢 이제 건물을 자유롭게 탐험할 수 있습니다!`,
+            1: `${baseMessage}\n🛗 엘리베이터를 이용해 다른 층으로 이동하세요!`,
+            2: `${baseMessage}\n📋 김대리의 신뢰를 얻었습니다!`,
+            3: `${baseMessage}\n💼 인턴의 업무를 도와주어 감사받았습니다!`,
+            4: `${baseMessage}\n📄 박직원과의 업무 관계를 쌓았습니다!`,
+            5: `${baseMessage}\n👥 팀장님의 회의 준비를 도왔습니다!`,
+            6: `${baseMessage}\n📚 교육팀의 소중한 자료를 지켜주었습니다!`,
+            7: `${baseMessage}\n🔒 기밀 문서를 안전하게 전달했습니다!`,
+            8: `${baseMessage}\n👑 휴넷 26주년의 모든 여정을 완주했습니다!`
+        };
+
+        return questMessages[questId] || baseMessage;
+    }
+
+    // 다음 퀘스트 정보 생성 (private)
+    _generateNextQuestInfo(completedQuestId) {
+        const nextQuestMaps = {
+            0: { message: "🔍 이제 26주년 기념 메달을 찾아 안내 데스크에 전달하세요!", floor: "1층 로비" },
+            1: { message: "🛗 엘리베이터를 타고 7층으로 올라가세요!", floor: "7층 사무실" },
+            2: { message: "💼 같은 7층에서 인턴을 도와주세요!", floor: "7층 사무실" },
+            3: { message: "📄 7층의 박직원도 도움이 필요합니다!", floor: "7층 사무실" },
+            4: { message: "⬆️ 8층으로 올라가서 팀장님을 만나보세요!", floor: "8층 본부" },
+            5: { message: "📚 8층 교육서비스본부에서 교육팀장을 찾아보세요!", floor: "8층 교육서비스본부" },
+            6: { message: "🔝 최고층인 9층 CEO실로 올라가세요!", floor: "9층 경영진" },
+            7: { message: "👑 모든 증명서를 모아 CEO님께 최종 보고하세요!", floor: "9층 CEO실" },
+            8: { message: "🎊 축하합니다! 휴넷 26주년 여정을 완주했습니다!", floor: "완료" }
+        };
+
+        return nextQuestMaps[completedQuestId] || { message: "🎯 다음 목표를 찾아보세요!", floor: "탐험 계속" };
     }
 
     // 퀘스트 초기화

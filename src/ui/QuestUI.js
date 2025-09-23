@@ -165,7 +165,7 @@ export class QuestUI {
                 if (itemState.hasItem) {
                     this.ctx.fillStyle = '#00ff00'; // 초록색 - 수집 완료
                     this.ctx.font = 'bold 12px Arial';
-                    this.ctx.fillText(`✅ ${itemState.name}`, x + 30, currentY);
+                    this.ctx.fillText(`💎 ${itemState.name}`, x + 30, currentY);
                 } else {
                     this.ctx.fillStyle = '#ffccaa'; // 주황색 - 미수집
                     this.ctx.font = '12px Arial';
@@ -208,7 +208,7 @@ export class QuestUI {
             let statusColor = '#cccccc';
 
             if (quest.completed) {
-                statusIcon = '✅';
+                statusIcon = '🏆';
                 statusColor = '#00ff00';
             } else if (quest.progress > 0) {
                 statusIcon = '🔄';
@@ -380,7 +380,7 @@ export class QuestUI {
         if ((quest.requiredItem && hasRequiredItem) ||
             (quest.requiredItems && hasAllRequiredItems)) {
             const npcName = this.getNPCNameByQuestGiver(quest.questGiver);
-            return `✅ 아이템 수집 완료! → ${npcName}에게 가져가세요! (📕 아이콘을 찾으세요)`;
+            return `🎁 아이템 수집 완료! → ${npcName}에게 가져가세요! (📕 아이콘을 찾으세요)`;
         }
 
         // 아이템이 없으면 원래 설명 표시

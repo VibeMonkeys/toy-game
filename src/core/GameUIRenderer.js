@@ -113,6 +113,149 @@ export class GameUIRenderer {
         }
     }
 
+    // NPC 관계 아이콘 표시
+    drawNPCRelationshipIcon(nearbyNPC, npcRelationshipSystem) {
+        if (!nearbyNPC || !npcRelationshipSystem) return;
+
+        const icons = npcRelationshipSystem.getRelationshipIcon(nearbyNPC.id);
+        const relationship = npcRelationshipSystem.getRelationshipStatus(nearbyNPC.id);
+        
+        // NPC 이름 옆에 관계 아이콘 표시
+        const boxX = 20;
+        const boxY = 20;
+        const boxWidth = 280;
+        const boxHeight = 90;
+
+        // 배경
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        this.ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+
+        // 테두리
+        this.ctx.strokeStyle = '#FFD700';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+
+        // NPC 이름과 아이콘
+        this.ctx.fillStyle = '#FFFFFF';
+        this.ctx.font = 'bold 16px Arial';
+        this.ctx.textAlign = 'left';
+        this.ctx.fillText(`${icons.mood} ${nearbyNPC.name} ${icons.status}`, boxX + 10, boxY + 25);
+
+        // 관계 레벨
+        this.ctx.font = '12px Arial';
+        this.ctx.fillStyle = '#FFD700';
+        this.ctx.fillText(`관계 레벨: ${icons.level}`, boxX + 10, boxY + 45);
+
+        // 관계 상태
+        const statusText = {
+            best_friend: '최고의 친구',
+            good_friend: '좋은 친구', 
+            friend: '친구',
+            acquaintance: '지인',
+            stranger: '낯선 사람',
+            dislike: '싫어함',
+            enemy: '적대적'
+        };
+        
+        this.ctx.fillStyle = '#FFFFFF';
+        this.ctx.fillText(`상태: ${statusText[relationship.status] || '알 수 없음'}`, boxX + 10, boxY + 65);
+
+        // 상호작용 횟수
+        this.ctx.fillStyle = '#CCCCCC';
+        this.ctx.font = '10px Arial';
+        this.ctx.fillText(`상호작용: ${relationship.interactionCount}회`, boxX + 180, boxY + 45);
+
+        // 특별 능력 표시
+        const abilities = npcRelationshipSystem.getSpecialAbilities(nearbyNPC.id);
+        if (abilities.length > 0) {
+            const abilityIcons = {
+                special_discount: '💰',
+                discount: '💵',
+                small_discount: '💳',
+                secret_info: '🔍',
+                helpful_hints: '💡',
+                exclusive_quests: '⭐',
+                priority_service: '🚀',
+                price_increase: '📈',
+                reluctant_service: '😒',
+                service_refusal: '❌',
+                hostile_response: '💢'
+            };
+            
+            let abilityText = abilities.map(ability => abilityIcons[ability] || '?').join(' ');
+            this.ctx.fillText(`효과: ${abilityText}`, boxX + 180, boxY + 65);
+        }
+    }
+
+    // 동적 퀘스트 힌트 표시
+    drawDynamicQuestHint(hint, isUrgent = false) {
+        if (!hint) return;
+
+        const boxWidth = Math.min(500, this.canvas.width - 40);
+        const boxHeight = 60;
+        const boxX = (this.canvas.width - boxWidth) / 2;
+        const boxY = this.canvas.height - 200;
+
+        // 긴급도에 따른 스타일 설정
+        const urgentStyle = {
+            bgColor: 'rgba(220, 53, 69, 0.9)',
+            borderColor: '#FF6B6B',
+            textColor: '#FFFFFF',
+            icon: '🚨'
+        };
+        
+        const normalStyle = {
+            bgColor: 'rgba(40, 167, 69, 0.9)',
+            borderColor: '#28A745',
+            textColor: '#FFFFFF',
+            icon: '💡'
+        };
+        
+        const style = isUrgent ? urgentStyle : normalStyle;
+
+        // 배경
+        this.ctx.fillStyle = style.bgColor;
+        this.ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+
+        // 테두리 (깜빡이는 효과)
+        const pulseAlpha = isUrgent ? 
+            0.7 + 0.3 * Math.sin(Date.now() * 0.01) : 
+            0.8;
+        this.ctx.strokeStyle = style.borderColor;
+        this.ctx.globalAlpha = pulseAlpha;
+        this.ctx.lineWidth = isUrgent ? 3 : 2;
+        this.ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
+        this.ctx.globalAlpha = 1;
+
+        // 아이콘과 제목
+        this.ctx.fillStyle = style.textColor;
+        this.ctx.font = 'bold 14px Arial';
+        this.ctx.textAlign = 'left';
+        this.ctx.fillText(`${style.icon} 스마트 힌트`, boxX + 15, boxY + 20);
+
+        // 힌트 텍스트 (긴 텍스트는 줄바꿈)
+        this.ctx.font = '12px Arial';
+        const maxWidth = boxWidth - 30;
+        const words = hint.split(' ');
+        let line = '';
+        let y = boxY + 40;
+
+        for (let n = 0; n < words.length; n++) {
+            const testLine = line + words[n] + ' ';
+            const metrics = this.ctx.measureText(testLine);
+            const testWidth = metrics.width;
+            
+            if (testWidth > maxWidth && n > 0) {
+                this.ctx.fillText(line, boxX + 15, y);
+                line = words[n] + ' ';
+                y += 14;
+            } else {
+                line = testLine;
+            }
+        }
+        this.ctx.fillText(line, boxX + 15, y);
+    }
+
     // 무적 모드 효과 그리기
     drawInvincibleEffect() {
         const time = Date.now() * 0.01;
@@ -137,6 +280,124 @@ export class GameUIRenderer {
         this.ctx.font = 'bold 16px Arial';
         this.ctx.textAlign = 'center';
         this.ctx.fillText('🎮 INVINCIBLE MODE 🎮', this.canvas.width / 2, 30);
+    }
+
+    // 퀘스트 피드백 메시지 표시
+    drawQuestFeedback(ctx, feedback, canvas) {
+        if (!feedback || !feedback.message) return;
+
+        const currentTime = Date.now();
+        const displayDuration = 4000; // 4초 동안 표시
+        
+        if (!feedback.startTime) {
+            feedback.startTime = currentTime;
+        }
+
+        const elapsed = currentTime - feedback.startTime;
+        if (elapsed > displayDuration) {
+            return false; // 피드백 표시 완료
+        }
+
+        // 페이드 인/아웃 효과
+        let alpha = 1;
+        const fadeTime = 500;
+        if (elapsed < fadeTime) {
+            alpha = elapsed / fadeTime;
+        } else if (elapsed > displayDuration - fadeTime) {
+            alpha = (displayDuration - elapsed) / fadeTime;
+        }
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+
+        // 배경 박스
+        const boxWidth = 400;
+        const boxHeight = 120;
+        const x = (canvas.width - boxWidth) / 2;
+        const y = 100;
+
+        // 피드백 타입에 따른 색상 설정
+        const bgColor = feedback.type === 'progress' ? '#4A90E2' : '#27AE60';
+        
+        ctx.fillStyle = bgColor;
+        ctx.globalAlpha = alpha * 0.9;
+        ctx.fillRect(x, y, boxWidth, boxHeight);
+        
+        // 테두리
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = alpha;
+        ctx.strokeRect(x, y, boxWidth, boxHeight);
+
+        // 메인 메시지
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(feedback.message, x + boxWidth/2, y + 30);
+
+        // 진행도 바 (progress 타입인 경우)
+        if (feedback.type === 'progress' && feedback.progress !== undefined) {
+            const progressWidth = 300;
+            const progressHeight = 20;
+            const progressX = x + (boxWidth - progressWidth) / 2;
+            const progressY = y + 45;
+
+            // 진행도 바 배경
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.fillRect(progressX, progressY, progressWidth, progressHeight);
+
+            // 진행도 바 채움
+            const fillWidth = (feedback.progress / feedback.maxProgress) * progressWidth;
+            ctx.fillStyle = '#FFD700';
+            ctx.fillRect(progressX, progressY, fillWidth, progressHeight);
+
+            // 진행도 텍스트
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '14px Arial';
+            ctx.fillText(`${feedback.progress}/${feedback.maxProgress}`, x + boxWidth/2, progressY + 14);
+        }
+
+        // 힌트 메시지
+        if (feedback.hint) {
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '12px Arial';
+            ctx.fillText(feedback.hint, x + boxWidth/2, y + boxHeight - 15);
+        }
+
+        ctx.restore();
+        return true; // 계속 표시 중
+    }
+
+    // 다음 단계 정보 표시
+    drawNextStepInfo(ctx, nextStepInfo, canvas) {
+        if (!nextStepInfo || !nextStepInfo.message) return;
+
+        const x = 20;
+        const y = canvas.height - 80;
+        const boxWidth = 300;
+        const boxHeight = 60;
+
+        // 배경
+        ctx.fillStyle = 'rgba(46, 204, 113, 0.9)';
+        ctx.fillRect(x, y, boxWidth, boxHeight);
+
+        // 테두리
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x, y, boxWidth, boxHeight);
+
+        // 제목
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText('🎯 다음 단계:', x + 10, y + 20);
+
+        // 메시지
+        ctx.font = '12px Arial';
+        ctx.fillText(nextStepInfo.message.substring(0, 35), x + 10, y + 35);
+        if (nextStepInfo.message.length > 35) {
+            ctx.fillText(nextStepInfo.message.substring(35), x + 10, y + 50);
+        }
     }
 
     // 디버그 정보 그리기

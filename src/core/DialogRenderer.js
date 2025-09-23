@@ -94,6 +94,70 @@ export class DialogRenderer {
         this.ctx.fillText(continueText, this.canvas.width / 2, dialogY + dialogHeight + 25);
     }
 
+    // 대화 선택지 그리기
+    drawDialogChoices(npc, selectedChoice = 0) {
+        if (!npc || !npc.hasChoices || !npc.dialogChoices) return;
+
+        const choices = npc.dialogChoices;
+        const boxWidth = 500;
+        const choiceHeight = 40;
+        const spacing = 10;
+        const totalHeight = 80 + (choices.choices.length * (choiceHeight + spacing));
+        
+        const x = (this.canvas.width - boxWidth) / 2;
+        const y = (this.canvas.height - totalHeight) / 2;
+
+        // 메인 배경
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        this.ctx.fillRect(x, y, boxWidth, totalHeight);
+        
+        // 테두리
+        this.ctx.strokeStyle = '#4A90E2';
+        this.ctx.lineWidth = 3;
+        this.ctx.strokeRect(x, y, boxWidth, totalHeight);
+
+        // NPC 이름
+        this.ctx.fillStyle = '#FFD700';
+        this.ctx.font = 'bold 18px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText(npc.name, x + boxWidth/2, y + 25);
+
+        // 질문
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.font = '16px Arial';
+        this.ctx.fillText(choices.question, x + boxWidth/2, y + 50);
+
+        // 선택지들
+        choices.choices.forEach((choice, index) => {
+            const choiceY = y + 80 + (index * (choiceHeight + spacing));
+            
+            // 선택지 배경
+            if (index === selectedChoice) {
+                this.ctx.fillStyle = 'rgba(74, 144, 226, 0.7)';
+            } else {
+                this.ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+            }
+            this.ctx.fillRect(x + 20, choiceY, boxWidth - 40, choiceHeight);
+            
+            // 선택지 테두리
+            this.ctx.strokeStyle = index === selectedChoice ? '#FFD700' : '#ffffff';
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect(x + 20, choiceY, boxWidth - 40, choiceHeight);
+            
+            // 선택지 텍스트
+            this.ctx.fillStyle = '#ffffff';
+            this.ctx.font = '14px Arial';
+            this.ctx.textAlign = 'left';
+            this.ctx.fillText(`${index + 1}. ${choice.text}`, x + 35, choiceY + 25);
+        });
+
+        // 조작 안내
+        this.ctx.fillStyle = '#cccccc';
+        this.ctx.font = '12px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('↑↓ 키로 선택, Enter로 확인, ESC로 취소', x + boxWidth/2, y + totalHeight - 10);
+    }
+
     // 텍스트 줄바꿈 처리
     wrapText(text, maxWidth) {
         const words = text.split(' ');
