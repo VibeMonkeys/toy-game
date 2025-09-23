@@ -41,9 +41,9 @@ export class QuestGuide {
         // 가이드 텍스트 생성 (questManager 전달)
         const guideText = this.getGuideText(gameState, currentMapId, questManager);
 
-        // 가이드 박스 설정
+        // 가이드 박스 설정 (높이 증가)
         const boxWidth = 600;
-        const boxHeight = 80;
+        const boxHeight = 100;
         const boxX = (this.canvas.width - boxWidth) / 2;
         const boxY = 20;
 
@@ -61,44 +61,47 @@ export class QuestGuide {
         this.ctx.fillStyle = '#FFD700';
         this.ctx.font = 'bold 16px Arial';
         this.ctx.textAlign = 'center';
-        this.ctx.fillText(`📋 ${currentQuest.title}`, boxX + boxWidth / 2, boxY + 25);
+        this.ctx.fillText(`${currentQuest.title}`, boxX + boxWidth / 2, boxY + 25);
 
-        // 현재 해야 할 일 가이드
+        // 현재 해야 할 일 가이드 (줄바꿈 지원)
         this.ctx.fillStyle = '#ffffff';
         this.ctx.font = '14px Arial';
-        this.ctx.fillText(guideText, boxX + boxWidth / 2, boxY + 45);
+        this.drawMultilineText(guideText, boxX + boxWidth / 2, boxY + 45, 18);
 
-        // 진행도 표시
-        const progressText = `${currentQuest.progress}/${currentQuest.maxProgress}`;
-        this.ctx.fillStyle = '#87CEEB';
-        this.ctx.font = 'bold 12px Arial';
-        this.ctx.fillText(progressText, boxX + boxWidth / 2, boxY + 65);
-
-        // 퀘스트 상태 표시
+        // 퀘스트 상태 표시 (우측 상단)
         let statusText = '';
         let statusColor = '#ffffff';
-        
+
         if (!currentQuest.started) {
-            statusText = '📝 퀘스트 받기 필요';
+            statusText = '퀘스트 받기 필요';
             statusColor = '#ffaa00';
         } else if (currentQuest.completed) {
-            statusText = '✅ 완료됨';
+            statusText = '완료됨';
             statusColor = '#00ff00';
         } else {
             const hasRequiredItem = this.hasRequiredItems(currentQuest, gameState?.inventory || []);
             if (hasRequiredItem) {
-                statusText = '📤 제출 가능';
+                statusText = '제출 가능';
                 statusColor = '#00ff00';
             } else {
-                statusText = '📦 수집 중';
+                statusText = '수집 중';
                 statusColor = '#ffaa00';
             }
         }
-        
+
         this.ctx.fillStyle = statusColor;
         this.ctx.font = '12px Arial';
         this.ctx.textAlign = 'right';
-        this.ctx.fillText(statusText, boxX + boxWidth - 20, boxY + 25);
+        this.ctx.fillText(statusText, boxX + boxWidth - 15, boxY + 25);
+
+        // 진행도 표시 (우측 하단, 충분한 간격)
+        const progressText = `${currentQuest.progress}/${currentQuest.maxProgress}`;
+        this.ctx.fillStyle = '#87CEEB';
+        this.ctx.font = 'bold 12px Arial';
+        this.ctx.textAlign = 'right';
+        this.ctx.fillText(progressText, boxX + boxWidth - 15, boxY + boxHeight - 15);
+
+        // textAlign 복원
         this.ctx.textAlign = 'center';
     }
 
@@ -233,43 +236,57 @@ export class QuestGuide {
         
         // 같은 층에 있는 경우
         if (currentFloor === npcInfo.floor) {
-            return `🗣️ ${npcInfo.locationDescription}에서 ${npcInfo.name}과(와) 대화하여 퀘스트를 받으세요`;
+            return `${npcInfo.locationDescription}의 ${npcInfo.name}에게서\n퀘스트를 받으세요`;
         }
         
         // 다른 층에 있는 경우
-        return `🚀 ${npcInfo.floor}층으로 이동 → ${npcInfo.locationDescription}에서 ${npcInfo.name}과(와) 대화하여 퀘스트를 받으세요`;
+        return `${npcInfo.floor}층으로 이동 후\n${npcInfo.locationDescription}의 ${npcInfo.name}에게서\n퀘스트를 받으세요`;
     }
 
     // 2. 아이템 수집 단계 가이드 
     getItemCollectionGuide(quest, currentMapId) {
         const itemName = quest.requiredItem || (quest.requiredItems && quest.requiredItems[0]);
         if (!itemName) {
-            return `📦 필요한 아이템을 수집하세요`;
+            return `필요한 아이템을 수집하세요`;
         }
 
         // 기존 위치 가이드 로직 활용
         const locationGuide = this.getLocationGuide(itemName, currentMapId);
-        return `📦 아이템 수집 필요: ${itemName}\n${locationGuide}`;
+        return `아이템 수집 필요: ${itemName}\n${locationGuide}`;
     }
 
     // 3. 아이템 제출 단계 가이드
     getItemSubmissionGuide(quest, currentMapId) {
         const npcInfo = this.getNPCLocationInfo(quest.questGiver);
         const itemName = quest.requiredItem || (quest.requiredItems && quest.requiredItems.join(', '));
-        
+
+        // 미니게임 챌린지가 필요한 경우 우선 안내
+        if (quest.minigameChallenge && quest.minigameChallenge.required && !quest.minigameChallenge.completed) {
+            if (!npcInfo) {
+                return `${quest.questGiver}에게 가서\n미니게임 챌린지를 완료하세요\n${quest.minigameChallenge.description}`;
+            }
+
+            const currentFloor = this.getCurrentFloor(currentMapId);
+            if (currentFloor === npcInfo.floor) {
+                return `${npcInfo.locationDescription}의 ${npcInfo.name}에게 가서\n미니게임 챌린지를 완료하세요\n${quest.minigameChallenge.description}`;
+            } else {
+                return `${npcInfo.floor}층 ${npcInfo.locationDescription}의\n${npcInfo.name}에게 가서\n미니게임 챌린지를 완료하세요`;
+            }
+        }
+
         if (!npcInfo) {
-            return `✅ ${itemName}을(를) ${quest.questGiver}에게 제출하세요`;
+            return `${itemName}을 가지고\n${quest.questGiver}에게 제출하세요`;
         }
 
         const currentFloor = this.getCurrentFloor(currentMapId);
-        
+
         // 같은 층에 있는 경우
         if (currentFloor === npcInfo.floor) {
-            return `✅ ${itemName}을(를) 가지고 ${npcInfo.locationDescription}의 ${npcInfo.name}에게 제출하세요`;
+            return `${itemName}을 가지고\n${npcInfo.locationDescription}의 ${npcInfo.name}에게\n제출하세요`;
         }
-        
+
         // 다른 층에 있는 경우
-        return `✅ ${itemName}을(를) 가지고 ${npcInfo.floor}층 → ${npcInfo.locationDescription}의 ${npcInfo.name}에게 제출하세요`;
+        return `${itemName}을 가지고 ${npcInfo.floor}층으로 이동 후\n${npcInfo.locationDescription}의 ${npcInfo.name}에게\n제출하세요`;
     }
 
     // 4. 다음 퀘스트 안내
@@ -283,10 +300,10 @@ export class QuestGuide {
         
         const npcInfo = this.getNPCLocationInfo(nextQuest.questGiver);
         if (!npcInfo) {
-            return `🎯 다음 퀘스트: ${nextQuest.title}`;
+            return `다음 퀘스트: ${nextQuest.title}`;
         }
         
-        return `🎯 다음 퀘스트: ${nextQuest.title}\n🗣️ ${npcInfo.floor}층 ${npcInfo.locationDescription}에서 ${npcInfo.name}과(와) 대화하세요`;
+        return `다음 퀘스트: ${nextQuest.title}\n${npcInfo.floor}층 ${npcInfo.locationDescription}의\n${npcInfo.name}에게 대화하세요`;
     }
 
     // NPC 위치 정보 가져오기
@@ -298,9 +315,9 @@ export class QuestGuide {
                 locationDescription: '1층 로비 오른쪽'
             },
             'reception': {
-                name: '안내 데스크',
+                name: '안내 데스크 직원',
                 floor: 1,
-                locationDescription: '1층 로비 중앙'
+                locationDescription: '1층 로비 중앙 안내 데스크'
             },
             'kim_deputy': {
                 name: '김대리',
@@ -365,7 +382,7 @@ export class QuestGuide {
 
         const targetLocation = itemLocations[itemName];
         if (!targetLocation) {
-            return `📍 ${itemName}을(를) 찾으세요 - 바닥을 잘 살펴보세요`;
+            return `${itemName}을 찾아서\n가까이 가면 자동으로 수집됩니다`;
         }
 
         return this.getDetailedDirections(currentMap, targetLocation, itemName);
@@ -405,63 +422,63 @@ export class QuestGuide {
         if (currentMap === targetMap) {
             Logger.debug(`✅ 목표 맵에 도착! specific 안내 적용`);
             if (targetLocation.specific) {
-                return `✨ ${targetLocation.specific}`;
+                return `${targetLocation.specific}`;
             }
-            return `💎 ${itemName}이(가) 이 방에 있습니다! 바닥을 클릭해서 수집하세요`;
+            return `${itemName}이 이 방에 있습니다\n가까이 가면 자동으로 수집됩니다`;
         }
 
         // 프로젝트 파일 전용 상세 가이드 - 현재 위치에 따라 다른 안내
         if (itemName === '프로젝트 파일') {
             Logger.debug(`📁 프로젝트 파일 가이드: currentMap=${currentMap}`);
             if (currentMap === 'floor_7_corridor') {
-                return `🚪 7층 복도에서 오른쪽으로 이동 → 710호 본사IT 문을 클릭하여 입장하세요`;
+                return `7층 복도에서 오른쪽으로 이동\n710호 본사IT에 입장하세요`;
             } else if (currentMap === 'floor_7_710_main_it') {
                 Logger.debug(`🎯 710호 안에 있음! 파일 수집 안내`);
-                return `📁 710호 본사IT 사무실 내부에서 바닥의 프로젝트 파일을 클릭하여 수집하세요!`;
+                return `710호 본사IT 사무실에서\n프로젝트 파일 근처로 이동하면\n자동으로 수집됩니다`;
             } else {
-                return `🎯 7층으로 이동 → 복도에서 오른쪽 → 710호 본사IT에 입장 → 파일 수집`;
+                return `7층으로 이동 후\n복도에서 오른쪽으로 이동\n710호 본사IT에 입장하여 파일 수집`;
             }
         }
 
         // 중요 계약서 전용 가이드
         if (itemName === '중요 계약서') {
             if (currentMap === 'floor_7_corridor') {
-                return `🚪 7층 복도에서 왼쪽으로 이동 → 709호 계열사 문을 클릭하여 입장하세요`;
+                return `7층 복도에서 왼쪽으로 이동\n709호 계열사에 입장하세요`;
             } else if (currentMap === 'floor_7_709_affiliates') {
-                return `📄 709호 계열사 사무실 내부에서 바닥의 중요 계약서를 클릭하여 수집하세요!`;
+                return `709호 계열사 사무실에서\n중요 계약서 근처로 이동하면\n자동으로 수집됩니다`;
             } else {
-                return `🎯 7층으로 이동 → 복도에서 왼쪽 → 709호 계열사에 입장 → 계약서 수집`;
+                return `7층으로 이동 후\n복도에서 왼쪽으로 이동\n709호 계열사에 입장하여 계약서 수집`;
             }
         }
 
         // 업무 보고서 전용 가이드
         if (itemName === '업무 보고서') {
             if (currentMap === 'floor_7_corridor') {
-                return `📋 7층 복도 바닥을 탐색하여 업무 보고서를 수집하세요 (바닥 클릭)`;
+                return `7층 복도를 탐색하여\n업무 보고서를 찾아\n가까이 가면 자동으로 수집됩니다`;
             } else {
-                return `🎯 7층 복도로 이동하여 업무 보고서를 찾으세요`;
+                return `7층 복도로 이동하여\n업무 보고서를 찾으세요`;
             }
         }
 
         // 교육 매뉴얼 전용 가이드
         if (itemName === '교육 매뉴얼') {
             if (currentMap === 'floor_8_corridor') {
-                return `🚪 8층 복도에서 오른쪽 위 '교육서비스본부' 문으로 들어가세요`;
+                return `8층 복도에서 오른쪽 위로 이동\n교육서비스본부에 입장하세요`;
             } else if (currentMap === 'floor_8_education_service') {
-                return `📚 교육서비스본부 사무실 내부에서 바닥의 교육 매뉴얼을 클릭하여 수집하세요!`;
+                return `교육서비스본부 사무실에서\n교육 매뉴얼 근처로 이동하면\n자동으로 수집됩니다`;
             } else {
-                return `🎯 8층으로 이동 → 교육서비스본부에 입장 → 매뉴얼 수집`;
+                return `8층으로 이동 후\n교육서비스본부에 입장하여\n매뉴얼 수집`;
             }
         }
 
         // 기밀 문서 전용 가이드
         if (itemName === '기밀 문서') {
             if (currentMap === 'floor_9_corridor') {
-                return `🚪 9층 복도에서 CEO실 문으로 들어가세요`;
+                return `9층 복도에서\nCEO실에 입장하세요`;
             } else if (currentMap === 'floor_9_ceo_office') {
-                return `🔒 CEO실 내부에서 바닥의 기밀 문서를 클릭하여 수집하세요!`;
+                return `CEO실에서\n기밀 문서 근처로 이동하면\n자동으로 수집됩니다`;
             } else {
-                return `🎯 9층 CEO실로 이동하여 기밀 문서를 찾으세요`;
+                return `9층 CEO실로 이동하여\n기밀 문서를 찾으세요`;
             }
         }
 
@@ -615,5 +632,13 @@ export class QuestGuide {
         }
 
         return baseDirection + afterElevator;
+    }
+
+    // 여러 줄 텍스트 그리기 (줄바꿈 지원)
+    drawMultilineText(text, x, y, lineHeight) {
+        const lines = text.split('\n');
+        lines.forEach((line, index) => {
+            this.ctx.fillText(line, x, y + (index * lineHeight));
+        });
     }
 }

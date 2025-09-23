@@ -187,73 +187,140 @@ export class GameUIRenderer {
         }
     }
 
-    // 동적 퀘스트 힌트 표시
+    // 동적 퀘스트 힌트 표시 (레트로 스타일)
     drawDynamicQuestHint(hint, isUrgent = false) {
         if (!hint) return;
 
-        const boxWidth = Math.min(500, this.canvas.width - 40);
-        const boxHeight = 60;
+        const boxWidth = Math.min(480, this.canvas.width - 40);
+        const boxHeight = 70;
         const boxX = (this.canvas.width - boxWidth) / 2;
-        const boxY = this.canvas.height - 200;
+        const boxY = this.canvas.height - 210;
 
-        // 긴급도에 따른 스타일 설정
+        // 레트로 스타일 설정 (덜 자극적으로)
         const urgentStyle = {
-            bgColor: 'rgba(220, 53, 69, 0.9)',
-            borderColor: '#FF6B6B',
-            textColor: '#FFFFFF',
-            icon: '🚨'
+            bgColor: 'rgba(80, 20, 20, 0.92)', // 어두운 레드
+            borderColor: '#FF6666',
+            textColor: '#FFAAAA',
+            icon: '⚠️'
         };
-        
+
         const normalStyle = {
-            bgColor: 'rgba(40, 167, 69, 0.9)',
-            borderColor: '#28A745',
-            textColor: '#FFFFFF',
+            bgColor: 'rgba(20, 60, 20, 0.92)', // 어두운 그린
+            borderColor: '#66BB66',
+            textColor: '#AAFFAA',
             icon: '💡'
         };
-        
+
         const style = isUrgent ? urgentStyle : normalStyle;
 
-        // 배경
-        this.ctx.fillStyle = style.bgColor;
-        this.ctx.fillRect(boxX, boxY, boxWidth, boxHeight);
+        // 레트로 스타일 배경 박스
+        this.drawRetroHintBox(boxX, boxY, boxWidth, boxHeight, isUrgent);
 
-        // 테두리 (깜빡이는 효과)
-        const pulseAlpha = isUrgent ? 
-            0.7 + 0.3 * Math.sin(Date.now() * 0.01) : 
-            0.8;
-        this.ctx.strokeStyle = style.borderColor;
-        this.ctx.globalAlpha = pulseAlpha;
-        this.ctx.lineWidth = isUrgent ? 3 : 2;
-        this.ctx.strokeRect(boxX, boxY, boxWidth, boxHeight);
-        this.ctx.globalAlpha = 1;
-
-        // 아이콘과 제목
+        // 제목 (레트로 폰트)
         this.ctx.fillStyle = style.textColor;
-        this.ctx.font = 'bold 14px Arial';
+        this.ctx.font = 'bold 13px "Courier New", monospace';
         this.ctx.textAlign = 'left';
-        this.ctx.fillText(`${style.icon} 스마트 힌트`, boxX + 15, boxY + 20);
 
-        // 힌트 텍스트 (긴 텍스트는 줄바꿈)
-        this.ctx.font = '12px Arial';
-        const maxWidth = boxWidth - 30;
+        const time = Date.now() * 0.005;
+        const titleText = isUrgent ? '>> SYSTEM ALERT' : '>> QUEST HINT';
+
+        // 글로우 효과
+        this.ctx.shadowColor = style.borderColor;
+        this.ctx.shadowBlur = isUrgent ? 6 : 4;
+        this.ctx.fillText(`${style.icon} ${titleText}`, boxX + 18, boxY + 22);
+        this.ctx.shadowBlur = 0;
+
+        // 힌트 텍스트 (레트로 스타일)
+        this.ctx.fillStyle = style.textColor;
+        this.ctx.font = '12px "Courier New", monospace';
+
+        // 텍스트 자동 줄바꿈
+        const maxCharsPerLine = 58;
         const words = hint.split(' ');
-        let line = '';
-        let y = boxY + 40;
+        let lines = [];
+        let currentLine = '';
 
-        for (let n = 0; n < words.length; n++) {
-            const testLine = line + words[n] + ' ';
-            const metrics = this.ctx.measureText(testLine);
-            const testWidth = metrics.width;
-            
-            if (testWidth > maxWidth && n > 0) {
-                this.ctx.fillText(line, boxX + 15, y);
-                line = words[n] + ' ';
-                y += 14;
+        for (let word of words) {
+            if (currentLine.length + word.length + 1 <= maxCharsPerLine) {
+                currentLine += (currentLine ? ' ' : '') + word;
             } else {
-                line = testLine;
+                if (currentLine) lines.push(currentLine);
+                currentLine = word;
             }
         }
-        this.ctx.fillText(line, boxX + 15, y);
+        if (currentLine) lines.push(currentLine);
+
+        // 최대 2줄로 제한
+        lines = lines.slice(0, 2);
+
+        lines.forEach((line, index) => {
+            // 부드러운 애니메이션
+            const fadeAlpha = isUrgent ?
+                0.9 + 0.1 * Math.sin(time + index * 0.3) :
+                0.8 + 0.2 * Math.sin(time + index * 0.5);
+            this.ctx.globalAlpha = fadeAlpha;
+
+            this.ctx.fillText(`> ${line}`, boxX + 18, boxY + 42 + (index * 15));
+        });
+
+        this.ctx.globalAlpha = 1;
+    }
+
+    // 레트로 스타일 힌트 박스 그리기
+    drawRetroHintBox(x, y, width, height, isUrgent = false) {
+        const time = Date.now() * 0.008;
+
+        // 배경 그라데이션
+        const gradient = this.ctx.createLinearGradient(x, y, x, y + height);
+        if (isUrgent) {
+            gradient.addColorStop(0, 'rgba(80, 20, 20, 0.94)');
+            gradient.addColorStop(0.5, 'rgba(60, 15, 15, 0.94)');
+            gradient.addColorStop(1, 'rgba(40, 10, 10, 0.94)');
+        } else {
+            gradient.addColorStop(0, 'rgba(20, 60, 20, 0.94)');
+            gradient.addColorStop(0.5, 'rgba(15, 45, 15, 0.94)');
+            gradient.addColorStop(1, 'rgba(10, 30, 10, 0.94)');
+        }
+
+        this.ctx.fillStyle = gradient;
+        this.ctx.fillRect(x, y, width, height);
+
+        // Windows 95 스타일 3D 테두리
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+        this.ctx.lineWidth = 1;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x, y + height);
+        this.ctx.lineTo(x, y);
+        this.ctx.lineTo(x + width, y);
+        this.ctx.stroke();
+
+        this.ctx.strokeStyle = 'rgba(100, 100, 100, 0.8)';
+        this.ctx.lineWidth = 1;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x + width, y);
+        this.ctx.lineTo(x + width, y + height);
+        this.ctx.lineTo(x, y + height);
+        this.ctx.stroke();
+
+        // 메인 테두리 (부드러운 펄스)
+        const pulseAlpha = isUrgent ?
+            0.5 + 0.3 * Math.sin(time * 2) :
+            0.6 + 0.2 * Math.sin(time);
+
+        const borderColor = isUrgent ? '#FF6666' : '#66BB66';
+        this.ctx.strokeStyle = `${borderColor}${Math.floor(pulseAlpha * 255).toString(16).padStart(2, '0')}`;
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(x + 2, y + 2, width - 4, height - 4);
+
+        // 좌상단 상태 LED (더 부드럽게)
+        const ledAlpha = isUrgent ?
+            0.6 + 0.4 * Math.sin(time * 4) :
+            0.5 + 0.3 * Math.sin(time * 2);
+
+        this.ctx.fillStyle = `${borderColor}${Math.floor(ledAlpha * 255).toString(16).padStart(2, '0')}`;
+        this.ctx.beginPath();
+        this.ctx.arc(x + 8, y + 8, 3, 0, Math.PI * 2);
+        this.ctx.fill();
     }
 
     // 무적 모드 효과 그리기
@@ -368,39 +435,179 @@ export class GameUIRenderer {
         return true; // 계속 표시 중
     }
 
-    // 다음 단계 정보 표시
+    // 다음 단계 정보 표시 (레트로 스타일)
     drawNextStepInfo(ctx, nextStepInfo, canvas) {
         if (!nextStepInfo || !nextStepInfo.message) return;
 
-        const x = 20;
-        const y = canvas.height - 80;
-        const boxWidth = 300;
-        const boxHeight = 60;
+        const x = 15;
+        const y = canvas.height - 95;
+        const boxWidth = 360;
+        const boxHeight = 80;
 
-        // 배경
-        ctx.fillStyle = 'rgba(46, 204, 113, 0.9)';
-        ctx.fillRect(x, y, boxWidth, boxHeight);
+        // 레트로 스타일 배경 박스 그리기
+        this.drawRetroNextStepBox(ctx, x, y, boxWidth, boxHeight);
 
-        // 테두리
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(x, y, boxWidth, boxHeight);
-
-        // 제목
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 14px Arial';
+        // 레트로 스타일 제목
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 14px "Courier New", monospace';
         ctx.textAlign = 'left';
-        ctx.fillText('🎯 다음 단계:', x + 10, y + 20);
 
-        // 메시지
-        ctx.font = '12px Arial';
-        ctx.fillText(nextStepInfo.message.substring(0, 35), x + 10, y + 35);
-        if (nextStepInfo.message.length > 35) {
-            ctx.fillText(nextStepInfo.message.substring(35), x + 10, y + 50);
+        // 깜박이는 아이콘 효과
+        const time = Date.now() * 0.006;
+        const iconAlpha = 0.8 + 0.2 * Math.sin(time);
+        ctx.globalAlpha = iconAlpha;
+
+        // 글로우 효과 추가
+        ctx.shadowColor = '#FFD700';
+        ctx.shadowBlur = 8;
+        ctx.fillText('>> QUEST GUIDE', x + 18, y + 22);
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+
+        // 레트로 스타일 메시지
+        ctx.fillStyle = '#00FF88';
+        ctx.font = '13px "Courier New", monospace';
+
+        // 메시지 자동 줄바꿈 (박스 경계 내에서 최적화)
+        const maxCharsPerLine = 38; // 박스 너비에 맞게 조정
+        const maxLines = 3; // 최대 3줄까지 허용
+        const words = nextStepInfo.message.split(' ');
+        let lines = [];
+        let currentLine = '';
+
+        for (let word of words) {
+            // 현재 줄에 단어를 추가했을 때의 길이 계산
+            const testLine = currentLine ? currentLine + ' ' + word : word;
+
+            if (testLine.length <= maxCharsPerLine) {
+                currentLine = testLine;
+            } else {
+                // 현재 줄을 완성하고 새 줄 시작
+                if (currentLine) {
+                    lines.push(currentLine);
+                    currentLine = word;
+                } else {
+                    // 단어가 너무 길면 강제로 자르기
+                    if (word.length > maxCharsPerLine) {
+                        lines.push(word.substring(0, maxCharsPerLine - 2) + '..');
+                        currentLine = '';
+                    } else {
+                        currentLine = word;
+                    }
+                }
+            }
+        }
+
+        // 마지막 줄 추가
+        if (currentLine) lines.push(currentLine);
+
+        // 최대 줄 수로 제한하고, 넘치면 마지막 줄에 "..." 추가
+        if (lines.length > maxLines) {
+            lines = lines.slice(0, maxLines - 1);
+            const lastLine = lines[lines.length - 1];
+            if (lastLine.length > maxCharsPerLine - 3) {
+                lines[lines.length - 1] = lastLine.substring(0, maxCharsPerLine - 3) + '...';
+            } else {
+                lines[lines.length - 1] = lastLine + '...';
+            }
+        }
+
+        lines.forEach((line, index) => {
+            // 모든 줄에 부드러운 페이드인 효과
+            const lineTime = time + index * 0.5;
+            const fadeAlpha = 0.8 + 0.2 * Math.sin(lineTime);
+            ctx.globalAlpha = fadeAlpha;
+
+            // 터미널 그린 글로우 효과
+            ctx.shadowColor = '#00FF88';
+            ctx.shadowBlur = 4;
+            // 줄 간격을 조정하여 3줄이 박스 안에 잘 들어가도록
+            ctx.fillText(`> ${line}`, x + 18, y + 38 + (index * 15));
+            ctx.shadowBlur = 0;
+            ctx.globalAlpha = 1;
+        });
+
+        // 진행 표시기 (우하단)
+        const progressDots = '...';
+        const dotTime = Math.floor(time * 3) % 4;
+        const visibleDots = progressDots.substring(0, dotTime);
+        ctx.fillStyle = '#666666';
+        ctx.font = '12px "Courier New", monospace';
+        ctx.fillText(visibleDots, x + boxWidth - 30, y + boxHeight - 12);
+    }
+
+    // 레트로 스타일 다음 단계 박스 그리기
+    drawRetroNextStepBox(ctx, x, y, width, height) {
+        // 레트로 그라데이션 배경 (더 세련된 색상)
+        const gradient = ctx.createLinearGradient(x, y, x, y + height);
+        gradient.addColorStop(0, 'rgba(30, 30, 60, 0.96)');
+        gradient.addColorStop(0.3, 'rgba(20, 20, 45, 0.96)');
+        gradient.addColorStop(0.7, 'rgba(15, 15, 30, 0.96)');
+        gradient.addColorStop(1, 'rgba(10, 10, 20, 0.96)');
+
+        ctx.fillStyle = gradient;
+        ctx.fillRect(x, y, width, height);
+
+        // 윈도우 95 스타일 3D 테두리 (더 선명하게)
+        // 상단/좌측 밝은 테두리
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x, y + height);
+        ctx.lineTo(x, y);
+        ctx.lineTo(x + width, y);
+        ctx.stroke();
+
+        // 하단/우측 어두운 테두리
+        ctx.strokeStyle = 'rgba(85, 85, 85, 0.9)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x + width, y);
+        ctx.lineTo(x + width, y + height);
+        ctx.lineTo(x, y + height);
+        ctx.stroke();
+
+        // 메인 테두리 (그린 어센트, 펄스 효과)
+        const time = Date.now() * 0.008;
+        const pulseAlpha = 0.6 + 0.4 * Math.sin(time * 2);
+        ctx.strokeStyle = `rgba(0, 170, 68, ${pulseAlpha})`;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x + 2, y + 2, width - 4, height - 4);
+
+        // 좌상단 시스템 상태 LED
+        const ledAlpha = 0.7 + 0.3 * Math.sin(time * 3);
+        ctx.fillStyle = `rgba(0, 255, 136, ${ledAlpha})`;
+        ctx.beginPath();
+        ctx.arc(x + 10, y + 10, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // LED 글로우 효과
+        ctx.shadowColor = '#00FF88';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(x + 10, y + 10, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // 우상단 시스템 정보 표시
+        ctx.fillStyle = 'rgba(255, 215, 0, 0.4)';
+        ctx.font = '8px "Courier New", monospace';
+        ctx.textAlign = 'right';
+        ctx.fillText('v1.0', x + width - 8, y + 12);
+
+        // 우하단 진행 표시기 (더 세련되게)
+        for (let i = 0; i < 3; i++) {
+            const dotTime = time + i * 0.8;
+            const dotAlpha = 0.4 + 0.4 * Math.sin(dotTime);
+            const dotSize = 2 + Math.sin(dotTime) * 0.5;
+            ctx.fillStyle = `rgba(255, 215, 0, ${dotAlpha})`;
+            ctx.beginPath();
+            ctx.arc(x + width - 22 + (i * 8), y + height - 8, dotSize, 0, Math.PI * 2);
+            ctx.fill();
         }
     }
 
-    // 디버그 정보 그리기
+    // 디버그 정보 그리기 (레트로 스타일)
     drawDebugInfo(player, mapManager, questSystem, gameState, konamiActivated) {
         const debugInfo = [
             `Position: (${player.x}, ${player.y})`,

@@ -28,8 +28,8 @@ import { ParticleSystem } from '../effects/ParticleSystem.js';
 import { NPCRelationshipSystem } from './NPCRelationshipSystem.js';
 import { DynamicQuestHints } from './DynamicQuestHints.js';
 import { TransitionManager } from '../effects/TransitionManager.js';
-import { FloorAtmosphereSystem } from '../systems/FloorAtmosphereSystem.js';
-import { SpecialNPCSystem } from '../systems/SpecialNPCSystem.js';
+// import { FloorAtmosphereSystem } from '../systems/FloorAtmosphereSystem.js'; // 백그라운드 소음 제거
+// import { SpecialNPCSystem } from '../systems/SpecialNPCSystem.js'; // 백그라운드 자동 스폰 제거
 
 export class Game {
     constructor() {
@@ -96,10 +96,10 @@ export class Game {
         this.nextStepTimer = null;
 
         // 층별 분위기 시스템
-        this.floorAtmosphereSystem = new FloorAtmosphereSystem(this.audioManager);
+        // this.floorAtmosphereSystem = new FloorAtmosphereSystem(this.audioManager); // 백그라운드 소음 제거
         
         // 특별 NPC 시스템
-        this.specialNPCSystem = new SpecialNPCSystem(this);
+        // this.specialNPCSystem = new SpecialNPCSystem(this); // 백그라운드 자동 스폰 제거
 
         // 대화 선택지 시스템
         this.showingChoices = false;
@@ -108,6 +108,9 @@ export class Game {
         this.currentDynamicHint = null;
         this.selectedChoice = 0;
         this.currentChoiceNPC = null;
+
+        // 미니게임 챌린지 시스템
+        this.currentMinigameChallenge = null;
 
         // 성능 최적화
         this.lastFrameTime = 0;
@@ -260,10 +263,10 @@ export class Game {
         }
 
         // 분위기 시스템 정리
-        this.floorAtmosphereSystem?.clearAllTimers();
+        // this.floorAtmosphereSystem?.clearAllTimers(); // 백그라운드 소음 제거
         
         // 특별 NPC 시스템 정리
-        this.specialNPCSystem?.destroy();
+        // this.specialNPCSystem?.destroy(); // 백그라운드 자동 스폰 제거
     }
 
     // 다음 단계 정보 표시 (메모리 누수 방지 버전)
@@ -939,7 +942,7 @@ export class Game {
                     this.audioManager.playPortalSound();
 
                     // 층별 분위기 변경
-                    this.floorAtmosphereSystem.changeFloor(portal.targetMap);
+                    // this.floorAtmosphereSystem.changeFloor(portal.targetMap); // 백그라운드 소음 제거
 
                     // 맵 이동 알림
                     const mapName = this.mapManager.getCurrentMap().name;
@@ -1110,7 +1113,8 @@ export class Game {
 
     // 특별 NPC 상호작용 처리
     handleSpecialNPCInteraction(npc) {
-        const dialogue = this.specialNPCSystem.interactWithSpecialNPC(npc.id);
+        // const dialogue = this.specialNPCSystem.interactWithSpecialNPC(npc.id); // 백그라운드 자동 스폰 제거
+        const dialogue = null; // 특별 NPC 기능 비활성화
         if (!dialogue) return;
 
         // 선택지가 있는 대화
@@ -1146,7 +1150,8 @@ export class Game {
     handleSpecialNPCChoice(choiceResponse) {
         if (!this.currentChoiceNPC) return;
 
-        const dialogue = this.specialNPCSystem.processChoice(this.currentChoiceNPC.id, choiceResponse);
+        // const dialogue = this.specialNPCSystem.processChoice(this.currentChoiceNPC.id, choiceResponse); // 백그라운드 자동 스폰 제거
+        const dialogue = null; // 특별 NPC 기능 비활성화
         if (dialogue) {
             this.currentDialog = [dialogue.text];
             this.currentChoices = null;
@@ -1186,9 +1191,10 @@ export class Game {
                 this.currentDialog = [
                     '잠깐! 먼저 챌린지를 완료해야 합니다.',
                     minigameCheck.description,
-                    '미니게임을 플레이해서 챌린지를 완료하세요!'
+                    '[Space]키를 누르면 미니게임이 시작됩니다!'
                 ];
                 this.currentNPC = this.nearbyNPC;
+                this.currentMinigameChallenge = minigameCheck; // 챌린지 정보 저장
                 this.dialogIndex = 0;
                 this.audioManager.playDialogOpen();
                 this.showDialog();
@@ -2007,6 +2013,22 @@ export class Game {
     }
 
     closeDialog() {
+        // 미니게임 챌린지 대화가 끝났으면 미니게임 시작
+        if (this.currentMinigameChallenge) {
+            const challenge = this.currentMinigameChallenge;
+            this.currentMinigameChallenge = null; // 챌린지 정보 정리
+
+            // 대화창 정리
+            this.currentDialog = null;
+            this.currentNPC = null;
+            this.dialogIndex = 0;
+            this.audioManager.playDialogClose();
+
+            // 미니게임 시작
+            this.miniGameSystem.show();
+            return;
+        }
+
         this.currentDialog = null;
         this.currentNPC = null; // NPC 정보 정리
         this.dialogIndex = 0;
@@ -2036,7 +2058,7 @@ export class Game {
         Logger.debug('맵 설정 결과:', mapSet, '현재 맵:', this.mapManager.getCurrentMapId());
 
         // 로비 분위기 시작
-        this.floorAtmosphereSystem.changeFloor(CONSTANTS.MAPS.LOBBY);
+        // this.floorAtmosphereSystem.changeFloor(CONSTANTS.MAPS.LOBBY); // 백그라운드 소음 제거
 
         this.player = new Player(33, 15);
         Logger.debug('플레이어 생성:', this.player.x, this.player.y);

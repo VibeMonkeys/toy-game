@@ -123,8 +123,8 @@ export class DynamicQuestHints {
     generateContextualHint(quest, context) {
         const { questType, hasRequiredItems, nearbyNPCs, timeStuck, previousAttempts } = context;
         
-        // 플레이어가 오래 멈춰있으면 더 구체적인 힌트 제공
-        const urgency = timeStuck > 60000 ? 'urgent' : timeStuck > 30000 ? 'helpful' : 'gentle';
+        // 플레이어가 오래 멈춰있으면 더 구체적인 힌트 제공 (시간 조정)
+        const urgency = timeStuck > 180000 ? 'urgent' : timeStuck > 90000 ? 'helpful' : 'gentle';
         
         switch (questType) {
             case 'collection':
