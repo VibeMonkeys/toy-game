@@ -11,9 +11,9 @@ export class TitleScreen {
         this.showCredits = false;
         this.menuAreas = [];
 
-        // 응답하라 1999 스타일 요소들
-        this.titleText = '휴넷 26주년 기념 게임에 오신 것을 환영합니다';
-        this.subtitleText = '휴넷 에듀테크 어드벤처 RPG v1.0';
+        // 휴넷 생존기 스타일 요소들
+        this.titleText = '최진안의 휴넷 생존기에 오신 것을 환영합니다';
+        this.subtitleText = '신입사원의 첫 출근부터 CEO 면담까지!';
         this.companyText = '(c)1999-2025 휴넷 코퍼레이션 - 인간 네트워크 (26주년)';
 
         this.showSecretMessage = false;
@@ -132,30 +132,30 @@ export class TitleScreen {
         this.ctx.fillStyle = '#FFD700';
         this.ctx.strokeStyle = '#8B4513';
         this.ctx.lineWidth = 3;
-        this.ctx.font = 'bold 48px "Courier New", monospace';
+        this.ctx.font = 'bold 40px "Courier New", monospace';
         this.ctx.textAlign = 'center';
 
         // 그림자 효과
         this.ctx.fillStyle = '#8B4513';
-        this.ctx.fillText('HUNET 26TH', 2, -12);
+        this.ctx.fillText('휴넷 생존기', 2, -20);
 
         // 메인 텍스트
         this.ctx.fillStyle = '#FFD700';
-        this.ctx.fillText('HUNET 26TH', 0, -15);
+        this.ctx.fillText('휴넷 생존기', 0, -23);
 
         // 서브타이틀
         this.ctx.fillStyle = '#FFA500';
         this.ctx.font = 'bold 24px "Courier New", monospace';
-        this.ctx.fillText('ANNIVERSARY', 0, 20);
+        this.ctx.fillText('HUNET SURVIVAL', 0, 10);
 
-        // "TREASURE HUNT" 텍스트 (더 임팩트 있게)
+        // "최진안의 첫 출근기" 텍스트 (더 임팩트 있게)
         this.ctx.fillStyle = '#FF6347';
         this.ctx.strokeStyle = '#8B0000';
         this.ctx.lineWidth = 2;
-        this.ctx.font = 'bold 28px "Courier New", monospace';
-        this.ctx.strokeText('TREASURE HUNT', 0, 50);
+        this.ctx.font = 'bold 20px "Courier New", monospace';
+        this.ctx.strokeText('최진안의 첫 출근기', 0, 40);
         this.ctx.fillStyle = '#FFD700';
-        this.ctx.fillText('TREASURE HUNT', 0, 50);
+        this.ctx.fillText('최진안의 첫 출근기', 0, 40);
 
         this.ctx.restore();
 
@@ -411,7 +411,7 @@ export class TitleScreen {
         this.ctx.fillStyle = '#D2691E';
 
         const infoText = [
-            '> 휴넷 26주년 기념 에듀테크 어드벤처 RPG',
+            '> 최진안의 휴넷 생존기 - 신입사원 첫 출근 어드벤처',
             '',
             '> 컨트롤:',
             '  [↑↓←→] 캐릭터 이동',
@@ -422,11 +422,12 @@ export class TitleScreen {
             '  [M]      미니맵 토글',
             '  [ESC]    일시정지 메뉴',
             '',
-            '> 미션 목표:',
-            '  • 엘리베이터로 각 층을 탐험하세요',
-            '  • 동료들과 대화하고 업무를 도와주세요',
-            '  • 숨겨진 아이템과 문서를 수집하세요',
-            '  • CEO님과의 최종 미팅을 완료하세요',
+            '> 생존 목표:',
+            '  • 출입카드 미스터리를 해결하세요',
+            '  • 각 층의 동료들과 친해지세요',
+            '  • 점심시간 전쟁에서 살아남으세요',
+            '  • 부서별 정치를 파악하고 적응하세요',
+            '  • CEO와의 최종 면담을 성공하세요',
             '',
             '> 히든 기능:',
             '  • H키: 숨겨진 메시지',
@@ -490,17 +491,18 @@ export class TitleScreen {
         const creditText = [
             '',
             '> 개발자의 한마디',
-            '  "휴넷 26주년을 기념하여 제작된 이 게임이',
-            '   여러분께 즐거움을 드리길 바랍니다."',
+            '  "신입사원의 첫 출근 경험을 재미있게',
+            '   표현한 휴넷 생존기를 즐겨보세요!"',
             '',
             '> 개발팀',
-            '  개발자: 최진안, 김경훈(기획)',
-            '  기획자: 인경실 직원 일동',
+            '  기획 및 개발: 최진안 (신입 개발자)',
+            '  인사팀 자문: 윤도현, 강해빈',
+            '  IT팀 지원: 김대리',
             '',
             '> 특별 감사',
-            '  • 26년간 휴넷과 함께해 주신 모든 임직원분들',
-            '  • 게임 개발에 아이디어를 제공해 주신 분들',
-            '  • 베타 테스트에 참여해 주신 모든 분들'
+            '  • 실제 휴넷 생활 경험을 공유해 주신 선배님들',
+            '  • 점심시간 전쟁 꿀팁을 알려주신 분들',
+            '  • 각 부서별 특색을 설명해 주신 모든 분들'
         ];
 
         let textY = boxY + 90;

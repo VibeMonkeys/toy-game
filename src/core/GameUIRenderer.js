@@ -468,48 +468,25 @@ export class GameUIRenderer {
         ctx.fillStyle = '#00FF88';
         ctx.font = '13px "Courier New", monospace';
 
-        // 메시지 자동 줄바꿈 (박스 경계 내에서 최적화)
-        const maxCharsPerLine = 38; // 박스 너비에 맞게 조정
+        // 메시지 자동 줄바꿈 (픽셀 기반으로 정확한 측정)
+        ctx.font = '13px "Courier New", monospace'; // 측정을 위한 폰트 설정
+        const maxWidth = boxWidth - 36; // 좌우 여백 고려
         const maxLines = 3; // 최대 3줄까지 허용
-        const words = nextStepInfo.message.split(' ');
-        let lines = [];
-        let currentLine = '';
 
-        for (let word of words) {
-            // 현재 줄에 단어를 추가했을 때의 길이 계산
-            const testLine = currentLine ? currentLine + ' ' + word : word;
-
-            if (testLine.length <= maxCharsPerLine) {
-                currentLine = testLine;
-            } else {
-                // 현재 줄을 완성하고 새 줄 시작
-                if (currentLine) {
-                    lines.push(currentLine);
-                    currentLine = word;
-                } else {
-                    // 단어가 너무 길면 강제로 자르기
-                    if (word.length > maxCharsPerLine) {
-                        lines.push(word.substring(0, maxCharsPerLine - 2) + '..');
-                        currentLine = '';
-                    } else {
-                        currentLine = word;
-                    }
-                }
-            }
-        }
-
-        // 마지막 줄 추가
-        if (currentLine) lines.push(currentLine);
+        let lines = this.wrapTextByPixelWidth(nextStepInfo.message, maxWidth, ctx);
 
         // 최대 줄 수로 제한하고, 넘치면 마지막 줄에 "..." 추가
         if (lines.length > maxLines) {
-            lines = lines.slice(0, maxLines - 1);
-            const lastLine = lines[lines.length - 1];
-            if (lastLine.length > maxCharsPerLine - 3) {
-                lines[lines.length - 1] = lastLine.substring(0, maxCharsPerLine - 3) + '...';
-            } else {
-                lines[lines.length - 1] = lastLine + '...';
+            lines = lines.slice(0, maxLines);
+            // 마지막 줄이 너무 길면 "..." 처리
+            const lastLine = lines[maxLines - 1];
+            const ellipsis = '...';
+            const ellipsisWidth = ctx.measureText(ellipsis).width;
+
+            while (ctx.measureText(lastLine).width + ellipsisWidth > maxWidth && lastLine.length > 1) {
+                lines[maxLines - 1] = lastLine.substring(0, lastLine.length - 1);
             }
+            lines[maxLines - 1] = lines[maxLines - 1] + ellipsis;
         }
 
         lines.forEach((line, index) => {
@@ -628,5 +605,44 @@ export class GameUIRenderer {
         debugInfo.forEach((info, index) => {
             this.ctx.fillText(info, 15, 25 + index * 15);
         });
+    }
+
+    // 픽셀 폭 기반 텍스트 줄바꿈 헬퍼 메서드
+    wrapTextByPixelWidth(text, maxWidth, ctx) {
+        const words = text.split(' ');
+        const lines = [];
+        let currentLine = '';
+
+        for (let i = 0; i < words.length; i++) {
+            const testLine = currentLine === '' ? words[i] : currentLine + ' ' + words[i];
+            const testWidth = ctx.measureText(testLine).width;
+
+            if (testWidth <= maxWidth) {
+                currentLine = testLine;
+            } else {
+                // 현재 줄에 단어가 있으면 줄을 완성하고 새 줄 시작
+                if (currentLine !== '') {
+                    lines.push(currentLine);
+                    currentLine = words[i];
+                } else {
+                    // 단어가 너무 길어서 한 줄에 들어가지 않는 경우
+                    // 강제로 자르기
+                    let longWord = words[i];
+                    while (ctx.measureText(longWord).width > maxWidth && longWord.length > 1) {
+                        const cutIndex = Math.floor(longWord.length * 0.8); // 80% 지점에서 자르기
+                        lines.push(longWord.substring(0, cutIndex));
+                        longWord = longWord.substring(cutIndex);
+                    }
+                    currentLine = longWord;
+                }
+            }
+        }
+
+        // 마지막 줄 추가
+        if (currentLine !== '') {
+            lines.push(currentLine);
+        }
+
+        return lines;
     }
 }

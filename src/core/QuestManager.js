@@ -441,18 +441,19 @@ export class QuestManager {
         return questMessages[questId] || baseMessage;
     }
 
-    // 다음 퀘스트 정보 생성 (private)
+    // 다음 퀘스트 정보 생성 (private) - 휴넷 생존기 버전
     _generateNextQuestInfo(completedQuestId) {
         const nextQuestMaps = {
-            0: { message: "🔍 이제 26주년 기념 메달을 찾아 안내 데스크에 전달하세요!", floor: "1층 로비" },
-            1: { message: "🛗 엘리베이터를 타고 7층으로 올라가세요!", floor: "7층 사무실" },
-            2: { message: "💼 같은 7층에서 인턴을 도와주세요!", floor: "7층 사무실" },
-            3: { message: "📄 7층의 박직원도 도움이 필요합니다!", floor: "7층 사무실" },
-            4: { message: "⬆️ 8층으로 올라가서 팀장님을 만나보세요!", floor: "8층 본부" },
-            5: { message: "📚 8층 교육서비스본부에서 교육팀장을 찾아보세요!", floor: "8층 교육서비스본부" },
-            6: { message: "🔝 최고층인 9층 CEO실로 올라가세요!", floor: "9층 경영진" },
-            7: { message: "👑 모든 증명서를 모아 CEO님께 최종 보고하세요!", floor: "9층 CEO실" },
-            8: { message: "🎊 축하합니다! 휴넷 26주년 여정을 완주했습니다!", floor: "완료" }
+            0: { message: "📋 강해빈에게 가서 신입사원 오리엔테이션을 받으세요!", floor: "1층 로비" },
+            1: { message: "🛗 엘리베이터를 타고 7층으로 올라가 IT팀에 합류하세요!", floor: "7층 710호" },
+            2: { message: "☕ 김대리의 커피 심부름을 완료하고 동료들과 친해지세요!", floor: "7층 710호" },
+            3: { message: "🍽️ 점심시간 전쟁을 경험하고 휴넷 점심 문화를 체험하세요!", floor: "7층 사무실" },
+            4: { message: "🚀 8층으로 올라가 각 본부의 서로 다른 문화를 탐방하세요!", floor: "8층 본부들" },
+            5: { message: "📝 이과장과의 첫 번째 회의에서 살아남아 보세요!", floor: "8층 영업본부" },
+            6: { message: "🎓 교육서비스본부에서 휴넷의 핵심 사업을 체험하세요!", floor: "8층 교육서비스본부" },
+            7: { message: "🔑 윤도현에게서 9층 출입 허가를 받고 CEO 만남을 준비하세요!", floor: "9층 인사경영실" },
+            8: { message: "👑 조영탁 CEO와의 특별한 대화로 정규직 확정을 받으세요!", floor: "9층 CEO실" },
+            9: { message: "🎊 축하합니다! 최진안의 휴넷 생존기를 성공적으로 완주했습니다!", floor: "완료" }
         };
 
         return nextQuestMaps[completedQuestId] || { message: "🎯 다음 목표를 찾아보세요!", floor: "탐험 계속" };

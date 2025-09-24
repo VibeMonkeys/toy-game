@@ -107,28 +107,58 @@ export class QuestGuide {
 
     // 퀘스트 데이터 캐싱 및 중복 계산 방지
     getQuestData(gameState, questManager) {
+        Logger.debug('🔍 QuestGuide.getQuestData 호출됨');
+        Logger.debug('📊 gameState:', gameState ? 'exists' : 'null');
+        Logger.debug('📊 questManager:', questManager ? 'exists' : 'null');
+
         // QuestManager를 통해 현재 활성 퀘스트 가져오기 (실시간 상태 반영)
         if (questManager) {
             const activeQuest = questManager.getCurrentActiveQuest();
             if (activeQuest) {
-                Logger.debug(`🎯 QuestManager에서 활성 퀘스트 가져옴: ${activeQuest.title}, started: ${activeQuest.started}`);
+                Logger.debug(`✅ QuestManager에서 활성 퀘스트 발견: ${activeQuest.title}`);
+                Logger.debug(`📋 퀘스트 상태 - ID: ${activeQuest.id}, started: ${activeQuest.started}, completed: ${activeQuest.completed}`);
                 return activeQuest;
+            } else {
+                Logger.debug('❌ QuestManager에서 활성 퀘스트 없음');
             }
         }
 
-        // 폴백: QUEST_DATA에서 직접 찾기
+        // 폴백: QUEST_DATA에서 직접 찾기 - 첫 번째 미완료 퀘스트
+        Logger.debug('📋 QUEST_DATA에서 직접 검색 시작...');
+        Logger.debug('📋 총 퀘스트 개수:', QUEST_DATA.length);
+
         const activeQuest = QUEST_DATA.find(quest => {
-            if (quest.completed) return false;
-            
+            Logger.debug(`🔍 퀘스트 검사: ${quest.title} (ID: ${quest.id})`);
+            Logger.debug(`   - completed: ${quest.completed}, started: ${quest.started}`);
+
+            if (quest.completed) {
+                Logger.debug(`   ❌ 이미 완료됨`);
+                return false;
+            }
+
             // 전제 조건이 있는 경우 확인
             if (quest.prerequisites && quest.prerequisites.length > 0) {
-                const hasPrerequisites = quest.prerequisites.every(prereq => 
-                    gameState?.inventory?.some(item => item.name === prereq) ||
-                    gameState?.collectedItems?.some(item => item.name === prereq)
-                );
-                if (!hasPrerequisites) return false;
+                Logger.debug(`   📋 전제조건 확인: ${quest.prerequisites}`);
+                const inventory = gameState?.inventory || [];
+                const collectedItems = gameState?.collectedItems || [];
+                Logger.debug(`   📦 인벤토리: ${inventory.map(i => i.name)}`);
+                Logger.debug(`   📦 수집된 아이템: ${collectedItems.map(i => i.name)}`);
+
+                const hasPrerequisites = quest.prerequisites.every(prereq => {
+                    const hasInInventory = inventory.some(item => item.name === prereq);
+                    const hasInCollected = collectedItems.some(item => item.name === prereq);
+                    const hasPrereq = hasInInventory || hasInCollected;
+                    Logger.debug(`     - ${prereq}: ${hasPrereq ? '✅' : '❌'}`);
+                    return hasPrereq;
+                });
+
+                if (!hasPrerequisites) {
+                    Logger.debug(`   ❌ 전제조건 불충족`);
+                    return false;
+                }
             }
-            
+
+            Logger.debug(`   ✅ 활성 퀘스트로 선정!`);
             return true;
         });
 
@@ -137,7 +167,7 @@ export class QuestGuide {
             return null;
         }
 
-        Logger.debug(`🎯 QUEST_DATA에서 활성 퀘스트 가져옴: ${activeQuest.title}, started: ${activeQuest.started}`);
+        Logger.debug(`🎯 최종 선정된 퀘스트: ${activeQuest.title} (ID: ${activeQuest.id})`);
         return activeQuest;
     }
 
@@ -306,78 +336,149 @@ export class QuestGuide {
         return `다음 퀘스트: ${nextQuest.title}\n${npcInfo.floor}층 ${npcInfo.locationDescription}의\n${npcInfo.name}에게 대화하세요`;
     }
 
-    // NPC 위치 정보 가져오기
+    // NPC 위치 정보 가져오기 (휴넷 생존기 전용)
     getNPCLocationInfo(npcId) {
         const npcLocationMap = {
+            // 1층 로비 NPC - 휴넷 생존기 실제 NPC들
             'guard': {
                 name: '경비 아저씨',
                 floor: 1,
-                locationDescription: '1층 로비 오른쪽'
+                locationDescription: '1층 로비 우측'
             },
             'reception': {
-                name: '안내 데스크 직원',
+                name: '안내 데스크',
                 floor: 1,
                 locationDescription: '1층 로비 중앙 안내 데스크'
             },
+            'janitor': {
+                name: '청소 아저씨',
+                floor: 1,
+                locationDescription: '1층 로비 좌측'
+            },
+            // 1층 카페 NPC들
+            'starbucks_barista': {
+                name: '스타벅스 바리스타',
+                floor: 1,
+                locationDescription: '1층 스타벅스'
+            },
+            'mammoth_owner': {
+                name: '매머드 커피 사장님',
+                floor: 1,
+                locationDescription: '1층 매머드 커피'
+            },
+            'gukbab_ajumma': {
+                name: '국밥92 이모님',
+                floor: 1,
+                locationDescription: '1층 국밥92'
+            },
+            'timhortons_staff': {
+                name: '팀 호튼스 직원',
+                floor: 1,
+                locationDescription: '1층 팀 호튼스'
+            },
+            // 7층 IT팀 & 계열사 NPC들
             'kim_deputy': {
                 name: '김대리',
                 floor: 7,
-                locationDescription: '7층 복도 왼쪽'
+                locationDescription: '7층 710호 본사 IT'
             },
-            'intern': {
-                name: '인턴',
+            'office_worker_1': {
+                name: '동료 직원',
                 floor: 7,
-                locationDescription: '7층 복도 중앙'
+                locationDescription: '7층 710호 본사 IT'
             },
             'office_worker_2': {
                 name: '박직원',
                 floor: 7,
-                locationDescription: '7층 복도 오른쪽'
+                locationDescription: '7층 709호 계열사'
             },
+            // 8층 본부들 NPC들
             'manager_lee': {
-                name: '이 매니저',
+                name: '이과장',
                 floor: 8,
-                locationDescription: '8층 복도'
+                locationDescription: '8층 영업+교육지원본부'
             },
             'education_manager': {
-                name: '교육 매니저',
+                name: '교육매니저',
                 floor: 8,
-                locationDescription: '8층 복도'
+                locationDescription: '8층 교육서비스본부'
             },
-            'secretary_jung': {
-                name: '정 비서',
+            'ai_researcher': {
+                name: 'AI 연구원',
+                floor: 8,
+                locationDescription: '8층 AI연구소'
+            },
+            'librarian': {
+                name: '도서관 사서',
+                floor: 8,
+                locationDescription: '8층 상상력발전소'
+            },
+            // 9층 경영진 NPC들
+            'yoon_dohyun': {
+                name: '윤도현',
                 floor: 9,
-                locationDescription: '9층 복도'
+                locationDescription: '9층 인사경영실'
+            },
+            'kang_haebin': {
+                name: '강해빈',
+                floor: 9,
+                locationDescription: '9층 인사경영실'
             },
             'ceo_kim': {
-                name: '김 대표',
+                name: '조영탁 CEO',
                 floor: 9,
                 locationDescription: '9층 CEO실'
+            },
+            // 옥상 NPC들
+            'rooftop_worker': {
+                name: '옥상 관리인',
+                floor: 'R',
+                locationDescription: '옥상 휴식공간'
+            },
+            // 특수 퀘스트
+            'auto_start': {
+                name: '자동 시작',
+                floor: 8,
+                locationDescription: '8층 진입 시 자동 발동'
+            },
+            'hidden_trigger': {
+                name: '특별 조건',
+                floor: 'R',
+                locationDescription: '옥상에서 특별 조건 달성 시'
             }
         };
-        
+
         return npcLocationMap[npcId];
     }
 
     getLocationGuide(itemName, currentMap) {
-        // 아이템별 목표 위치 정의 (QuestData.js와 MapData.js에 맞춰 업데이트)
+        // 휴넷 생존기 전용 아이템 위은e
         const itemLocations = {
-            // 1층 아이템
-            '입장 패스': { floor: 1, map: 'lobby', detail: '1층 로비 바닥' },
-            '26주년 기념 메달': { floor: 1, map: 'lobby', detail: '1층 로비 바닥' },
+            // 1층 메인 퀘스트 아이템
+            '임시 출입카드': { floor: 1, map: 'lobby', detail: '1층 로비 바닥', specific: '로비를 상하좌우로 이동하며 바닥을 확인하세요' },
+            '신입사원 서류': { floor: 1, map: 'lobby', detail: '1층 로비 바닥', specific: '안내 데스크 근처의 서류를 찾으세요' },
 
-            // 7층 아이템
-            '업무 보고서': { floor: 7, map: 'floor_7_corridor', detail: '7층 복도' },
-            '프로젝트 파일': { floor: 7, map: 'floor_7_710_main_it', detail: '710호 본사IT', specific: '710호 문을 열고 들어가서 바닥의 파일을 수집하세요' },
-            '중요 계약서': { floor: 7, map: 'floor_7_709_affiliates', detail: '709호 계열사' },
+            // 7층 메인 퀘스트 아이템
+            '커피 주문서': { floor: 7, map: 'floor_7_710_main_it', detail: '710호 본사 IT', specific: '710호 IT팀 사무실에서 커피 주문서를 찾으세요' },
+            '점심 영수증': { floor: 7, map: 'floor_7_710_main_it', detail: '710호 본사 IT', specific: '점심시간 후 IT팀에서 영수증을 찾으세요' },
 
-            // 8층 아이템
-            '회의록': { floor: 8, map: 'floor_8_corridor', detail: '8층 복도' },
-            '프레젠테이션': { floor: 8, map: 'floor_8_corridor', detail: '8층 복도' },
-            '교육 매뉴얼': { floor: 8, map: 'floor_8_education_service', detail: '교육서비스본부' },
+            // 8층 메인 퀘스트 아이템
+            '부서 탐방 노트': { floor: 8, map: 'floor_8_education_service', detail: '8층 교육서비스본부', specific: '8층 각 본부를 돌아다니며 탐방 노트를 작성하세요' },
+            '회의록': { floor: 8, map: 'floor_8_education_service', detail: '8층 영업+교육지원본부', specific: '이과장이 있는 본부에서 회의록을 찾으세요' },
+            '교육 수료증': { floor: 8, map: 'floor_8_education_service', detail: '8층 교육서비스본부', specific: '교육매니저와 배울이 끈난 후 수료증을 수령하세요' },
 
-            // 9층 아이템
-            '기밀 문서': { floor: 9, map: 'floor_9_ceo_office', detail: '9층 CEO실' }
+            // 9층 메인 퀘스트 아이템
+            '9층 출입 허가서': { floor: 9, map: 'floor_9_ceo_office', detail: '9층 CEO실', specific: '윤도현으로부터 9층 출입 허가를 얻으세요' },
+            'CEO 면담 요청서': { floor: 9, map: 'floor_9_ceo_office', detail: '9층 CEO실', specific: 'CEO실 내에서 면담 요청서를 찾으세요' },
+
+            // 옵상 히든 퀘스트 아이템
+            '우정의 증표': { floor: 'R', map: 'rooftop', detail: '옵상 휴식공간', specific: '옵상에서 과거 직원들이 남긴 우정의 증표를 찾으세요' },
+
+            // 서브 퀘스트 아이템들
+            '스타벅스 포인트 카드': { floor: 1, map: 'starbucks', detail: '스타벅스 카페' },
+            '매머드 커피 단골 카드': { floor: 1, map: 'mammoth_coffee', detail: '매머드 커피' },
+            '단골 도장': { floor: 1, map: 'kook_bab_92', detail: '국법92' },
+            '메뉴 마스터 증서': { floor: 1, map: 'tim_hortons', detail: '팀 호튤스' }
         };
 
         const targetLocation = itemLocations[itemName];
@@ -402,11 +503,13 @@ export class QuestGuide {
     }
 
     getCurrentFloor(mapId) {
+        // 휴넷 생존기 맵 구조에 맞게 업데이트
         if (mapId.includes('lobby') || mapId.includes('starbucks') || mapId.includes('mammoth') ||
             mapId.includes('kook_bab') || mapId.includes('tim_hortons')) return 1;
         if (mapId.includes('floor_7') || mapId.includes('709') || mapId.includes('710')) return 7;
-        if (mapId.includes('floor_8')) return 8;
-        if (mapId.includes('floor_9')) return 9;
+        if (mapId.includes('floor_8') || mapId.includes('it_division') || mapId.includes('hr_office') ||
+            mapId.includes('ai_research') || mapId.includes('education_service') || mapId.includes('sales_support')) return 8;
+        if (mapId.includes('floor_9') || mapId.includes('ceo_office')) return 9;
         if (mapId.includes('rooftop')) return 'R';
         return 1; // 기본값
     }

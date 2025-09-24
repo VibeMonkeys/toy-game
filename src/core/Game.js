@@ -504,6 +504,21 @@ export class Game {
                 return;
                 
             case 'Escape':
+                // 대화창이 열려있으면 대화창 먼저 닫기
+                if (this.currentDialog) {
+                    console.log('💬 ESC로 대화창 닫기');
+                    this.closeDialog();
+                    return;
+                }
+
+                // 선택지 창이 열려있으면 선택지 취소
+                if (this.showingChoices) {
+                    console.log('💬 ESC로 선택지 취소');
+                    this.cancelChoices();
+                    return;
+                }
+
+                // 대화창이 없으면 일시정지 메뉴 토글
                 this.pauseMenu.toggle();
                 return;
         }

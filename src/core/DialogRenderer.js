@@ -62,13 +62,17 @@ export class DialogRenderer {
 
         // 텍스트 줄바꿈 처리
         const maxWidth = dialogWidth - 40;
-        const lineHeight = 25;
+        const lineHeight = 26; // 줄 간격을 더 넓히기
         const lines = this.wrapText(currentText, maxWidth);
 
         // NPC 이름이 있으면 텍스트를 더 아래에 표시
-        const textStartY = currentNPC ? dialogY + 55 : dialogY + 35;
+        const textStartY = currentNPC ? dialogY + 60 : dialogY + 40;
 
-        lines.forEach((line, index) => {
+        // 텍스트가 대화창을 벗어나지 않도록 제한
+        const maxLines = Math.floor((dialogHeight - (textStartY - dialogY) - 40) / lineHeight);
+        const visibleLines = lines.slice(0, maxLines);
+
+        visibleLines.forEach((line, index) => {
             this.ctx.fillText(line, dialogX + 20, textStartY + index * lineHeight);
         });
 

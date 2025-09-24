@@ -21,46 +21,50 @@ export const CONSTANTS = {
     },
 
     QUEST_TARGETS: {
-        // 메인 퀘스트 타겟
+        // 휴넷 생존기 메인 퀘스트 타겟
         START_GAME: 'start_game',
-        COLLECT_MEDAL: 'collect_medal',
+        COLLECT_ORIENTATION: 'collect_orientation',
         TALK_TO_KIM: 'talk_to_kim',
-        TALK_TO_PARK: 'talk_to_park',
-        TALK_TO_LEE: 'talk_to_lee',
+        LUNCH_EXPERIENCE: 'lunch_experience',
+        DEPARTMENT_CULTURE: 'department_culture',
+        MEETING_SURVIVAL: 'meeting_survival',
+        EDUCATION_EXPERIENCE: 'education_experience',
+        CEO_PREPARATION: 'ceo_preparation',
         TALK_TO_CEO: 'talk_to_ceo',
-        COLLECT_EDUCATION: 'collect_education',
-        EXPLORE_OFFICE_1: 'explore_office_1',
-        FIND_HIDDEN_DOCUMENT: 'find_hidden_document',
-        HELP_INTERN: 'help_intern',
-        COMPLETE_MEETING_TASK: 'complete_meeting_task',
+        HIDDEN_TRUTH: 'hidden_truth',
 
-        // 기존 컬렉션 퀘스트
-        COLLECT_26TH_ITEMS: 'collect_26th_items',
-        DISCOVER_HISTORY: 'discover_history',
-        COLLECT_MESSAGES: 'collect_messages',
-        COLLECT_ALL_ITEMS: 'collect_all_items',
+        // 서브 퀘스트 타겟 - 카페 문화 시리즈
+        STARBUCKS_REGULAR: 'starbucks_regular',
+        MAMMOTH_FRIENDSHIP: 'mammoth_friendship',
+        KOOKBAP_RECOGNITION: 'kookbap_recognition',
+        TIMHORTONS_MASTER: 'timhortons_master',
 
-        // 새로운 서브 퀘스트들
-        DELIVER_PACKAGE: 'deliver_package',
-        HELP_VISITOR: 'help_visitor',
-        COFFEE_DELIVERY: 'coffee_delivery',
-        LUNCH_ORDER: 'lunch_order',
-        TRAINING_ASSIST: 'training_assist',
-        REPAIR_PRINTER: 'repair_printer',
-        FIND_LOST_ITEM: 'find_lost_item',
-        MEETING_SETUP: 'meeting_setup',
-        EMPLOYEE_INTRODUCTION: 'employee_introduction',
-        STRESS_RELIEF: 'stress_relief',
-        SECURITY_CHECK: 'security_check',
-        EXERCISE_BUDDY: 'exercise_buddy',
-        PHONE_MESSAGE: 'phone_message',
-        MEDITATION_GUIDE: 'meditation_guide',
-        ARCADE_CHAMPION: 'arcade_champion',
-        CLEANING_HELP: 'cleaning_help',
-        JOB_INTERVIEW_PREP: 'job_interview_prep',
-        EXECUTIVE_BRIEFING: 'executive_briefing',
-        LEGAL_DOCUMENT: 'legal_document',
-        FINANCIAL_REPORT: 'financial_report'
+        // 서브 퀘스트 타겟 - 동료 관계 구축
+        CORRIDOR_GREETINGS: 'corridor_greetings',
+        AFFILIATES_TOUR: 'affiliates_tour',
+        IT_GAME_CHAMPION: 'it_game_champion',
+        AI_RESEARCHER_QUESTIONS: 'ai_researcher_questions',
+        EDUCATION_EVENTS: 'education_events',
+        SALES_ASSISTANT: 'sales_assistant',
+        HR_TRUST: 'hr_trust',
+        EXECUTIVE_RAPPORT: 'executive_rapport',
+
+        // 서브 퀘스트 타겟 - 회사 문화 체험
+        FOUR_DAY_WORK: 'four_day_work',
+        UNLIMITED_VACATION: 'unlimited_vacation',
+        FLEXIBLE_HOURS: 'flexible_hours',
+        FRUIT_FRIDGE: 'fruit_fridge',
+        LIBRARY_READING: 'library_reading',
+        ROOFTOP_SOCIALIZING: 'rooftop_socializing',
+        OVERTIME_CULTURE: 'overtime_culture',
+
+        // 서브 퀘스트 타겟 - 히든 퀘스트
+        ELEVATOR_SECRETS: 'elevator_secrets',
+        BATHROOM_POLITICS: 'bathroom_politics',
+        VENDING_MACHINE_LEGEND: 'vending_machine_legend',
+        COFFEE_MACHINE_MASTER: 'coffee_machine_master',
+        JANITOR_WISDOM: 'janitor_wisdom',
+        COMPANY_DINNER_CULTURE: 'company_dinner_culture'
     },
 
     MAPS: {
@@ -89,17 +93,9 @@ export const CONSTANTS = {
         FLOOR_8_SALES_SUPPORT: 'floor_8_sales_support',          // 영업+교육지원 본부 (큰 맵)
         FLOOR_8_CORRIDOR: 'floor_8_corridor',
 
-        // 기존 8층 호환성 (제거 예정)
-        FLOOR_8_MAIN: 'floor_8_main',
-
         // 9층 - 1개 사무실 (CEO실)
         FLOOR_9_CEO_OFFICE: 'floor_9_ceo_office',
-        FLOOR_9_CORRIDOR: 'floor_9_corridor',
-
-        // 기존 호환성 유지 (제거 예정)
-        MEETING_ROOM: 'meeting_room',
-        CAFETERIA: 'cafeteria',
-        CEO_OFFICE: 'ceo_office'
+        FLOOR_9_CORRIDOR: 'floor_9_corridor'
     },
 
     FLOORS: {
