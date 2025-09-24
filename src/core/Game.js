@@ -14,7 +14,6 @@ import { PauseMenu } from '../ui/PauseMenu.js';
 import { ElevatorUI } from '../ui/ElevatorUI.js';
 import { MiniGameSystem } from '../ui/MiniGameSystem.js';
 import { MINIGAME_CHALLENGES } from '../data/QuestData.js';
-import { TutorialSystem } from '../ui/TutorialSystem.js';
 import { IntroScreen } from '../ui/IntroScreen.js';
 import { CertificateScreen } from '../ui/CertificateScreen.js';
 import { QuestGuide } from '../ui/QuestGuide.js';
@@ -80,7 +79,6 @@ export class Game {
         this.pauseMenu = new PauseMenu(this.canvas, this.ctx, this.audioManager);
         this.elevatorUI = new ElevatorUI(this.canvas, this.ctx, this.audioManager);
         this.miniGameSystem = new MiniGameSystem(this.canvas, this.ctx, this.audioManager, this);
-        this.tutorialSystem = new TutorialSystem(this.canvas, this.ctx);
         this.introScreen = new IntroScreen(this.canvas, this.ctx, this.audioManager);
         this.certificateScreen = new CertificateScreen(this.canvas, this.ctx);
         this.questGuide = new QuestGuide(this.canvas, this.ctx);
@@ -451,22 +449,8 @@ export class Game {
         }
     }
 
-    // 튜토리얼에 UI 상태 업데이트 (UI 토글 후 호출)
-    updateTutorialAfterKeyPress(key) {
-        if (this.tutorialSystem && this.tutorialSystem.isVisible()) {
-            // UI 토글 후 업데이트된 상태를 튜토리얼에 전달
-            this.tutorialSystem.handleKeyPress(
-                key,
-                this.questSystem.showQuestUI,
-                this.inventory.isVisible,
-                this.minimap.isVisible
-            );
-        }
-    }
 
     handleGameInput(event) {
-        // 튜토리얼은 UI 토글 후에 별도로 업데이트됨
-
         // 코나미 코드 체크
         this.checkKonamiCode(event);
         
@@ -504,7 +488,6 @@ export class Game {
             case 'ㅂ':
             case 'ㅃ':
                 this.questSystem.toggleQuestUI();
-                this.updateTutorialAfterKeyPress('q');
                 return;
                 
             case 'i':
@@ -512,14 +495,12 @@ export class Game {
             case 'ㅑ':
             case 'ㅣ':
                 this.inventory.toggle();
-                this.updateTutorialAfterKeyPress('i');
                 return;
                 
             case 'm':
             case 'M':
             case 'ㅡ':
                 this.minimap.toggle();
-                this.updateTutorialAfterKeyPress('m');
                 return;
                 
             case 'Escape':
@@ -542,22 +523,15 @@ export class Game {
                 this.movePlayer(1, 0);
                 break;
             case ' ':
-                console.log('🔍 스페이스바 눌림! currentDialog:', this.currentDialog, 'nearbyNPC:', this.nearbyNPC, 'tutorial:', this.tutorialSystem.isVisible());
-                
-                // 튜토리얼이 활성화되어 있으면 튜토리얼 처리
-                if (this.tutorialSystem.isVisible()) {
-                    console.log('📚 튜토리얼 모드에서 스페이스바 처리');
-                    this.tutorialSystem.nextStep();
-                    return;
-                }
-                
+                console.log('🔍 스페이스바 눌림! currentDialog:', this.currentDialog, 'nearbyNPC:', this.nearbyNPC);
+
                 // 대화창이 있으면 대화 진행
                 if (this.currentDialog) {
                     console.log('💬 대화창에서 스페이스바 처리 - 다음 대화로');
                     this.continueDialog();
                     return;
                 }
-                
+
                 // 대화창이 없으면 상호작용
                 this.interact();
                 break;
@@ -881,10 +855,6 @@ export class Game {
         const newX = this.player.x + dx;
         const newY = this.player.y + dy;
 
-        // 튜토리얼에 이동 알림
-        if (this.tutorialSystem.isVisible()) {
-            this.tutorialSystem.handleMovement();
-        }
 
         // 코나미 코드 활성화 시 벽 통과 가능
         const canMove = this.konamiActivated ||
@@ -1164,10 +1134,6 @@ export class Game {
     interact() {
         console.log('🎯 interact() 호출됨! nearbyNPC:', this.nearbyNPC, '플레이어 위치:', this.player.x, this.player.y);
         
-        // 튜토리얼에 상호작용 알림
-        if (this.tutorialSystem.isVisible()) {
-            this.tutorialSystem.handleInteraction();
-        }
 
         if (this.nearbyNPC) {
             console.log('✅ nearbyNPC 발견:', this.nearbyNPC.id, this.nearbyNPC.name);
@@ -2078,7 +2044,6 @@ export class Game {
         // UI 시스템들 재초기화 (questGuide는 생성자에서 이미 초기화됨)
         this.uiRenderer = new GameUIRenderer(this.canvas, this.ctx);
         this.dialogRenderer = new DialogRenderer(this.canvas, this.ctx);
-        this.tutorialSystem = new TutorialSystem(this.canvas, this.ctx);
 
         this.camera.update(this.player.x, this.player.y);
         Logger.debug('카메라 업데이트 완료');
@@ -2097,16 +2062,6 @@ export class Game {
         this.inventory.showItemNotification({ name: '동전 5,000원을 지급받았습니다.' });
         this.inventory.showItemNotification({ name: '휴넷 26주년 게임을 시작합니다!' });
 
-        // 튜토리얼 완료 콜백 설정
-        this.tutorialSystem.setOnComplete(() => {
-            Logger.info('✅ 튜토리얼 완료! 정상적인 게임플레이 시작');
-            // 퀘스트 가이드는 이미 표시되어 있음
-        });
-
-        // 튜토리얼 자동 시작
-        this.setSafeTimeout(() => {
-            this.tutorialSystem.start();
-        }, 1000);
         
         // 시간 기반 이스터 에그 체크
         this.setSafeTimeout(() => {
@@ -2265,8 +2220,6 @@ export class Game {
             this.minimap.draw(this.player, this.mapManager, this.gameState);
             this.inventory.draw(this.gameState);
 
-            // 튜토리얼 렌더링 (모든 UI 위에)
-            this.tutorialSystem.draw();
 
             // 대화창 렌더링 (UI보다 위에)
             if (this.showingChoices && this.currentChoiceNPC) {
@@ -2318,10 +2271,6 @@ export class Game {
             // 파티클 시스템 렌더링
             this.particleSystem.draw();
 
-            // 튜토리얼 시스템 렌더링 (최상위)
-            if (this.tutorialSystem && this.tutorialSystem.isVisible()) {
-                this.tutorialSystem.draw();
-            }
 
             // 전환 효과 렌더링 (최상위)
             this.transitionManager.drawTransitions();
