@@ -15,12 +15,20 @@ export class MapManager {
     private currentMap: DungeonMap | null = null;
     private tileSize: number = 32; // 타일 크기 (픽셀)
 
-    // 타일 색상
+    // 타일 색상 (더 밝고 선명하게)
     private readonly TILE_COLORS = {
-        WALL: '#1a1a2e',
-        FLOOR: '#2d3142',
-        CORRIDOR: '#3a3f51',
-        DOOR: '#5c4a42'
+        WALL: '#2C3E50',        // 진한 청회색 벽
+        FLOOR: '#34495E',       // 중간 회색 바닥
+        CORRIDOR: '#455A64',    // 복도
+        DOOR: '#7F8C8D'        // 문
+    };
+
+    // 타일 테두리 색상
+    private readonly TILE_BORDERS = {
+        WALL: '#1A252F',
+        FLOOR: '#2C3E50',
+        CORRIDOR: '#37474F',
+        DOOR: '#5D6D7E'
     };
 
     constructor() {
@@ -78,9 +86,27 @@ export class MapManager {
                 const color = this.getTileColor(tile);
                 renderer.drawRect(screenX, screenY, this.tileSize, this.tileSize, color);
 
-                // 벽 테두리 (깊이감)
+                // 타일 테두리 및 효과
+                const borderColor = this.getTileBorderColor(tile);
+                renderer.drawRectOutline(screenX, screenY, this.tileSize, this.tileSize, borderColor, 1);
+
+                // 벽에 입체감 추가 (그라데이션 효과)
                 if (tile === 0) {
-                    renderer.drawRectOutline(screenX, screenY, this.tileSize, this.tileSize, '#000000', 1);
+                    const ctx = renderer.getContext();
+                    const gradient = ctx.createLinearGradient(screenX, screenY, screenX, screenY + this.tileSize);
+                    gradient.addColorStop(0, 'rgba(255, 255, 255, 0.1)');
+                    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(screenX, screenY, this.tileSize, this.tileSize);
+                }
+
+                // 바닥 텍스처 (체크 패턴)
+                if (tile === 1 || tile === 2) {
+                    const tileX_checker = x % 2;
+                    const tileY_checker = y % 2;
+                    if ((tileX_checker + tileY_checker) % 2 === 0) {
+                        renderer.drawRect(screenX, screenY, this.tileSize, this.tileSize, 'rgba(0, 0, 0, 0.05)');
+                    }
                 }
             }
         }
@@ -101,6 +127,19 @@ export class MapManager {
             case 2: return this.TILE_COLORS.CORRIDOR;
             case 3: return this.TILE_COLORS.DOOR;
             default: return this.TILE_COLORS.WALL;
+        }
+    }
+
+    /**
+     * 타일 테두리 색상
+     */
+    private getTileBorderColor(tileType: TileType): string {
+        switch (tileType) {
+            case 0: return this.TILE_BORDERS.WALL;
+            case 1: return this.TILE_BORDERS.FLOOR;
+            case 2: return this.TILE_BORDERS.CORRIDOR;
+            case 3: return this.TILE_BORDERS.DOOR;
+            default: return this.TILE_BORDERS.WALL;
         }
     }
 

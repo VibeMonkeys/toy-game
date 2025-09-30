@@ -426,23 +426,36 @@ class Game {
 
         // 플레이어 렌더링 (화면 좌표로 변환)
         const playerScreen = this.camera.worldToScreen(this.player.x, this.player.y);
-        this.renderer.drawRect(
-            playerScreen.x,
-            playerScreen.y,
-            32,
-            32,
+
+        // 플레이어 그림자
+        this.renderer.drawCircle(
+            playerScreen.x + 16,
+            playerScreen.y + 28,
+            12,
+            'rgba(0, 0, 0, 0.3)'
+        );
+
+        // 플레이어 몸체 (원형)
+        this.renderer.drawCircle(
+            playerScreen.x + 16,
+            playerScreen.y + 16,
+            14,
             GAMEPLAY.PLAYER_BASE.COLOR
         );
 
         // 플레이어 테두리
-        this.renderer.drawRectOutline(
-            playerScreen.x,
-            playerScreen.y,
-            32,
-            32,
-            '#000000',
-            2
-        );
+        const ctx = this.renderer.getContext();
+        ctx.strokeStyle = '#2C3E50';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(playerScreen.x + 16, playerScreen.y + 16, 14, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // 방향 표시 (작은 점)
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath();
+        ctx.arc(playerScreen.x + 16, playerScreen.y + 10, 3, 0, Math.PI * 2);
+        ctx.fill();
 
         // 적 렌더링 (화면 좌표로 변환)
         for (const enemy of this.enemies) {
@@ -514,63 +527,139 @@ class Game {
 
         const stats = this.player.stats;
         const levelInfo = this.player.getLevelInfo();
+        const ctx = this.renderer.getContext();
 
-        // 레벨 표시
+        // HUD 배경 (반투명 패널)
+        ctx.fillStyle = 'rgba(44, 62, 80, 0.85)';
+        ctx.fillRect(10, 10, 280, 150);
+        ctx.strokeStyle = '#34495E';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(10, 10, 280, 150);
+
+        // 레벨 표시 (큰 원형 배지)
+        ctx.fillStyle = '#2C3E50';
+        ctx.beginPath();
+        ctx.arc(40, 40, 25, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
         this.renderer.drawText(
-            `Lv.${levelInfo.level}`,
-            20,
-            20,
-            'bold 18px Arial',
+            `${levelInfo.level}`,
+            40,
+            48,
+            'bold 24px Arial',
             '#FFD700',
+            'center'
+        );
+
+        // 플레이어 이름
+        this.renderer.drawText(
+            '최진안',
+            75,
+            35,
+            'bold 16px Arial',
+            '#ECF0F1',
             'left'
         );
 
-        // 체력바
-        this.renderer.drawHealthBar(20, 30, 250, 25, stats.health, stats.maxHealth);
         this.renderer.drawText(
-            `${Math.floor(stats.health)} / ${stats.maxHealth}`,
-            145,
-            48,
-            '14px Arial',
-            '#ffffff',
-            'center'
+            `모험가`,
+            75,
+            50,
+            '12px Arial',
+            '#BDC3C7',
+            'left'
+        );
+
+        // 체력바 (그라데이션)
+        this.renderer.drawHealthBar(20, 70, 260, 18, stats.health, stats.maxHealth);
+        this.renderer.drawText(
+            `HP ${Math.floor(stats.health)} / ${stats.maxHealth}`,
+            25,
+            82,
+            'bold 11px Arial',
+            '#FFFFFF',
+            'left'
         );
 
         // 마나바
-        this.renderer.drawManaBar(20, 65, 250, 20, stats.mana, stats.maxMana);
+        this.renderer.drawManaBar(20, 95, 260, 14, stats.mana, stats.maxMana);
+        this.renderer.drawText(
+            `MP ${Math.floor(stats.mana)}`,
+            25,
+            105,
+            '10px Arial',
+            '#FFFFFF',
+            'left'
+        );
 
         // 스태미나바
-        this.renderer.drawStaminaBar(20, 95, 250, 20, stats.stamina, stats.maxStamina);
+        this.renderer.drawStaminaBar(20, 115, 260, 14, stats.stamina, stats.maxStamina);
+        this.renderer.drawText(
+            `SP ${Math.floor(stats.stamina)}`,
+            25,
+            125,
+            '10px Arial',
+            '#FFFFFF',
+            'left'
+        );
 
         // 경험치바
-        this.renderer.drawExperienceBar(20, 125, 250, 15, levelInfo.experience, levelInfo.experienceToNextLevel);
+        this.renderer.drawExperienceBar(20, 135, 260, 12, levelInfo.experience, levelInfo.experienceToNextLevel);
         this.renderer.drawText(
-            `EXP: ${levelInfo.experience} / ${levelInfo.experienceToNextLevel}`,
-            145,
-            137,
-            '12px Arial',
-            '#ffffff',
-            'center'
+            `EXP ${levelInfo.experience} / ${levelInfo.experienceToNextLevel}`,
+            25,
+            144,
+            '9px Arial',
+            '#FFFFFF',
+            'left'
         );
+
+        // 층수 및 적 수 패널 (우측 상단)
+        ctx.fillStyle = 'rgba(44, 62, 80, 0.85)';
+        ctx.fillRect(SCREEN.WIDTH - 170, 10, 160, 80);
+        ctx.strokeStyle = '#34495E';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(SCREEN.WIDTH - 170, 10, 160, 80);
 
         // 층수 표시
         this.renderer.drawText(
-            `층: ${this.currentFloor}`,
-            SCREEN.WIDTH - 20,
+            `🏰 층수`,
+            SCREEN.WIDTH - 150,
             30,
+            'bold 14px Arial',
+            '#ECF0F1',
+            'left'
+        );
+
+        this.renderer.drawText(
+            `${this.currentFloor} / ${GAMEPLAY.MAX_FLOORS}`,
+            SCREEN.WIDTH - 150,
+            50,
             'bold 24px Arial',
-            '#ffffff',
-            'right'
+            '#3498DB',
+            'left'
         );
 
         // 적 수
         this.renderer.drawText(
-            `적: ${this.enemies.length}`,
-            SCREEN.WIDTH - 20,
-            60,
-            '20px Arial',
-            '#ff4444',
-            'right'
+            `👹 적`,
+            SCREEN.WIDTH - 150,
+            70,
+            '12px Arial',
+            '#ECF0F1',
+            'left'
+        );
+
+        this.renderer.drawText(
+            `${this.enemies.length}`,
+            SCREEN.WIDTH - 40,
+            70,
+            'bold 16px Arial',
+            this.enemies.length > 0 ? '#E74C3C' : '#27AE60',
+            'center'
         );
 
         // 콤보 카운트
