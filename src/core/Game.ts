@@ -8,6 +8,8 @@ import { GameMode } from '../types';
 import { GAME_MODES, SCREEN, GAMEPLAY } from '../utils/Constants';
 import { InputManager } from '../systems/InputManager';
 import { Renderer } from '../systems/Renderer';
+import { MapManager } from '../systems/MapManager';
+import { Camera } from '../systems/Camera';
 import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
 
@@ -18,6 +20,8 @@ class Game {
 
     // 시스템
     private inputManager: InputManager;
+    private mapManager: MapManager;
+    private camera: Camera;
 
     // 게임 상태
     private gameMode: GameMode = GameMode.LOADING;
@@ -51,6 +55,8 @@ class Game {
         // 시스템 초기화
         this.renderer = new Renderer(this.canvas);
         this.inputManager = new InputManager();
+        this.mapManager = new MapManager();
+        this.camera = new Camera();
 
         // 게임 초기화
         this.init();
@@ -149,9 +155,11 @@ class Game {
     private updateGameplay(): void {
         if (!this.player) return;
 
-        // 플레이어 이동
+        // 플레이어 이동 (충돌 체크 포함)
         const movement = this.inputManager.getMovementInput();
-        this.player.move(movement, this.deltaTime);
+        this.player.move(movement, this.deltaTime, (x, y, w, h) => {
+            return this.mapManager.isColliding(x, y, w, h);
+        });
 
         // 플레이어 공격
         if (this.inputManager.isAttackPressed()) {
@@ -167,6 +175,10 @@ class Game {
 
         // 플레이어 업데이트
         this.player.update(this.deltaTime);
+
+        // 카메라 업데이트 (플레이어 따라가기)
+        this.camera.setTarget(this.player.getPosition());
+        this.camera.update();
 
         // 적 업데이트
         for (let i = this.enemies.length - 1; i >= 0; i--) {
@@ -310,12 +322,24 @@ class Game {
     private renderGameplay(): void {
         if (!this.player) return;
 
-        // 플레이어 렌더링
-        this.player.render(this.renderer);
+        const cameraPos = this.camera.getPosition();
 
-        // 적 렌더링
+        // 맵 렌더링 (카메라 적용)
+        this.mapManager.render(this.renderer, cameraPos.x, cameraPos.y);
+
+        // 플레이어 렌더링 (화면 좌표로 변환)
+        const playerScreen = this.camera.worldToScreen(this.player.x, this.player.y);
+        this.renderer.drawCircle(
+            playerScreen.x + 16, // 중앙
+            playerScreen.y + 16,
+            16,
+            GAMEPLAY.PLAYER_BASE.COLOR
+        );
+
+        // 적 렌더링 (화면 좌표로 변환)
         for (const enemy of this.enemies) {
-            enemy.render(this.renderer);
+            const enemyScreen = this.camera.worldToScreen(enemy.x, enemy.y);
+            enemy.renderAtPosition(this.renderer, enemyScreen.x, enemyScreen.y);
         }
 
         // HUD 렌더링
@@ -480,11 +504,15 @@ class Game {
 
         this.currentFloor = 1;
 
-        // 플레이어 생성
-        this.player = new Player(SCREEN.CENTER_X, SCREEN.CENTER_Y);
-
         // 첫 번째 층 생성
         this.generateFloor(1);
+
+        // 플레이어 생성 (맵 스폰 위치)
+        const spawnPos = this.mapManager.getPlayerSpawnPosition();
+        this.player = new Player(spawnPos.x, spawnPos.y);
+
+        // 카메라를 플레이어 위치로 즉시 이동
+        this.camera.snapToTarget(this.player.getPosition());
 
         // 게임플레이 모드로 전환
         this.changeGameMode(GameMode.PLAYING);
@@ -496,22 +524,23 @@ class Game {
     private generateFloor(floor: number): void {
         console.log(`🗺️ ${floor}층 생성 중...`);
 
+        // 던전 맵 생성
+        const dungeonMap = this.mapManager.generateFloor(floor);
+
+        // 카메라 맵 경계 설정
+        const mapSize = this.mapManager.getMapSize();
+        this.camera.setMapBounds(mapSize.width, mapSize.height);
+
         // 적 초기화
         this.enemies = [];
 
-        // 적 수 계산 (층수에 따라 증가)
-        const enemyCount = 3 + floor * 2;
-
-        // 적 생성 (랜덤 위치)
-        for (let i = 0; i < enemyCount; i++) {
-            const x = 200 + Math.random() * (SCREEN.WIDTH - 400);
-            const y = 200 + Math.random() * (SCREEN.HEIGHT - 400);
-
-            const enemyType = this.getRandomEnemyType(floor);
-            this.enemies.push(new Enemy(x, y, enemyType));
+        // 맵에서 생성된 적 스폰 포인트로 적 배치
+        const enemySpawns = this.mapManager.getEnemySpawnPoints();
+        for (const spawn of enemySpawns) {
+            this.enemies.push(new Enemy(spawn.x, spawn.y, spawn.type as any));
         }
 
-        console.log(`✅ ${enemyCount}마리 적 생성 완료`);
+        console.log(`✅ ${this.enemies.length}마리 적 생성 완료`);
     }
 
     /**

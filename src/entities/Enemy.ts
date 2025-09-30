@@ -199,12 +199,19 @@ export class Enemy {
      * 렌더링
      */
     render(renderer: Renderer): void {
+        this.renderAtPosition(renderer, this.x, this.y);
+    }
+
+    /**
+     * 특정 위치에 렌더링 (카메라용)
+     */
+    renderAtPosition(renderer: Renderer, x: number, y: number): void {
         const data = this.getEnemyData(this.type);
 
         // 적 몸체
         renderer.drawRect(
-            this.x - this.width / 2,
-            this.y - this.height / 2,
+            x - this.width / 2,
+            y - this.height / 2,
             this.width,
             this.height,
             data.color
@@ -212,8 +219,8 @@ export class Enemy {
 
         // 테두리
         renderer.drawRectOutline(
-            this.x - this.width / 2,
-            this.y - this.height / 2,
+            x - this.width / 2,
+            y - this.height / 2,
             this.width,
             this.height,
             '#000000',
@@ -223,8 +230,8 @@ export class Enemy {
         // 체력바
         if (this.health < this.maxHealth) {
             renderer.drawHealthBar(
-                this.x - this.width / 2,
-                this.y - this.height / 2 - 8,
+                x - this.width / 2,
+                y - this.height / 2 - 8,
                 this.width,
                 4,
                 this.health,

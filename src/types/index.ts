@@ -231,6 +231,68 @@ export interface ExitPoint {
 }
 
 // ============================================
+// BSP 던전 생성 시스템
+// ============================================
+export enum TileType {
+    WALL = 0,
+    FLOOR = 1,
+    CORRIDOR = 2,
+    DOOR = 3
+}
+
+export enum RoomType {
+    START = 'start',
+    EXIT = 'exit',
+    COMBAT = 'combat',
+    BOSS = 'boss',
+    TREASURE = 'treasure',
+    SHOP = 'shop',
+    SHRINE = 'shrine',
+    SECRET = 'secret'
+}
+
+export interface Rectangle {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}
+
+export interface Room {
+    bounds: Rectangle;
+    center: Position;
+    type: RoomType;
+    connections: Room[];
+}
+
+export interface BSPNode {
+    bounds: Rectangle;
+    room: Room | null;
+    leftChild: BSPNode | null;
+    rightChild: BSPNode | null;
+}
+
+export interface DungeonMap {
+    width: number;
+    height: number;
+    tiles: TileType[][];
+    rooms: Room[];
+    startRoom: Room;
+    exitRoom: Room;
+    spawnPoints: SpawnPoints;
+}
+
+export interface MapGenerationConfig {
+    width: number;
+    height: number;
+    minRoomSize: Size;
+    maxRoomSize: Size;
+    roomCount: { min: number; max: number };
+    corridorWidth: number;
+    maxDepth: number;
+}
+
+// ============================================
 // NPC & 대화 시스템
 // ============================================
 export interface DialogueLine {

@@ -77,14 +77,32 @@ export class Player {
     /**
      * 이동
      */
-    move(direction: Vector2D, deltaTime: number): void {
+    move(direction: Vector2D, deltaTime: number, collisionCheck?: (x: number, y: number, w: number, h: number) => boolean): void {
         if (this.isDodging) return;
 
         this.velocity.x = direction.x * this.stats.speed;
         this.velocity.y = direction.y * this.stats.speed;
 
-        this.x += this.velocity.x * deltaTime;
-        this.y += this.velocity.y * deltaTime;
+        // 새 위치 계산
+        const newX = this.x + this.velocity.x * deltaTime;
+        const newY = this.y + this.velocity.y * deltaTime;
+
+        // 충돌 체크 (있으면)
+        if (collisionCheck) {
+            // X축 이동 체크
+            if (!collisionCheck(newX, this.y, this.width, this.height)) {
+                this.x = newX;
+            }
+
+            // Y축 이동 체크
+            if (!collisionCheck(this.x, newY, this.width, this.height)) {
+                this.y = newY;
+            }
+        } else {
+            // 충돌 체크 없으면 그냥 이동
+            this.x = newX;
+            this.y = newY;
+        }
     }
 
     /**
