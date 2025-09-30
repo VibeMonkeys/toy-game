@@ -208,10 +208,10 @@ export class Enemy {
     renderAtPosition(renderer: Renderer, x: number, y: number): void {
         const data = this.getEnemyData(this.type);
 
-        // 적 몸체
+        // 적 몸체 (x, y는 좌상단)
         renderer.drawRect(
-            x - this.width / 2,
-            y - this.height / 2,
+            x,
+            y,
             this.width,
             this.height,
             data.color
@@ -219,8 +219,8 @@ export class Enemy {
 
         // 테두리
         renderer.drawRectOutline(
-            x - this.width / 2,
-            y - this.height / 2,
+            x,
+            y,
             this.width,
             this.height,
             '#000000',
@@ -230,8 +230,8 @@ export class Enemy {
         // 체력바
         if (this.health < this.maxHealth) {
             renderer.drawHealthBar(
-                x - this.width / 2,
-                y - this.height / 2 - 8,
+                x,
+                y - 8,
                 this.width,
                 4,
                 this.health,

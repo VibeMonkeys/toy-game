@@ -80,6 +80,9 @@ export class Player {
     move(direction: Vector2D, deltaTime: number, collisionCheck?: (x: number, y: number, w: number, h: number) => boolean): void {
         if (this.isDodging) return;
 
+        // 이동 방향이 없으면 리턴
+        if (direction.x === 0 && direction.y === 0) return;
+
         this.velocity.x = direction.x * this.stats.speed;
         this.velocity.y = direction.y * this.stats.speed;
 

@@ -42,7 +42,8 @@ export const GAMEPLAY = {
         SPEED: 150,  // pixels per second
         CRITICAL_CHANCE: 0.15,
         CRITICAL_DAMAGE: 1.5,
-        LUCK: 0
+        LUCK: 0,
+        COLOR: '#4A90E2'  // 파란색
     },
 
     // 소울 포인트 계산

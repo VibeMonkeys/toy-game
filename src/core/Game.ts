@@ -351,11 +351,22 @@ class Game {
 
         // 플레이어 렌더링 (화면 좌표로 변환)
         const playerScreen = this.camera.worldToScreen(this.player.x, this.player.y);
-        this.renderer.drawCircle(
-            playerScreen.x + 16, // 중앙
-            playerScreen.y + 16,
-            16,
+        this.renderer.drawRect(
+            playerScreen.x,
+            playerScreen.y,
+            32,
+            32,
             GAMEPLAY.PLAYER_BASE.COLOR
+        );
+
+        // 플레이어 테두리
+        this.renderer.drawRectOutline(
+            playerScreen.x,
+            playerScreen.y,
+            32,
+            32,
+            '#000000',
+            2
         );
 
         // 적 렌더링 (화면 좌표로 변환)
