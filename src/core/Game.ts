@@ -441,35 +441,64 @@ class Game {
 
         // 플레이어 렌더링 (화면 좌표로 변환)
         const playerScreen = this.camera.worldToScreen(this.player.x, this.player.y);
-
-        // 플레이어 그림자
-        this.renderer.drawCircle(
-            playerScreen.x + 16,
-            playerScreen.y + 28,
-            12,
-            'rgba(0, 0, 0, 0.3)'
-        );
-
-        // 플레이어 몸체 (원형)
-        this.renderer.drawCircle(
-            playerScreen.x + 16,
-            playerScreen.y + 16,
-            14,
-            GAMEPLAY.PLAYER_BASE.COLOR
-        );
-
-        // 플레이어 테두리
         const ctx = this.renderer.getContext();
-        ctx.strokeStyle = '#2C3E50';
-        ctx.lineWidth = 2;
+
+        // 플레이어 그림자 (타원형)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+        ctx.beginPath();
+        ctx.ellipse(playerScreen.x + 16, playerScreen.y + 30, 14, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 플레이어 몸체 (그라데이션)
+        const playerGradient = ctx.createRadialGradient(
+            playerScreen.x + 16, playerScreen.y + 14,
+            0,
+            playerScreen.x + 16, playerScreen.y + 16,
+            16
+        );
+        playerGradient.addColorStop(0, '#6AB8F5');
+        playerGradient.addColorStop(0.7, GAMEPLAY.PLAYER_BASE.COLOR);
+        playerGradient.addColorStop(1, '#2C5F8D');
+
+        ctx.fillStyle = playerGradient;
+        ctx.beginPath();
+        ctx.arc(playerScreen.x + 16, playerScreen.y + 16, 14, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 플레이어 하이라이트
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.beginPath();
+        ctx.arc(playerScreen.x + 13, playerScreen.y + 13, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 플레이어 테두리 (이중)
+        ctx.strokeStyle = '#1A3A5C';
+        ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.arc(playerScreen.x + 16, playerScreen.y + 16, 14, 0, Math.PI * 2);
         ctx.stroke();
 
-        // 방향 표시 (작은 점)
+        ctx.strokeStyle = '#6AB8F5';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(playerScreen.x + 16, playerScreen.y + 16, 15, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // 방향 표시 (발광 점)
+        const dirGradient = ctx.createRadialGradient(
+            playerScreen.x + 16, playerScreen.y + 9,
+            0,
+            playerScreen.x + 16, playerScreen.y + 9,
+            5
+        );
+        dirGradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+        dirGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = dirGradient;
+        ctx.fillRect(playerScreen.x + 11, playerScreen.y + 4, 10, 10);
+
         ctx.fillStyle = '#FFFFFF';
         ctx.beginPath();
-        ctx.arc(playerScreen.x + 16, playerScreen.y + 10, 3, 0, Math.PI * 2);
+        ctx.arc(playerScreen.x + 16, playerScreen.y + 9, 3, 0, Math.PI * 2);
         ctx.fill();
 
         // 적 렌더링 (화면 좌표로 변환)

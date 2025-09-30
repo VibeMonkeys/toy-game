@@ -222,63 +222,134 @@ export class Enemy {
      */
     renderAtPosition(renderer: Renderer, x: number, y: number): void {
         const data = this.getEnemyData(this.type);
+        const ctx = renderer.getContext();
+        const centerX = x + this.width / 2;
+        const centerY = y + this.height / 2;
 
-        // 보스면 붉은 오라
+        // 그림자
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.beginPath();
+        ctx.ellipse(centerX, y + this.height + 2, this.width / 2, this.height / 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 보스면 붉은 오라 (발광 효과)
         if (this.isBoss) {
             const pulse = Math.sin(Date.now() / 200) * 0.3 + 0.7;
-            renderer.getContext().globalAlpha = pulse * 0.5;
-            renderer.drawRect(
-                x - 4,
-                y - 4,
-                this.width + 8,
-                this.height + 8,
-                '#FF0000'
+            const auraGradient = ctx.createRadialGradient(
+                centerX, centerY, 0,
+                centerX, centerY, this.width
             );
-            renderer.getContext().globalAlpha = 1.0;
+            auraGradient.addColorStop(0, `rgba(255, 0, 0, ${pulse * 0.3})`);
+            auraGradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
+            ctx.fillStyle = auraGradient;
+            ctx.fillRect(x - 10, y - 10, this.width + 20, this.height + 20);
         }
 
-        // 적 몸체 (x, y는 좌상단)
-        renderer.drawRect(
-            x,
-            y,
-            this.width,
-            this.height,
-            this.isBoss ? '#8B0000' : data.color
+        // 적 몸체 (그라데이션)
+        const bodyGradient = ctx.createRadialGradient(
+            centerX, centerY - 5,
+            0,
+            centerX, centerY,
+            this.width / 2
         );
+        const baseColor = this.isBoss ? '#8B0000' : data.color;
+        bodyGradient.addColorStop(0, this.lightenColor(baseColor, 20));
+        bodyGradient.addColorStop(0.7, baseColor);
+        bodyGradient.addColorStop(1, this.darkenColor(baseColor, 20));
 
-        // 테두리
-        renderer.drawRectOutline(
-            x,
-            y,
-            this.width,
-            this.height,
-            this.isBoss ? '#FF0000' : '#000000',
-            this.isBoss ? 3 : 2
-        );
+        ctx.fillStyle = bodyGradient;
+        ctx.fillRect(x, y, this.width, this.height);
 
-        // 보스 라벨
+        // 하이라이트
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.beginPath();
+        ctx.arc(x + this.width * 0.3, y + this.height * 0.3, this.width * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 테두리 (이중)
+        ctx.strokeStyle = this.darkenColor(baseColor, 30);
+        ctx.lineWidth = this.isBoss ? 3 : 2;
+        ctx.strokeRect(x, y, this.width, this.height);
+
         if (this.isBoss) {
+            ctx.strokeStyle = '#FF0000';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x - 1, y - 1, this.width + 2, this.height + 2);
+        }
+
+        // 눈 (위협적인 느낌)
+        ctx.fillStyle = this.isBoss ? '#FFFF00' : '#FF0000';
+        const eyeY = y + this.height * 0.4;
+        ctx.beginPath();
+        ctx.arc(x + this.width * 0.35, eyeY, 3, 0, Math.PI * 2);
+        ctx.arc(x + this.width * 0.65, eyeY, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 보스 라벨 (더 화려하게)
+        if (this.isBoss) {
+            const pulse = Math.sin(Date.now() / 200) * 0.3 + 0.7;
+
+            // 배경
+            ctx.fillStyle = `rgba(0, 0, 0, ${pulse * 0.7})`;
+            ctx.fillRect(centerX - 30, y - 25, 60, 18);
+
+            // 텍스트
             renderer.drawText(
-                'BOSS',
-                x + this.width / 2,
-                y - 15,
-                'bold 12px Arial',
-                '#FF0000',
+                '👑 BOSS',
+                centerX,
+                y - 12,
+                'bold 14px Arial',
+                `rgba(255, ${Math.floor(pulse * 100)}, 0, 1)`,
                 'center'
             );
         }
 
-        // 체력바
+        // 체력바 (더 세련되게)
         if (this.health < this.maxHealth) {
-            renderer.drawHealthBar(
-                x,
-                y - 8,
-                this.width,
-                6,
-                this.health,
-                this.maxHealth
-            );
+            const barWidth = this.width;
+            const barHeight = 6;
+            const barX = x;
+            const barY = y - 10;
+
+            // 배경
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(barX, barY, barWidth, barHeight);
+
+            // 체력
+            const healthRatio = this.health / this.maxHealth;
+            const healthColor = healthRatio > 0.5 ? '#4CAF50' : healthRatio > 0.25 ? '#FF9800' : '#F44336';
+            ctx.fillStyle = healthColor;
+            ctx.fillRect(barX, barY, barWidth * healthRatio, barHeight);
+
+            // 테두리
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(barX, barY, barWidth, barHeight);
         }
+    }
+
+    /**
+     * 색상 밝게
+     */
+    private lightenColor(color: string, percent: number): string {
+        const num = parseInt(color.replace('#', ''), 16);
+        const amt = Math.round(2.55 * percent);
+        const R = Math.min(255, (num >> 16) + amt);
+        const G = Math.min(255, (num >> 8 & 0x00FF) + amt);
+        const B = Math.min(255, (num & 0x0000FF) + amt);
+        return `#${(0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1)}`;
+    }
+
+    /**
+     * 색상 어둡게
+     */
+    private darkenColor(color: string, percent: number): string {
+        const num = parseInt(color.replace('#', ''), 16);
+        const amt = Math.round(2.55 * percent);
+        const R = Math.max(0, (num >> 16) - amt);
+        const G = Math.max(0, (num >> 8 & 0x00FF) - amt);
+        const B = Math.max(0, (num & 0x0000FF) - amt);
+        return `#${(0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1)}`;
     }
 
     /**

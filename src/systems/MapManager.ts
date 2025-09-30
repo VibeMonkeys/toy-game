@@ -15,21 +15,28 @@ export class MapManager {
     private currentMap: DungeonMap | null = null;
     private tileSize: number = 32; // 타일 크기 (픽셀)
 
-    // 타일 색상 (더 밝고 선명하게)
+    // 타일 색상 (RPG 스타일 - 더 생동감 있게)
     private readonly TILE_COLORS = {
-        WALL: '#2C3E50',        // 진한 청회색 벽
-        FLOOR: '#34495E',       // 중간 회색 바닥
-        CORRIDOR: '#455A64',    // 복도
-        DOOR: '#7F8C8D'        // 문
+        WALL: '#1a1a2e',        // 어두운 던전 벽
+        FLOOR: '#2d3142',       // 돌바닥
+        CORRIDOR: '#3a3f51',    // 복도
+        DOOR: '#8b6f47'         // 나무 문
     };
 
     // 타일 테두리 색상
     private readonly TILE_BORDERS = {
-        WALL: '#1A252F',
-        FLOOR: '#2C3E50',
-        CORRIDOR: '#37474F',
-        DOOR: '#5D6D7E'
+        WALL: '#0f0f1a',
+        FLOOR: '#1a1d2e',
+        CORRIDOR: '#252836',
+        DOOR: '#5c4a30'
     };
+
+    // 벽 하이라이트 색상
+    private readonly WALL_HIGHLIGHTS = [
+        '#2d2d4a',
+        '#25253d',
+        '#1e1e32'
+    ];
 
     constructor() {
         this.dungeonGenerator = new DungeonGenerator({
@@ -82,32 +89,88 @@ export class MapManager {
                 const screenX = x * this.tileSize - cameraX;
                 const screenY = y * this.tileSize - cameraY;
 
-                // 타일 그리기
+                const ctx = renderer.getContext();
+
+                // 타일 기본 색상
                 const color = this.getTileColor(tile);
                 renderer.drawRect(screenX, screenY, this.tileSize, this.tileSize, color);
 
-                // 타일 테두리 및 효과
-                const borderColor = this.getTileBorderColor(tile);
-                renderer.drawRectOutline(screenX, screenY, this.tileSize, this.tileSize, borderColor, 1);
-
-                // 벽에 입체감 추가 (그라데이션 효과)
+                // 벽 타일 (복잡한 텍스처)
                 if (tile === 0) {
-                    const ctx = renderer.getContext();
-                    const gradient = ctx.createLinearGradient(screenX, screenY, screenX, screenY + this.tileSize);
-                    gradient.addColorStop(0, 'rgba(255, 255, 255, 0.1)');
+                    // 어두운 그라데이션
+                    const gradient = ctx.createLinearGradient(screenX, screenY, screenX + this.tileSize, screenY + this.tileSize);
+                    gradient.addColorStop(0, 'rgba(0, 0, 0, 0.4)');
+                    gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.05)');
                     gradient.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
                     ctx.fillStyle = gradient;
                     ctx.fillRect(screenX, screenY, this.tileSize, this.tileSize);
+
+                    // 돌 텍스처 (랜덤 점들)
+                    const seed = x * 1000 + y;
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+                    for (let i = 0; i < 3; i++) {
+                        const px = screenX + ((seed * (i + 1) * 13) % this.tileSize);
+                        const py = screenY + ((seed * (i + 2) * 17) % this.tileSize);
+                        ctx.fillRect(px, py, 2, 2);
+                    }
+
+                    // 벽 윤곽선 하이라이트
+                    const highlightColor = this.WALL_HIGHLIGHTS[seed % this.WALL_HIGHLIGHTS.length];
+                    ctx.strokeStyle = highlightColor;
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(screenX + 1, screenY + 1, this.tileSize - 2, this.tileSize - 2);
                 }
 
-                // 바닥 텍스처 (체크 패턴)
+                // 바닥 타일 (돌 패턴)
                 if (tile === 1 || tile === 2) {
+                    // 교차 패턴
                     const tileX_checker = x % 2;
                     const tileY_checker = y % 2;
                     if ((tileX_checker + tileY_checker) % 2 === 0) {
-                        renderer.drawRect(screenX, screenY, this.tileSize, this.tileSize, 'rgba(0, 0, 0, 0.05)');
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                        ctx.fillRect(screenX, screenY, this.tileSize, this.tileSize);
                     }
+
+                    // 돌 금 (균열)
+                    const seed = x * 1000 + y;
+                    if (seed % 7 === 0) {
+                        ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(screenX + 5, screenY + 10);
+                        ctx.lineTo(screenX + this.tileSize - 5, screenY + 20);
+                        ctx.stroke();
+                    }
+
+                    // 미묘한 하이라이트
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
+                    ctx.fillRect(screenX, screenY, this.tileSize / 2, this.tileSize / 2);
                 }
+
+                // 문 타일 (나무 질감)
+                if (tile === 3) {
+                    // 나무 결
+                    ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+                    ctx.lineWidth = 2;
+                    for (let i = 0; i < 3; i++) {
+                        ctx.beginPath();
+                        ctx.moveTo(screenX, screenY + i * 10 + 5);
+                        ctx.lineTo(screenX + this.tileSize, screenY + i * 10 + 5);
+                        ctx.stroke();
+                    }
+
+                    // 문 손잡이
+                    ctx.fillStyle = '#3d3d3d';
+                    ctx.beginPath();
+                    ctx.arc(screenX + this.tileSize - 8, screenY + this.tileSize / 2, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // 타일 테두리
+                const borderColor = this.getTileBorderColor(tile);
+                ctx.strokeStyle = borderColor;
+                ctx.lineWidth = 1;
+                ctx.strokeRect(screenX, screenY, this.tileSize, this.tileSize);
             }
         }
 
