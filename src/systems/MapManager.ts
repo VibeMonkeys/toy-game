@@ -15,27 +15,27 @@ export class MapManager {
     private currentMap: DungeonMap | null = null;
     private tileSize: number = 32; // 타일 크기 (픽셀)
 
-    // 타일 색상 (RPG 스타일 - 더 생동감 있게)
+    // 타일 색상 (동굴 스타일 - 벽은 갈색, 바닥은 회색)
     private readonly TILE_COLORS = {
-        WALL: '#1a1a2e',        // 어두운 던전 벽
-        FLOOR: '#2d3142',       // 돌바닥
+        WALL: '#5c4033',        // 갈색 동굴 벽
+        FLOOR: '#2d3142',       // 회색 돌바닥
         CORRIDOR: '#3a3f51',    // 복도
         DOOR: '#8b6f47'         // 나무 문
     };
 
     // 타일 테두리 색상
     private readonly TILE_BORDERS = {
-        WALL: '#0f0f1a',
+        WALL: '#3d2b1f',        // 진한 갈색
         FLOOR: '#1a1d2e',
         CORRIDOR: '#252836',
         DOOR: '#5c4a30'
     };
 
-    // 벽 하이라이트 색상
+    // 벽 하이라이트 색상 (흙/바위 느낌)
     private readonly WALL_HIGHLIGHTS = [
-        '#2d2d4a',
-        '#25253d',
-        '#1e1e32'
+        '#7d5c4a',
+        '#6b4e3d',
+        '#8a6a52'
     ];
 
     constructor() {
@@ -95,26 +95,34 @@ export class MapManager {
                 const color = this.getTileColor(tile);
                 renderer.drawRect(screenX, screenY, this.tileSize, this.tileSize, color);
 
-                // 벽 타일 (복잡한 텍스처)
+                // 벽 타일 (동굴 갈색 텍스처)
                 if (tile === 0) {
-                    // 어두운 그라데이션
+                    // 갈색 그라데이션 (흙/바위 느낌)
                     const gradient = ctx.createLinearGradient(screenX, screenY, screenX + this.tileSize, screenY + this.tileSize);
-                    gradient.addColorStop(0, 'rgba(0, 0, 0, 0.4)');
-                    gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.05)');
-                    gradient.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
+                    gradient.addColorStop(0, 'rgba(139, 90, 43, 0.4)');  // 밝은 갈색
+                    gradient.addColorStop(0.5, 'rgba(92, 64, 51, 0.1)');  // 중간 갈색
+                    gradient.addColorStop(1, 'rgba(61, 43, 31, 0.3)');    // 어두운 갈색
                     ctx.fillStyle = gradient;
                     ctx.fillRect(screenX, screenY, this.tileSize, this.tileSize);
 
-                    // 돌 텍스처 (랜덤 점들)
+                    // 바위/흙 텍스처 (랜덤 점들 - 갈색 톤)
                     const seed = x * 1000 + y;
-                    ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
-                    for (let i = 0; i < 3; i++) {
+                    ctx.fillStyle = 'rgba(139, 90, 43, 0.15)';  // 밝은 갈색 점
+                    for (let i = 0; i < 5; i++) {
                         const px = screenX + ((seed * (i + 1) * 13) % this.tileSize);
                         const py = screenY + ((seed * (i + 2) * 17) % this.tileSize);
-                        ctx.fillRect(px, py, 2, 2);
+                        ctx.fillRect(px, py, 3, 3);
                     }
 
-                    // 벽 윤곽선 하이라이트
+                    // 어두운 얼룩 (동굴 느낌)
+                    ctx.fillStyle = 'rgba(61, 43, 31, 0.3)';
+                    for (let i = 0; i < 2; i++) {
+                        const px = screenX + ((seed * (i + 3) * 19) % this.tileSize);
+                        const py = screenY + ((seed * (i + 4) * 23) % this.tileSize);
+                        ctx.fillRect(px, py, 4, 4);
+                    }
+
+                    // 벽 윤곽선 하이라이트 (갈색 톤)
                     const highlightColor = this.WALL_HIGHLIGHTS[seed % this.WALL_HIGHLIGHTS.length];
                     ctx.strokeStyle = highlightColor;
                     ctx.lineWidth = 1;
