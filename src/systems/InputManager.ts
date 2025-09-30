@@ -11,6 +11,7 @@ export class InputManager {
     private keys: Set<string> = new Set();
     private mousePos: { x: number; y: number } = { x: 0, y: 0 };
     private mouseButtons: { left: boolean; right: boolean } = { left: false, right: false };
+    private keyJustPressed: Set<string> = new Set();
 
     constructor() {
         this.setupEventListeners();
@@ -19,6 +20,9 @@ export class InputManager {
     private setupEventListeners(): void {
         // 키보드 이벤트
         window.addEventListener('keydown', (e) => {
+            if (!this.keys.has(e.code)) {
+                this.keyJustPressed.add(e.code);
+            }
             this.keys.add(e.code);
         });
 
@@ -96,6 +100,21 @@ export class InputManager {
         return this.isKeyPressed(CONTROLS.SKILL_3);
     }
 
+    // 한 번만 눌림 체크 (토글용)
+    isKeyJustPressed(code: string): boolean {
+        return this.keyJustPressed.has(code);
+    }
+
+    // 인벤토리 토글
+    isInventoryToggled(): boolean {
+        return this.isKeyJustPressed(CONTROLS.INVENTORY);
+    }
+
+    // 프레임 끝에 호출 (just pressed 클리어)
+    clearJustPressed(): void {
+        this.keyJustPressed.clear();
+    }
+
     // 마우스 위치 (캔버스 기준)
     getMousePosition(canvas: HTMLCanvasElement): { x: number; y: number } {
         const rect = canvas.getBoundingClientRect();
@@ -108,5 +127,6 @@ export class InputManager {
     // 정리
     destroy(): void {
         this.keys.clear();
+        this.keyJustPressed.clear();
     }
 }

@@ -4,8 +4,10 @@
  * 플레이어 아이템 관리 (획득, 장착, 사용)
  */
 
-import { Item, ItemType } from './ItemSystem';
+import { Item, ItemType, ItemRarity } from './ItemSystem';
 import type { PlayerStats } from '../types';
+import { Renderer } from './Renderer';
+import { RARITY_COLORS } from '../utils/Constants';
 
 export interface InventorySlot {
     item: Item;
@@ -226,5 +228,166 @@ export class Inventory {
             weapon: null,
             armor: null
         };
+    }
+
+    /**
+     * 인벤토리 UI 렌더링
+     */
+    render(renderer: Renderer, isOpen: boolean = false): void {
+        if (!isOpen) return;
+
+        const ctx = renderer.getContext();
+        const centerX = 640;
+        const centerY = 360;
+        const panelWidth = 600;
+        const panelHeight = 500;
+        const panelX = centerX - panelWidth / 2;
+        const panelY = centerY - panelHeight / 2;
+
+        // 반투명 배경 (전체 화면)
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, 0, 1280, 720);
+
+        // 인벤토리 패널
+        ctx.fillStyle = 'rgba(44, 62, 80, 0.95)';
+        ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
+
+        // 패널 테두리
+        ctx.strokeStyle = '#5D6D7E';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(panelX, panelY, panelWidth, panelHeight);
+
+        // 타이틀 바
+        ctx.fillStyle = 'rgba(52, 73, 94, 0.95)';
+        ctx.fillRect(panelX, panelY, panelWidth, 50);
+        ctx.strokeStyle = '#5D6D7E';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(panelX, panelY, panelWidth, 50);
+
+        // 타이틀
+        ctx.fillStyle = '#ECF0F1';
+        ctx.font = 'bold 24px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText('🎒 인벤토리', panelX + 20, panelY + 35);
+
+        // 슬롯 정보
+        ctx.font = '14px Arial';
+        ctx.fillStyle = '#95A5A6';
+        ctx.textAlign = 'right';
+        ctx.fillText(`${this.slots.length} / ${this.maxSlots}`, panelX + panelWidth - 20, panelY + 35);
+
+        // 장착 아이템 영역
+        const equipX = panelX + 20;
+        const equipY = panelY + 70;
+
+        ctx.fillStyle = '#34495E';
+        ctx.fillRect(equipX, equipY, 250, 150);
+        ctx.strokeStyle = '#5D6D7E';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(equipX, equipY, 250, 150);
+
+        ctx.fillStyle = '#ECF0F1';
+        ctx.font = 'bold 16px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText('⚔️ 장착 아이템', equipX + 10, equipY + 25);
+
+        // 무기 슬롯
+        this.renderEquipmentSlot(ctx, equipX + 10, equipY + 40, '무기', this.equipped.weapon);
+
+        // 방어구 슬롯
+        this.renderEquipmentSlot(ctx, equipX + 10, equipY + 90, '방어구', this.equipped.armor);
+
+        // 인벤토리 슬롯 그리드
+        const slotSize = 60;
+        const slotGap = 10;
+        const slotsPerRow = 8;
+        const gridX = panelX + 20;
+        const gridY = panelY + 240;
+
+        ctx.fillStyle = '#ECF0F1';
+        ctx.font = 'bold 16px Arial';
+        ctx.fillText('📦 보유 아이템', gridX, gridY - 10);
+
+        for (let i = 0; i < this.maxSlots; i++) {
+            const row = Math.floor(i / slotsPerRow);
+            const col = i % slotsPerRow;
+            const x = gridX + col * (slotSize + slotGap);
+            const y = gridY + row * (slotSize + slotGap);
+
+            const slot = this.slots[i];
+            this.renderInventorySlot(ctx, x, y, slotSize, slot);
+        }
+
+        // 안내 문구
+        ctx.fillStyle = '#95A5A6';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('ESC 또는 I 키를 눌러 닫기', centerX, panelY + panelHeight - 15);
+    }
+
+    /**
+     * 장착 슬롯 렌더링
+     */
+    private renderEquipmentSlot(ctx: CanvasRenderingContext2D, x: number, y: number, label: string, item: Item | null): void {
+        // 슬롯 배경
+        ctx.fillStyle = 'rgba(52, 73, 94, 0.8)';
+        ctx.fillRect(x, y, 230, 40);
+        ctx.strokeStyle = item ? RARITY_COLORS[item.rarity] : '#7F8C8D';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, y, 230, 40);
+
+        // 라벨
+        ctx.fillStyle = '#BDC3C7';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText(label, x + 5, y + 15);
+
+        // 아이템 정보
+        if (item) {
+            ctx.fillStyle = RARITY_COLORS[item.rarity];
+            ctx.font = 'bold 14px Arial';
+            ctx.fillText(item.name, x + 5, y + 32);
+        } else {
+            ctx.fillStyle = '#7F8C8D';
+            ctx.font = 'italic 12px Arial';
+            ctx.fillText('- 비어있음 -', x + 5, y + 32);
+        }
+    }
+
+    /**
+     * 인벤토리 슬롯 렌더링
+     */
+    private renderInventorySlot(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, slot?: InventorySlot): void {
+        if (slot) {
+            // 아이템이 있는 슬롯
+            ctx.fillStyle = 'rgba(52, 73, 94, 0.9)';
+            ctx.fillRect(x, y, size, size);
+
+            // 희귀도 테두리
+            ctx.strokeStyle = RARITY_COLORS[slot.item.rarity];
+            ctx.lineWidth = 3;
+            ctx.strokeRect(x, y, size, size);
+
+            // 아이템 이름 (첫 글자)
+            ctx.fillStyle = RARITY_COLORS[slot.item.rarity];
+            ctx.font = 'bold 24px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(slot.item.name.charAt(0), x + size / 2, y + size / 2 + 8);
+
+            // 수량 표시
+            if (slot.quantity > 1) {
+                ctx.fillStyle = '#ECF0F1';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'right';
+                ctx.fillText(`x${slot.quantity}`, x + size - 5, y + size - 5);
+            }
+        } else {
+            // 빈 슬롯
+            ctx.fillStyle = 'rgba(52, 73, 94, 0.5)';
+            ctx.fillRect(x, y, size, size);
+            ctx.strokeStyle = '#5D6D7E';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x, y, size, size);
+        }
     }
 }

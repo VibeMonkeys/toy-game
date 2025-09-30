@@ -36,6 +36,7 @@ class Game {
     private gameMode: GameMode = GameMode.LOADING;
     private isRunning: boolean = false;
     private currentFloor: number = 1;
+    private inventoryOpen: boolean = false;
 
     // 엔티티
     private player: Player | null = null;
@@ -154,6 +155,9 @@ class Game {
                 this.updateGameplay();
                 break;
         }
+
+        // 프레임 끝에 just pressed 클리어
+        this.inputManager.clearJustPressed();
     }
 
     /**
@@ -171,6 +175,17 @@ class Game {
      */
     private updateGameplay(): void {
         if (!this.player) return;
+
+        // 인벤토리 토글 (I 키)
+        if (this.inputManager.isInventoryToggled()) {
+            this.inventoryOpen = !this.inventoryOpen;
+        }
+
+        // 인벤토리가 열려있으면 게임 일시정지
+        if (this.inventoryOpen) {
+            this.inputManager.clearJustPressed();
+            return;
+        }
 
         // 플레이어 이동 (충돌 체크 포함)
         const movement = this.inputManager.getMovementInput();
@@ -517,6 +532,11 @@ class Game {
             this.player.getPosition(),
             this.enemies
         );
+
+        // 인벤토리 렌더링 (I 키로 토글)
+        if (this.inventory) {
+            this.inventory.render(this.renderer, this.inventoryOpen);
+        }
     }
 
     /**
