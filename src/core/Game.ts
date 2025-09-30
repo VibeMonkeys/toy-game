@@ -11,6 +11,8 @@ import { Renderer } from '../systems/Renderer';
 import { MapManager } from '../systems/MapManager';
 import { Camera } from '../systems/Camera';
 import { DamageNumberSystem } from '../systems/DamageNumberSystem';
+import { ItemSystem } from '../systems/ItemSystem';
+import { Inventory } from '../systems/Inventory';
 import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
 
@@ -24,6 +26,8 @@ class Game {
     private mapManager: MapManager;
     private camera: Camera;
     private damageNumberSystem: DamageNumberSystem;
+    private itemSystem: ItemSystem;
+    private inventory: Inventory;
 
     // 게임 상태
     private gameMode: GameMode = GameMode.LOADING;
@@ -60,6 +64,8 @@ class Game {
         this.mapManager = new MapManager();
         this.camera = new Camera();
         this.damageNumberSystem = new DamageNumberSystem();
+        this.itemSystem = new ItemSystem();
+        this.inventory = new Inventory();
 
         // 게임 초기화
         this.init();
@@ -198,6 +204,20 @@ class Game {
         // 데미지 숫자 업데이트
         this.damageNumberSystem.update(this.deltaTime);
 
+        // 아이템 시스템 업데이트
+        this.itemSystem.update(this.deltaTime);
+
+        // 아이템 획득 체크
+        const pickedItem = this.itemSystem.checkPickup(this.player.x, this.player.y);
+        if (pickedItem) {
+            const added = this.inventory.addItem(pickedItem.item);
+            if (added) {
+                console.log(`📦 ${pickedItem.item.name} 획득!`);
+            } else {
+                console.log('❌ 인벤토리가 가득 찼습니다');
+            }
+        }
+
         // 플레이어 사망 체크
         if (this.player.stats.health <= 0) {
             this.handlePlayerDeath();
@@ -273,6 +293,9 @@ class Game {
             expGain,
             false
         );
+
+        // 아이템 드롭
+        this.itemSystem.dropRandomItem(enemy.x, enemy.y, enemy.type, this.currentFloor);
 
         if (leveledUp) {
             console.log(`✨ 레벨업! 현재 레벨: ${this.player.level}`);
@@ -417,6 +440,47 @@ class Game {
         for (const enemy of this.enemies) {
             const enemyScreen = this.camera.worldToScreen(enemy.x, enemy.y);
             enemy.renderAtPosition(this.renderer, enemyScreen.x, enemyScreen.y);
+        }
+
+        // 드롭된 아이템 렌더링
+        for (const droppedItem of this.itemSystem.getDroppedItems()) {
+            const itemScreen = this.camera.worldToScreen(droppedItem.x, droppedItem.y);
+            const color = this.itemSystem.getRarityColor(droppedItem.item.rarity);
+
+            // 아이템 상자 (반짝임 효과)
+            const pulse = Math.sin(Date.now() / 200) * 0.2 + 0.8;
+            this.renderer.drawRect(
+                itemScreen.x - 8,
+                itemScreen.y - 8,
+                16,
+                16,
+                color
+            );
+
+            // 테두리
+            this.renderer.drawRectOutline(
+                itemScreen.x - 8,
+                itemScreen.y - 8,
+                16,
+                16,
+                '#000000',
+                2
+            );
+
+            // 소멸 시간 임박 시 깜빡임
+            if (droppedItem.lifetime > 0.8) {
+                const blink = Math.floor(Date.now() / 200) % 2 === 0;
+                if (blink) {
+                    this.renderer.drawText(
+                        '!',
+                        itemScreen.x,
+                        itemScreen.y - 20,
+                        'bold 16px Arial',
+                        '#FF0000',
+                        'center'
+                    );
+                }
+            }
         }
 
         // 데미지 숫자 렌더링
