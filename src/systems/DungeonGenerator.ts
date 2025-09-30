@@ -29,8 +29,8 @@ export class DungeonGenerator {
         this.config = {
             width: config?.width ?? 80,
             height: config?.height ?? 60,
-            minRoomSize: config?.minRoomSize ?? { width: 6, height: 6 },
-            maxRoomSize: config?.maxRoomSize ?? { width: 14, height: 14 },
+            minRoomSize: config?.minRoomSize ?? { width: 10, height: 10 },
+            maxRoomSize: config?.maxRoomSize ?? { width: 18, height: 18 },
             roomCount: config?.roomCount ?? { min: 6, max: 10 },
             corridorWidth: config?.corridorWidth ?? 2,
             maxDepth: config?.maxDepth ?? 4

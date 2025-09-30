@@ -79,6 +79,32 @@ export class Renderer {
         this.ctx.fillText(text, x, y);
     }
 
+    drawTextWithAlpha(
+        text: string,
+        x: number,
+        y: number,
+        font: string,
+        color: string,
+        alpha: number,
+        align: CanvasTextAlign = 'left'
+    ): void {
+        const oldAlpha = this.ctx.globalAlpha;
+        this.ctx.globalAlpha = alpha;
+        this.ctx.font = font;
+        this.ctx.fillStyle = color;
+        this.ctx.textAlign = align;
+
+        // 테두리 (가독성 향상)
+        this.ctx.strokeStyle = '#000000';
+        this.ctx.lineWidth = 3;
+        this.ctx.strokeText(text, x, y);
+
+        // 텍스트
+        this.ctx.fillText(text, x, y);
+
+        this.ctx.globalAlpha = oldAlpha;
+    }
+
     drawHealthBar(
         x: number,
         y: number,

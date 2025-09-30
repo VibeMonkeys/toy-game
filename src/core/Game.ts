@@ -10,6 +10,7 @@ import { InputManager } from '../systems/InputManager';
 import { Renderer } from '../systems/Renderer';
 import { MapManager } from '../systems/MapManager';
 import { Camera } from '../systems/Camera';
+import { DamageNumberSystem } from '../systems/DamageNumberSystem';
 import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
 
@@ -22,6 +23,7 @@ class Game {
     private inputManager: InputManager;
     private mapManager: MapManager;
     private camera: Camera;
+    private damageNumberSystem: DamageNumberSystem;
 
     // 게임 상태
     private gameMode: GameMode = GameMode.LOADING;
@@ -57,6 +59,7 @@ class Game {
         this.inputManager = new InputManager();
         this.mapManager = new MapManager();
         this.camera = new Camera();
+        this.damageNumberSystem = new DamageNumberSystem();
 
         // 게임 초기화
         this.init();
@@ -191,6 +194,9 @@ class Game {
             }
         }
 
+        // 데미지 숫자 업데이트
+        this.damageNumberSystem.update(this.deltaTime);
+
         // 플레이어 사망 체크
         if (this.player.stats.health <= 0) {
             this.handlePlayerDeath();
@@ -226,6 +232,22 @@ class Game {
                 );
 
                 enemy.takeDamage(combatResult.damage);
+
+                // 데미지 숫자 표시 (화면 좌표로 변환)
+                const enemyScreen = this.camera.worldToScreen(enemy.x, enemy.y);
+                this.damageNumberSystem.spawn(
+                    enemyScreen.x,
+                    enemyScreen.y - 20,
+                    combatResult.damage,
+                    combatResult.isCritical
+                );
+
+                // 카메라 흔들림 (크리티컬이면 강하게)
+                if (combatResult.isCritical) {
+                    this.camera.shake(15, 200);
+                } else {
+                    this.camera.shake(5, 100);
+                }
 
                 console.log(`💥 ${combatResult.damage} 데미지! (콤보: ${combatResult.comboMultiplier.toFixed(1)}x)`);
             }
@@ -341,6 +363,9 @@ class Game {
             const enemyScreen = this.camera.worldToScreen(enemy.x, enemy.y);
             enemy.renderAtPosition(this.renderer, enemyScreen.x, enemyScreen.y);
         }
+
+        // 데미지 숫자 렌더링
+        this.damageNumberSystem.render(this.renderer);
 
         // HUD 렌더링
         this.renderHUD();

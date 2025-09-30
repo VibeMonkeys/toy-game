@@ -85,10 +85,10 @@ export class MapManager {
             }
         }
 
-        // 방 디버그 렌더링 (개발용)
-        if (process.env.NODE_ENV === 'development') {
-            this.renderRoomsDebug(renderer, cameraX, cameraY);
-        }
+        // 방 디버그 렌더링 (개발용) - 주석 처리
+        // if (process.env.NODE_ENV === 'development') {
+        //     this.renderRoomsDebug(renderer, cameraX, cameraY);
+        // }
     }
 
     /**
