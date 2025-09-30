@@ -12,6 +12,7 @@ export enum GameMode {
     TITLE = 'TITLE',
     INTRO = 'INTRO',
     PLAYING = 'PLAYING',
+    TRAIT_SELECTION = 'TRAIT_SELECTION',
     SOUL_CHAMBER = 'SOUL_CHAMBER',
     PAUSED = 'PAUSED',
     GAME_OVER = 'GAME_OVER',

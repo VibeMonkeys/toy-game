@@ -13,6 +13,7 @@ import { Camera } from '../systems/Camera';
 import { DamageNumberSystem } from '../systems/DamageNumberSystem';
 import { ItemSystem } from '../systems/ItemSystem';
 import { Inventory } from '../systems/Inventory';
+import { Trait } from '../systems/TraitSystem';
 import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
 
@@ -37,6 +38,10 @@ class Game {
     // 엔티티
     private player: Player | null = null;
     private enemies: Enemy[] = [];
+
+    // 특성 선택
+    private traitChoices: Trait[] = [];
+    private selectedTraitIndex: number = 0;
 
     // 프레임 관리
     private targetFPS: number = GAMEPLAY.TARGET_FPS;

@@ -7,6 +7,7 @@
 import { Position, Vector2D, PlayerStats, WeaponType } from '../types';
 import { GAMEPLAY, COLORS } from '../utils/Constants';
 import { CombatSystem } from '../systems/CombatSystem';
+import { TraitSystem } from '../systems/TraitSystem';
 import { Renderer } from '../systems/Renderer';
 
 export class Player {
@@ -29,6 +30,7 @@ export class Player {
 
     // 전투
     private combatSystem: CombatSystem;
+    private traitSystem: TraitSystem;
     private isAttacking: boolean = false;
     private attackCooldown: number = 500;
     private lastAttackTime: number = 0;
@@ -61,6 +63,7 @@ export class Player {
         };
 
         this.combatSystem = new CombatSystem();
+        this.traitSystem = new TraitSystem();
     }
 
     /**
@@ -262,6 +265,13 @@ export class Player {
      */
     getCombatSystem(): CombatSystem {
         return this.combatSystem;
+    }
+
+    /**
+     * 특성 시스템 가져오기
+     */
+    getTraitSystem(): TraitSystem {
+        return this.traitSystem;
     }
 
     /**
