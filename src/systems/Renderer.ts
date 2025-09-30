@@ -176,6 +176,29 @@ export class Renderer {
         this.ctx.strokeRect(x, y, width, height);
     }
 
+    drawExperienceBar(
+        x: number,
+        y: number,
+        width: number,
+        height: number,
+        current: number,
+        max: number
+    ): void {
+        // 배경
+        this.ctx.fillStyle = '#2a2a3a';
+        this.ctx.fillRect(x, y, width, height);
+
+        // 경험치
+        const ratio = Math.max(0, Math.min(1, current / max));
+        this.ctx.fillStyle = '#FFD700'; // 금색
+        this.ctx.fillRect(x, y, width * ratio, height);
+
+        // 테두리
+        this.ctx.strokeStyle = COLORS.BORDER;
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(x, y, width, height);
+    }
+
     drawDamageNumber(x: number, y: number, damage: number, isCritical: boolean = false): void {
         const color = isCritical ? COLORS.CRITICAL_HIT : COLORS.DAMAGE;
         const font = isCritical ? 'bold 28px Arial' : 'bold 20px Arial';

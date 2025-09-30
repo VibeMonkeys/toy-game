@@ -22,6 +22,11 @@ export class Player {
     // 스탯
     stats: PlayerStats;
 
+    // 레벨 & 경험치
+    level: number = 1;
+    experience: number = 0;
+    experienceToNextLevel: number = 100;
+
     // 전투
     private combatSystem: CombatSystem;
     private isAttacking: boolean = false;
@@ -264,5 +269,56 @@ export class Player {
      */
     getPosition(): Position {
         return { x: this.x, y: this.y };
+    }
+
+    /**
+     * 경험치 획득
+     */
+    gainExperience(amount: number): boolean {
+        this.experience += amount;
+
+        // 레벨업 체크
+        if (this.experience >= this.experienceToNextLevel) {
+            this.levelUp();
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * 레벨업
+     */
+    private levelUp(): void {
+        this.level++;
+        this.experience -= this.experienceToNextLevel;
+
+        // 다음 레벨 필요 경험치 증가 (1.5배)
+        this.experienceToNextLevel = Math.floor(this.experienceToNextLevel * 1.5);
+
+        // 스탯 증가
+        this.stats.maxHealth += 20;
+        this.stats.health = this.stats.maxHealth; // 체력 완전 회복
+        this.stats.maxMana += 10;
+        this.stats.mana = this.stats.maxMana; // 마나 완전 회복
+        this.stats.maxStamina += 10;
+        this.stats.stamina = this.stats.maxStamina;
+        this.stats.attack += 5;
+        this.stats.defense += 2;
+        this.stats.speed += 5;
+
+        console.log(`🎉 레벨업! Lv.${this.level}`);
+    }
+
+    /**
+     * 레벨 및 경험치 정보
+     */
+    getLevelInfo(): { level: number; experience: number; experienceToNextLevel: number; progress: number } {
+        return {
+            level: this.level,
+            experience: this.experience,
+            experienceToNextLevel: this.experienceToNextLevel,
+            progress: this.experience / this.experienceToNextLevel
+        };
     }
 }

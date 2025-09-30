@@ -188,8 +188,9 @@ class Game {
             const enemy = this.enemies[i];
             enemy.update(this.deltaTime, this.player);
 
-            // 죽은 적 제거
+            // 죽은 적 제거 및 보상
             if (enemy.isDead()) {
+                this.handleEnemyKilled(enemy);
                 this.enemies.splice(i, 1);
             }
         }
@@ -252,6 +253,49 @@ class Game {
                 console.log(`💥 ${combatResult.damage} 데미지! (콤보: ${combatResult.comboMultiplier.toFixed(1)}x)`);
             }
         }
+    }
+
+    /**
+     * 적 처치 보상
+     */
+    private handleEnemyKilled(enemy: Enemy): void {
+        if (!this.player) return;
+
+        // 경험치 획득
+        const expGain = this.calculateExperienceReward(enemy.type);
+        const leveledUp = this.player.gainExperience(expGain);
+
+        // 경험치 획득 표시
+        const enemyScreen = this.camera.worldToScreen(enemy.x, enemy.y);
+        this.damageNumberSystem.spawn(
+            enemyScreen.x,
+            enemyScreen.y - 40,
+            expGain,
+            false
+        );
+
+        if (leveledUp) {
+            console.log(`✨ 레벨업! 현재 레벨: ${this.player.level}`);
+            // 레벨업 이펙트 (화면 번쩍임)
+            this.camera.shake(20, 300);
+        }
+    }
+
+    /**
+     * 적 타입별 경험치 계산
+     */
+    private calculateExperienceReward(enemyType: string): number {
+        const baseExp: Record<string, number> = {
+            goblin: 15,
+            orc: 25,
+            skeleton: 20,
+            troll: 40,
+            wraith: 35
+        };
+
+        const exp = baseExp[enemyType] || 10;
+        // 층수에 따라 보너스 (+10% per floor)
+        return Math.floor(exp * (1 + this.currentFloor * 0.1));
     }
 
     /**
@@ -389,23 +433,45 @@ class Game {
         if (!this.player) return;
 
         const stats = this.player.stats;
+        const levelInfo = this.player.getLevelInfo();
+
+        // 레벨 표시
+        this.renderer.drawText(
+            `Lv.${levelInfo.level}`,
+            20,
+            20,
+            'bold 18px Arial',
+            '#FFD700',
+            'left'
+        );
 
         // 체력바
-        this.renderer.drawHealthBar(20, 20, 250, 25, stats.health, stats.maxHealth);
+        this.renderer.drawHealthBar(20, 30, 250, 25, stats.health, stats.maxHealth);
         this.renderer.drawText(
             `${Math.floor(stats.health)} / ${stats.maxHealth}`,
             145,
-            38,
+            48,
             '14px Arial',
             '#ffffff',
             'center'
         );
 
         // 마나바
-        this.renderer.drawManaBar(20, 55, 250, 20, stats.mana, stats.maxMana);
+        this.renderer.drawManaBar(20, 65, 250, 20, stats.mana, stats.maxMana);
 
         // 스태미나바
-        this.renderer.drawStaminaBar(20, 85, 250, 20, stats.stamina, stats.maxStamina);
+        this.renderer.drawStaminaBar(20, 95, 250, 20, stats.stamina, stats.maxStamina);
+
+        // 경험치바
+        this.renderer.drawExperienceBar(20, 125, 250, 15, levelInfo.experience, levelInfo.experienceToNextLevel);
+        this.renderer.drawText(
+            `EXP: ${levelInfo.experience} / ${levelInfo.experienceToNextLevel}`,
+            145,
+            137,
+            '12px Arial',
+            '#ffffff',
+            'center'
+        );
 
         // 층수 표시
         this.renderer.drawText(
