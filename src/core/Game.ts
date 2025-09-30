@@ -719,10 +719,11 @@ class Game {
         // 맵에서 생성된 적 스폰 포인트로 적 배치
         const enemySpawns = this.mapManager.getEnemySpawnPoints();
         for (const spawn of enemySpawns) {
-            this.enemies.push(new Enemy(spawn.x, spawn.y, spawn.type as any));
+            const isBoss = spawn.isBoss || false;
+            this.enemies.push(new Enemy(spawn.x, spawn.y, spawn.type as any, isBoss));
         }
 
-        console.log(`✅ ${this.enemies.length}마리 적 생성 완료`);
+        console.log(`✅ ${this.enemies.length}마리 적 생성 완료 (보스층: ${floor % 5 === 0})`);
     }
 
     /**

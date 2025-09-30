@@ -25,6 +25,9 @@ export class Enemy {
     width: number = 32;
     height: number = 32;
 
+    // 보스 여부
+    isBoss: boolean = false;
+
     // AI
     aiState: AIState = 'patrol';
     targetPlayer: boolean = false;
@@ -42,10 +45,11 @@ export class Enemy {
     // 애니메이션
     private animationTime: number = 0;
 
-    constructor(x: number, y: number, type: EnemyType) {
+    constructor(x: number, y: number, type: EnemyType, isBoss: boolean = false) {
         this.x = x;
         this.y = y;
         this.type = type;
+        this.isBoss = isBoss;
         this.patrolCenter = { x, y };
 
         // 타입별 스탯 설정
@@ -55,6 +59,17 @@ export class Enemy {
         this.attack = data.attack;
         this.defense = data.defense;
         this.speed = data.speed;
+
+        // 보스면 스탯 대폭 증가
+        if (isBoss) {
+            this.health *= 5;
+            this.maxHealth *= 5;
+            this.attack *= 2;
+            this.defense *= 2;
+            this.width = 48;
+            this.height = 48;
+            this.detectionRange = 300; // 보스는 더 먼 거리에서 감지
+        }
     }
 
     /**
@@ -208,13 +223,27 @@ export class Enemy {
     renderAtPosition(renderer: Renderer, x: number, y: number): void {
         const data = this.getEnemyData(this.type);
 
+        // 보스면 붉은 오라
+        if (this.isBoss) {
+            const pulse = Math.sin(Date.now() / 200) * 0.3 + 0.7;
+            renderer.getContext().globalAlpha = pulse * 0.5;
+            renderer.drawRect(
+                x - 4,
+                y - 4,
+                this.width + 8,
+                this.height + 8,
+                '#FF0000'
+            );
+            renderer.getContext().globalAlpha = 1.0;
+        }
+
         // 적 몸체 (x, y는 좌상단)
         renderer.drawRect(
             x,
             y,
             this.width,
             this.height,
-            data.color
+            this.isBoss ? '#8B0000' : data.color
         );
 
         // 테두리
@@ -223,9 +252,21 @@ export class Enemy {
             y,
             this.width,
             this.height,
-            '#000000',
-            2
+            this.isBoss ? '#FF0000' : '#000000',
+            this.isBoss ? 3 : 2
         );
+
+        // 보스 라벨
+        if (this.isBoss) {
+            renderer.drawText(
+                'BOSS',
+                x + this.width / 2,
+                y - 15,
+                'bold 12px Arial',
+                '#FF0000',
+                'center'
+            );
+        }
 
         // 체력바
         if (this.health < this.maxHealth) {
@@ -233,7 +274,7 @@ export class Enemy {
                 x,
                 y - 8,
                 this.width,
-                4,
+                6,
                 this.health,
                 this.maxHealth
             );
