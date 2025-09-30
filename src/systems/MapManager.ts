@@ -25,12 +25,12 @@ export class MapManager {
 
     constructor() {
         this.dungeonGenerator = new DungeonGenerator({
-            width: 80,
-            height: 60,
-            minRoomSize: { width: 6, height: 6 },
-            maxRoomSize: { width: 14, height: 14 },
-            roomCount: { min: 6, max: 10 },
-            corridorWidth: 2,
+            width: 150,  // 맵 크기 대폭 증가 (RPG 스타일)
+            height: 100,
+            minRoomSize: { width: 20, height: 20 },  // 방 크기 크게 증가
+            maxRoomSize: { width: 35, height: 35 },
+            roomCount: { min: 10, max: 15 },  // 방 개수 증가
+            corridorWidth: 4,  // 복도 폭 증가
             maxDepth: 4
         });
     }

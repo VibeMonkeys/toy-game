@@ -39,7 +39,7 @@ export const GAMEPLAY = {
         STAMINA: 100,
         ATTACK: 25,
         DEFENSE: 5,
-        SPEED: 150,  // pixels per second
+        SPEED: 250,  // pixels per second (RPG 스타일로 증가)
         CRITICAL_CHANCE: 0.15,
         CRITICAL_DAMAGE: 1.5,
         LUCK: 0,
