@@ -14,6 +14,7 @@ import { DamageNumberSystem } from '../systems/DamageNumberSystem';
 import { ItemSystem } from '../systems/ItemSystem';
 import { Inventory } from '../systems/Inventory';
 import { Trait } from '../systems/TraitSystem';
+import { Minimap } from '../ui/Minimap';
 import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
 
@@ -29,6 +30,7 @@ class Game {
     private damageNumberSystem: DamageNumberSystem;
     private itemSystem: ItemSystem;
     private inventory: Inventory;
+    private minimap: Minimap;
 
     // 게임 상태
     private gameMode: GameMode = GameMode.LOADING;
@@ -71,6 +73,7 @@ class Game {
         this.damageNumberSystem = new DamageNumberSystem();
         this.itemSystem = new ItemSystem();
         this.inventory = new Inventory();
+        this.minimap = new Minimap();
 
         // 게임 초기화
         this.init();
@@ -493,6 +496,14 @@ class Game {
 
         // HUD 렌더링
         this.renderHUD();
+
+        // 미니맵 렌더링
+        this.minimap.render(
+            this.renderer,
+            this.mapManager.getCurrentMap(),
+            this.player.getPosition(),
+            this.enemies
+        );
     }
 
     /**
