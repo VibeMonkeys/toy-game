@@ -2,70 +2,115 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>최진안의 휴넷 생존기</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>최진안의 이세계 모험기</title>
     <style>
-        html {
-            overflow: hidden;
-            height: 100%;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
+
         body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Arial', sans-serif;
+        }
+
+        #gameContainer {
+            position: relative;
+            background: #000;
+            border-radius: 10px;
+            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
             overflow: hidden;
-            height: 100%;
-            position: fixed;
+        }
+
+        #gameCanvas {
+            display: block;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
+        #loading-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            color: white;
+        }
+
+        .loading-content {
+            text-align: center;
+        }
+
+        .loading-content h1 {
+            font-size: 48px;
+            margin-bottom: 30px;
+            color: #e94560;
+            text-shadow: 0 0 20px rgba(233, 69, 96, 0.5);
+        }
+
+        .loading-bar {
+            width: 400px;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .loading-progress {
+            height: 100%;
+            background: linear-gradient(90deg, #e94560, #ff6b6b);
+            width: 100%;
+            animation: loading 1.5s ease-in-out infinite;
+        }
+
+        @keyframes loading {
+            0%, 100% { transform: translateX(-100%); }
+            50% { transform: translateX(100%); }
+        }
+
+        .loading-content p {
+            font-size: 18px;
+            color: #aaa;
+        }
+
+        .fade-out {
+            animation: fadeOut 0.5s ease-out forwards;
+        }
+
+        @keyframes fadeOut {
+            to {
+                opacity: 0;
+            }
         }
     </style>
 </head>
 <body>
     <div id="gameContainer">
-        <canvas id="gameCanvas" width="1200" height="700"></canvas>
+        <canvas id="gameCanvas" width="1280" height="720"></canvas>
+        <div id="loading-screen">
+            <div class="loading-content">
+                <h1>🗡️ 최진안의 이세계 모험기</h1>
+                <div class="loading-bar">
+                    <div class="loading-progress"></div>
+                </div>
+                <p>게임 로딩 중...</p>
+            </div>
+        </div>
     </div>
-    <script type="module">
-        console.log('모듈 스크립트 시작');
 
-        async function loadGame() {
-            try {
-                console.log('Game.js import 시도...');
-                const timestamp = Date.now();
-                const { Game } = await import('./src/core/Game.js?v=' + timestamp);
-                console.log('Game.js import 성공');
-
-                function initializeGame() {
-                    try {
-                        console.log('게임 초기화 시작...');
-                        const game = new Game();
-                        console.log('최진안의 휴넷 생존기가 시작되었습니다!');
-                    } catch (error) {
-                        console.error('❌ 게임 초기화 실패:', error);
-                        document.getElementById('gameContainer').innerHTML =
-                            `<h2>게임 로딩 중 오류가 발생했습니다.</h2><p>오류: ${error.message}</p><p>브라우저 콘솔을 확인해주세요.</p>`;
-                    }
-                }
-
-                // 페이지가 이미 로드되었는지 확인
-                if (document.readyState === 'loading') {
-                    window.addEventListener('load', initializeGame);
-                } else {
-                    // 이미 로드된 경우 바로 실행
-                    initializeGame();
-                }
-            } catch (error) {
-                console.error('❌ 모듈 import 실패:', error);
-                document.getElementById('gameContainer').innerHTML =
-                    `<h2>모듈 로딩 실패</h2><p>오류: ${error.message}</p><p>브라우저가 ES6 모듈을 지원하지 않거나 파일 경로에 문제가 있습니다.</p>`;
-            }
-        }
-
-        loadGame();
-    </script>
-
-    <!-- 구형 브라우저를 위한 폴백 -->
-    <script nomodule>
-        document.getElementById('gameContainer').innerHTML =
-            '<h2>브라우저 호환성 문제</h2><p>ES6 모듈을 지원하는 최신 브라우저가 필요합니다.</p>' +
-            '<p>Chrome 61+, Firefox 60+, Safari 10.1+, Edge 16+</p>';
-    </script>
+    <!-- TypeScript 모듈 로드 (Vite가 처리) -->
+    <script type="module" src="/src/core/Game.ts"></script>
 </body>
 </html>

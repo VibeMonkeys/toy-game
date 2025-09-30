@@ -1,0 +1,549 @@
+/**
+ * 🎮 최진안의 이세계 모험기 - 메인 게임 클래스
+ *
+ * docs/OPTIMIZED_GAME_DESIGN.md 기반으로 완전 새로 구현
+ */
+
+import { GameMode } from '../types';
+import { GAME_MODES, SCREEN, GAMEPLAY } from '../utils/Constants';
+import { InputManager } from '../systems/InputManager';
+import { Renderer } from '../systems/Renderer';
+import { Player } from '../entities/Player';
+import { Enemy } from '../entities/Enemy';
+
+class Game {
+    // 캔버스
+    private canvas: HTMLCanvasElement;
+    private renderer: Renderer;
+
+    // 시스템
+    private inputManager: InputManager;
+
+    // 게임 상태
+    private gameMode: GameMode = GameMode.LOADING;
+    private isRunning: boolean = false;
+    private currentFloor: number = 1;
+
+    // 엔티티
+    private player: Player | null = null;
+    private enemies: Enemy[] = [];
+
+    // 프레임 관리
+    private targetFPS: number = GAMEPLAY.TARGET_FPS;
+    private frameInterval: number = 1000 / this.targetFPS;
+    private lastFrameTime: number = 0;
+    private deltaTime: number = 0;
+
+    // FPS 표시
+    private fps: number = 0;
+    private fpsCounter: number = 0;
+    private fpsTime: number = 0;
+
+    constructor() {
+        console.log('🎮 최진안의 이세계 모험기 시작!');
+
+        // 캔버스 가져오기
+        this.canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
+        if (!this.canvas) {
+            throw new Error('Canvas element not found!');
+        }
+
+        // 시스템 초기화
+        this.renderer = new Renderer(this.canvas);
+        this.inputManager = new InputManager();
+
+        // 게임 초기화
+        this.init();
+    }
+
+    /**
+     * 초기화
+     */
+    private async init(): Promise<void> {
+        console.log('🔧 게임 초기화 중...');
+
+        // 로딩 화면 숨기기
+        this.hideLoadingScreen();
+
+        // 타이틀 화면으로 전환
+        this.changeGameMode(GameMode.TITLE);
+
+        // 게임 시작
+        this.start();
+    }
+
+    /**
+     * 로딩 화면 숨기기
+     */
+    private hideLoadingScreen(): void {
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen) {
+            loadingScreen.style.display = 'none';
+        }
+    }
+
+    /**
+     * 게임 시작
+     */
+    private start(): void {
+        console.log('🚀 게임 시작!');
+        this.isRunning = true;
+        requestAnimationFrame((time) => this.gameLoop(time));
+    }
+
+    /**
+     * 메인 게임 루프
+     */
+    private gameLoop(currentTime: number): void {
+        if (!this.isRunning) return;
+
+        // FPS 계산
+        this.fpsCounter++;
+        if (currentTime - this.fpsTime >= 1000) {
+            this.fps = this.fpsCounter;
+            this.fpsCounter = 0;
+            this.fpsTime = currentTime;
+        }
+
+        // 프레임 제한
+        if (currentTime - this.lastFrameTime >= this.frameInterval) {
+            this.deltaTime = (currentTime - this.lastFrameTime) / 1000;
+            this.lastFrameTime = currentTime;
+
+            // 업데이트 & 렌더링
+            this.update();
+            this.render();
+        }
+
+        requestAnimationFrame((time) => this.gameLoop(time));
+    }
+
+    /**
+     * 업데이트
+     */
+    private update(): void {
+        switch (this.gameMode) {
+            case GameMode.TITLE:
+                this.updateTitleScreen();
+                break;
+
+            case GameMode.PLAYING:
+                this.updateGameplay();
+                break;
+        }
+    }
+
+    /**
+     * 타이틀 화면 업데이트
+     */
+    private updateTitleScreen(): void {
+        // 스페이스바로 게임 시작
+        if (this.inputManager.isKeyPressed('Space')) {
+            this.startNewGame();
+        }
+    }
+
+    /**
+     * 게임플레이 업데이트
+     */
+    private updateGameplay(): void {
+        if (!this.player) return;
+
+        // 플레이어 이동
+        const movement = this.inputManager.getMovementInput();
+        this.player.move(movement, this.deltaTime);
+
+        // 플레이어 공격
+        if (this.inputManager.isAttackPressed()) {
+            if (this.player.attack()) {
+                this.handlePlayerAttack();
+            }
+        }
+
+        // 플레이어 회피
+        if (this.inputManager.isDodgePressed()) {
+            this.player.dodge(movement);
+        }
+
+        // 플레이어 업데이트
+        this.player.update(this.deltaTime);
+
+        // 적 업데이트
+        for (let i = this.enemies.length - 1; i >= 0; i--) {
+            const enemy = this.enemies[i];
+            enemy.update(this.deltaTime, this.player);
+
+            // 죽은 적 제거
+            if (enemy.isDead()) {
+                this.enemies.splice(i, 1);
+            }
+        }
+
+        // 플레이어 사망 체크
+        if (this.player.stats.health <= 0) {
+            this.handlePlayerDeath();
+        }
+
+        // 층 클리어 체크
+        if (this.enemies.length === 0) {
+            this.handleFloorClear();
+        }
+    }
+
+    /**
+     * 플레이어 공격 처리
+     */
+    private handlePlayerAttack(): void {
+        if (!this.player) return;
+
+        const playerPos = this.player.getPosition();
+        const attackRange = 60;
+
+        // 범위 내 적 탐지
+        for (const enemy of this.enemies) {
+            const dx = enemy.x - playerPos.x;
+            const dy = enemy.y - playerPos.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance <= attackRange) {
+                // 전투 시스템으로 데미지 계산
+                const combatResult = this.player.getCombatSystem().attack(
+                    this.player.stats.attack,
+                    this.player.stats.criticalChance,
+                    false
+                );
+
+                enemy.takeDamage(combatResult.damage);
+
+                console.log(`💥 ${combatResult.damage} 데미지! (콤보: ${combatResult.comboMultiplier.toFixed(1)}x)`);
+            }
+        }
+    }
+
+    /**
+     * 플레이어 사망 처리
+     */
+    private handlePlayerDeath(): void {
+        console.log('💀 플레이어 사망');
+        this.changeGameMode(GameMode.GAME_OVER);
+    }
+
+    /**
+     * 층 클리어 처리
+     */
+    private handleFloorClear(): void {
+        console.log(`✅ ${this.currentFloor}층 클리어!`);
+
+        // 다음 층으로
+        this.currentFloor++;
+
+        if (this.currentFloor > GAMEPLAY.MAX_FLOORS) {
+            // 게임 클리어!
+            this.changeGameMode(GameMode.VICTORY);
+        } else {
+            // 다음 층 생성
+            this.generateFloor(this.currentFloor);
+        }
+    }
+
+    /**
+     * 렌더링
+     */
+    private render(): void {
+        // 화면 클리어
+        this.renderer.clear();
+
+        switch (this.gameMode) {
+            case GameMode.TITLE:
+                this.renderTitleScreen();
+                break;
+
+            case GameMode.PLAYING:
+                this.renderGameplay();
+                break;
+
+            case GameMode.GAME_OVER:
+                this.renderGameOver();
+                break;
+
+            case GameMode.VICTORY:
+                this.renderVictory();
+                break;
+        }
+    }
+
+    /**
+     * 타이틀 화면 렌더링
+     */
+    private renderTitleScreen(): void {
+        this.renderer.drawText(
+            '🗡️ 최진안의 이세계 모험기',
+            SCREEN.CENTER_X,
+            200,
+            'bold 48px Arial',
+            '#e94560',
+            'center'
+        );
+
+        this.renderer.drawText(
+            'Press SPACE to Start',
+            SCREEN.CENTER_X,
+            400,
+            '24px Arial',
+            '#ffffff',
+            'center'
+        );
+
+        this.renderer.drawText(
+            'TypeScript + Canvas로 만든 로그라이크 게임',
+            SCREEN.CENTER_X,
+            500,
+            '18px Arial',
+            '#cccccc',
+            'center'
+        );
+    }
+
+    /**
+     * 게임플레이 렌더링
+     */
+    private renderGameplay(): void {
+        if (!this.player) return;
+
+        // 플레이어 렌더링
+        this.player.render(this.renderer);
+
+        // 적 렌더링
+        for (const enemy of this.enemies) {
+            enemy.render(this.renderer);
+        }
+
+        // HUD 렌더링
+        this.renderHUD();
+    }
+
+    /**
+     * HUD 렌더링
+     */
+    private renderHUD(): void {
+        if (!this.player) return;
+
+        const stats = this.player.stats;
+
+        // 체력바
+        this.renderer.drawHealthBar(20, 20, 250, 25, stats.health, stats.maxHealth);
+        this.renderer.drawText(
+            `${Math.floor(stats.health)} / ${stats.maxHealth}`,
+            145,
+            38,
+            '14px Arial',
+            '#ffffff',
+            'center'
+        );
+
+        // 마나바
+        this.renderer.drawManaBar(20, 55, 250, 20, stats.mana, stats.maxMana);
+
+        // 스태미나바
+        this.renderer.drawStaminaBar(20, 85, 250, 20, stats.stamina, stats.maxStamina);
+
+        // 층수 표시
+        this.renderer.drawText(
+            `층: ${this.currentFloor}`,
+            SCREEN.WIDTH - 20,
+            30,
+            'bold 24px Arial',
+            '#ffffff',
+            'right'
+        );
+
+        // 적 수
+        this.renderer.drawText(
+            `적: ${this.enemies.length}`,
+            SCREEN.WIDTH - 20,
+            60,
+            '20px Arial',
+            '#ff4444',
+            'right'
+        );
+
+        // 콤보 카운트
+        const comboCount = this.player.getCombatSystem().getComboCount();
+        if (comboCount > 0) {
+            this.renderer.drawText(
+                `${comboCount} COMBO!`,
+                SCREEN.CENTER_X,
+                100,
+                'bold 32px Arial',
+                '#ffff00',
+                'center'
+            );
+        }
+
+        // FPS 표시
+        this.renderer.drawText(
+            `FPS: ${this.fps}`,
+            20,
+            SCREEN.HEIGHT - 20,
+            '14px Arial',
+            '#888888'
+        );
+    }
+
+    /**
+     * 게임 오버 렌더링
+     */
+    private renderGameOver(): void {
+        this.renderer.drawText(
+            'GAME OVER',
+            SCREEN.CENTER_X,
+            200,
+            'bold 64px Arial',
+            '#ff4444',
+            'center'
+        );
+
+        this.renderer.drawText(
+            `도달 층: ${this.currentFloor}`,
+            SCREEN.CENTER_X,
+            300,
+            '24px Arial',
+            '#ffffff',
+            'center'
+        );
+
+        this.renderer.drawText(
+            'Press SPACE to Restart',
+            SCREEN.CENTER_X,
+            400,
+            '20px Arial',
+            '#cccccc',
+            'center'
+        );
+
+        // 재시작
+        if (this.inputManager.isKeyPressed('Space')) {
+            this.startNewGame();
+        }
+    }
+
+    /**
+     * 승리 렌더링
+     */
+    private renderVictory(): void {
+        this.renderer.drawText(
+            '🎉 VICTORY!',
+            SCREEN.CENTER_X,
+            200,
+            'bold 64px Arial',
+            '#4CAF50',
+            'center'
+        );
+
+        this.renderer.drawText(
+            '모든 층을 클리어했습니다!',
+            SCREEN.CENTER_X,
+            300,
+            '24px Arial',
+            '#ffffff',
+            'center'
+        );
+
+        this.renderer.drawText(
+            'Press SPACE to Restart',
+            SCREEN.CENTER_X,
+            400,
+            '20px Arial',
+            '#cccccc',
+            'center'
+        );
+
+        // 재시작
+        if (this.inputManager.isKeyPressed('Space')) {
+            this.startNewGame();
+        }
+    }
+
+    /**
+     * 게임 모드 변경
+     */
+    private changeGameMode(newMode: GameMode): void {
+        console.log(`🔄 게임 모드 변경: ${this.gameMode} → ${newMode}`);
+        this.gameMode = newMode;
+    }
+
+    /**
+     * 새 게임 시작
+     */
+    private startNewGame(): void {
+        console.log('🆕 새 게임 시작!');
+
+        this.currentFloor = 1;
+
+        // 플레이어 생성
+        this.player = new Player(SCREEN.CENTER_X, SCREEN.CENTER_Y);
+
+        // 첫 번째 층 생성
+        this.generateFloor(1);
+
+        // 게임플레이 모드로 전환
+        this.changeGameMode(GameMode.PLAYING);
+    }
+
+    /**
+     * 층 생성
+     */
+    private generateFloor(floor: number): void {
+        console.log(`🗺️ ${floor}층 생성 중...`);
+
+        // 적 초기화
+        this.enemies = [];
+
+        // 적 수 계산 (층수에 따라 증가)
+        const enemyCount = 3 + floor * 2;
+
+        // 적 생성 (랜덤 위치)
+        for (let i = 0; i < enemyCount; i++) {
+            const x = 200 + Math.random() * (SCREEN.WIDTH - 400);
+            const y = 200 + Math.random() * (SCREEN.HEIGHT - 400);
+
+            const enemyType = this.getRandomEnemyType(floor);
+            this.enemies.push(new Enemy(x, y, enemyType));
+        }
+
+        console.log(`✅ ${enemyCount}마리 적 생성 완료`);
+    }
+
+    /**
+     * 층수에 따른 랜덤 적 타입
+     */
+    private getRandomEnemyType(floor: number): 'goblin' | 'orc' | 'skeleton' | 'troll' | 'wraith' {
+        if (floor <= 2) return 'goblin';
+        if (floor <= 4) return Math.random() < 0.5 ? 'goblin' : 'orc';
+        if (floor <= 6) return Math.random() < 0.5 ? 'orc' : 'skeleton';
+        if (floor <= 8) return Math.random() < 0.5 ? 'skeleton' : 'troll';
+        return Math.random() < 0.5 ? 'troll' : 'wraith';
+    }
+}
+
+// 게임 시작
+window.addEventListener('load', () => {
+    try {
+        console.log('🎮 게임 로딩 시작...');
+        new Game();
+    } catch (error) {
+        console.error('❌ 게임 초기화 실패:', error);
+
+        // 로딩 화면에 에러 표시
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen) {
+            loadingScreen.innerHTML = `
+                <div class="loading-content">
+                    <h1 style="color: #ff4444;">❌ 게임 로딩 실패</h1>
+                    <p style="color: #ffffff;">${error instanceof Error ? error.message : String(error)}</p>
+                    <p style="color: #aaa; margin-top: 20px;">브라우저 콘솔(F12)을 확인하세요.</p>
+                </div>
+            `;
+        }
+    }
+});

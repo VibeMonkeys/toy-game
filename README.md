@@ -1,71 +1,151 @@
-# 휴넷 26주년 창립 기념 게임
+# 🗡️ 최진안의 이세계 모험기
 
-포켓몬스터 스타일의 2D RPG 보물찾기 게임입니다.
+> TypeScript + HTML5 Canvas로 만든 RPG × 로그라이크 게임
 
-## 🎮 게임 방법
-- 방향키로 캐릭터 이동
-- 스페이스바로 NPC와 대화
-- S키로 게임 저장
-- 김대리 → 박과장 → 이부장 → CEO 순서로 찾아가며 보물을 찾으세요!
+## 🎮 게임 소개
 
-## 🏗️ 프로젝트 구조
-```
-src/
-├── core/           # 게임 핵심 로직
-│   ├── Game.js          # 메인 게임 클래스
-│   ├── GameState.js     # 상태 관리
-│   └── QuestSystem.js   # 퀘스트 시스템
-├── entities/       # 게임 엔티티
-│   └── Player.js        # 플레이어 관련
-├── ui/            # UI 컴포넌트
-│   ├── TitleScreen.js   # 타이틀 화면
-│   ├── QuestUI.js      # 퀘스트 UI
-│   ├── Minimap.js      # 미니맵
-│   └── Inventory.js    # 인벤토리
-├── maps/          # 맵 시스템
-│   ├── MapManager.js    # 맵 관리
-│   ├── MapData.js      # 맵 데이터
-│   └── Camera.js       # 카메라 시스템
-├── graphics/      # 렌더링 시스템
-│   ├── Renderer.js     # 렌더링 엔진
-│   └── AnimationSystem.js # 애니메이션
-└── utils/         # 유틸리티
-    ├── Constants.js    # 상수 정의
-    ├── SaveSystem.js   # 저장/로드
-    └── AudioManager.js # 사운드
-```
+평범한 개발자 최진안이 이세계에 떨어져 영웅이 되는 이야기.
+**Hades** 스타일의 액션 로그라이크 게임입니다.
 
-## 🚀 실행하기
+### 핵심 특징
 
-### 온라인에서 플레이
-🎮 **[여기서 바로 게임하기](https://yourusername.github.io/toy-game/)**
+- ⚔️ **깊이 있는 전투**: 콤보, 회피, 패링 시스템
+- 🎲 **빌드 다양성**: 특성, 룬, 무기 조합
+- 📜 **스토리 퀘스트**: 15개 메인 퀘스트 (4막 구성)
+- 🗺️ **절차적 생성**: 매 런마다 다른 맵
+- 💎 **메타 프로그레션**: 영구 업그레이드 시스템
 
-### 로컬에서 실행
+## 🚀 빠른 시작
+
+### 1. 설치
+
 ```bash
-python3 -m http.server 8000
+# 저장소 클론
+git clone <repository-url>
+cd toy-game
+
+# 패키지 설치
+npm install
 ```
-http://localhost:8000 접속
 
-### 브라우저 호환성
-- ✅ Chrome 61+
-- ✅ Firefox 60+
-- ✅ Safari 10.1+
-- ✅ Edge 16+
+### 2. 실행
 
-## 📊 통계
-- **총 코드 라인**: 2,119줄 (16개 모듈)
-- **원본 대비**: 681줄 감소 (모듈화 + 불필요한 코드 제거)
+```bash
+# 개발 서버 실행
+npm run dev
 
-## ✨ 기술 스택
-- **Frontend**: HTML5 Canvas, ES6 Modules
-- **Language**: JavaScript (Vanilla)
-- **Styling**: CSS3
-- **Architecture**: 모듈화된 MVC 패턴
+# 브라우저가 자동으로 열립니다
+# http://localhost:3000
+```
 
-## 🎯 주요 기능
-- ✅ 타이틀 화면 & 메뉴 시스템
-- ✅ 저장/로드 기능
-- ✅ 퀘스트 & 진행도 추적
-- ✅ 미니맵 & 인벤토리
-- ✅ NPC 상호작용 시스템
-- ✅ 반응형 UI (스크롤 없는 고정 화면)
+### 3. 빌드
+
+```bash
+# 프로덕션 빌드
+npm run build
+
+# 빌드 미리보기
+npm run preview
+```
+
+## 🎯 조작법
+
+### 기본 조작
+- **W/A/S/D**: 이동
+- **Space / 마우스 좌클릭**: 공격
+- **X / 마우스 우클릭**: 회피
+- **C**: 패링 (고급 테크닉)
+
+### 스킬 & 아이템
+- **1/2/3**: 스킬 사용
+- **4/5**: 포션 사용
+- **Q**: 무기 전환
+
+### UI
+- **I**: 인벤토리
+- **K**: 스킬 커스터마이즈
+- **M**: 전체 맵
+- **ESC**: 일시정지
+
+## 📊 프로젝트 구조
+
+```
+toy-game/
+├── src/
+│   ├── core/
+│   │   └── Game.ts              # 메인 게임 루프
+│   ├── systems/
+│   │   ├── InputManager.ts      # 입력 처리
+│   │   ├── Renderer.ts          # 렌더링
+│   │   └── CombatSystem.ts      # 전투 시스템
+│   ├── entities/
+│   │   ├── Player.ts            # 플레이어
+│   │   └── Enemy.ts             # 적
+│   ├── types/
+│   │   └── index.ts             # 타입 정의
+│   └── utils/
+│       └── Constants.ts         # 상수
+├── docs/                        # 게임 기획 문서
+│   ├── OPTIMIZED_GAME_DESIGN.md # 최적화 기획서
+│   └── ...
+├── index.html
+├── package.json
+├── tsconfig.json
+└── vite.config.ts
+```
+
+## 🎨 기술 스택
+
+- **TypeScript**: 타입 안정성
+- **Vite**: 빠른 빌드 & HMR
+- **HTML5 Canvas**: 2D 렌더링
+- **Vanilla JS**: 프레임워크 없음
+
+## 📚 개발 문서
+
+자세한 게임 기획은 `docs/` 폴더를 참고하세요:
+
+- [게임 개요](./docs/01-game-overview.md)
+- [최적화 기획서](./docs/OPTIMIZED_GAME_DESIGN.md)
+- [RPG 통합 설계](./docs/COMPLETE_RPG_ROGUELIKE_DESIGN.md)
+
+## 🎯 개발 진행 상황
+
+### ✅ 완료
+- [x] TypeScript 프로젝트 설정
+- [x] 핵심 게임 루프
+- [x] 전투 시스템 (콤보, 회피)
+- [x] 플레이어 & 적 기본 구현
+- [x] 입력 & 렌더링 시스템
+
+### 🚧 진행 중
+- [ ] 맵 생성 (BSP 알고리즘)
+- [ ] 빌드 다양성 (특성, 룬)
+- [ ] NPC & 대화 시스템
+- [ ] 퀘스트 시스템
+
+### 📋 예정
+- [ ] 보스 전투
+- [ ] 사운드 시스템
+- [ ] 파티클 효과
+- [ ] 저장/로드
+
+## 🤝 기여하기
+
+이 프로젝트는 학습 목적으로 만들어졌습니다.
+이슈나 PR은 언제나 환영합니다!
+
+## 📝 라이선스
+
+MIT License
+
+## 🎮 플레이 팁
+
+1. **콤보 시스템 활용**: 연속 공격 시 데미지 증가 (최대 1.5배)
+2. **회피 타이밍**: 적 공격 직전 회피 시 완벽 회피 (크리티컬 버프)
+3. **스태미나 관리**: 공격과 회피의 균형이 중요
+4. **층마다 업그레이드**: 체력 회복 + 스탯 선택
+
+---
+
+**즐거운 게임 되세요!** 🎮✨

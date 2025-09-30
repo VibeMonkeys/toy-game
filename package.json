@@ -1,0 +1,26 @@
+{
+  "name": "jinan-isekai-adventure",
+  "version": "1.0.0",
+  "description": "최진안의 이세계 모험기 - RPG × 로그라이크 게임",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "game",
+    "roguelike",
+    "rpg",
+    "typescript",
+    "html5"
+  ],
+  "author": "Jinan",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "vite": "^5.0.11"
+  },
+  "dependencies": {}
+}
