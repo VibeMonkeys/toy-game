@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>SVG to PNG Converter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        #progress {
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 5px;
+            min-height: 100px;
+        }
+        .success {
+            color: #4CAF50;
+        }
+        .error {
+            color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎨 SVG → PNG 변환기</h1>
+    <p>플레이스홀더 스프라이트 SVG 파일을 PNG로 변환합니다.</p>
+
+    <button onclick="convertAll()">모든 스프라이트 변환</button>
+    <button onclick="downloadZip()">ZIP으로 다운로드</button>
+
+    <div id="progress"></div>
+
+    <script>
+        const sprites = [
+            { name: 'player', folder: 'characters', size: 32 },
+            { name: 'goblin', folder: 'enemies', size: 32 },
+            { name: 'orc', folder: 'enemies', size: 32 },
+            { name: 'skeleton', folder: 'enemies', size: 32 },
+            { name: 'troll', folder: 'enemies', size: 32 },
+            { name: 'wraith', folder: 'enemies', size: 32 },
+            { name: 'soul_keeper', folder: 'npcs', size: 32 },
+            { name: 'blacksmith', folder: 'npcs', size: 32 },
+            { name: 'skill_master', folder: 'npcs', size: 32 },
+            { name: 'sage', folder: 'npcs', size: 32 },
+            { name: 'merchant', folder: 'npcs', size: 32 },
+            { name: 'goblin_chieftain', folder: 'enemies', size: 48 },
+            { name: 'orc_chieftain', folder: 'enemies', size: 48 },
+            { name: 'troll_king', folder: 'enemies', size: 64 },
+            { name: 'skeleton_lord', folder: 'enemies', size: 64 },
+            { name: 'death_knight', folder: 'enemies', size: 64 },
+            { name: 'chaos_lord', folder: 'enemies', size: 128 }
+        ];
+
+        let convertedImages = {};
+
+        function log(message, type = 'normal') {
+            const progress = document.getElementById('progress');
+            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : '';
+            progress.innerHTML += `<div class="${className}">${message}</div>`;
+        }
+
+        async function convertSvgToPng(svgPath, width, height) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width * 4; // 4프레임
+                    canvas.height = height * 4; // 4방향
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+
+                    canvas.toBlob((blob) => {
+                        resolve(blob);
+                    }, 'image/png');
+                };
+                img.onerror = reject;
+                img.src = svgPath;
+            });
+        }
+
+        async function convertAll() {
+            document.getElementById('progress').innerHTML = '';
+            log('🎨 변환 시작...', 'normal');
+
+            for (const sprite of sprites) {
+                try {
+                    const svgPath = `/assets/sprites/${sprite.folder}/${sprite.name}.svg`;
+                    const totalSize = sprite.size;
+                    const blob = await convertSvgToPng(svgPath, totalSize, totalSize);
+
+                    convertedImages[`${sprite.folder}/${sprite.name}.png`] = blob;
+                    log(`✅ ${sprite.name}.png (${sprite.size}x${sprite.size})`, 'success');
+                } catch (error) {
+                    log(`❌ ${sprite.name}: ${error.message}`, 'error');
+                }
+            }
+
+            log(`\n🎉 ${Object.keys(convertedImages).length}개 변환 완료!`, 'success');
+            log('이제 "ZIP으로 다운로드" 버튼을 클릭하세요!', 'normal');
+        }
+
+        function downloadZip() {
+            if (Object.keys(convertedImages).length === 0) {
+                alert('먼저 "모든 스프라이트 변환"을 클릭하세요!');
+                return;
+            }
+
+            // 각 이미지를 개별 다운로드 (ZIP 라이브러리 없이)
+            log('\n📥 다운로드 시작...', 'normal');
+            for (const [path, blob] of Object.entries(convertedImages)) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = path.replace('/', '_');
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }
+            log('✅ 다운로드 완료! 다운로드 폴더를 확인하세요.', 'success');
+        }
+    </script>
+</body>
+</html>

@@ -8,6 +8,7 @@ import { Position, EnemyType, EnemyData, AIState } from '../types';
 import { COLORS } from '../utils/Constants';
 import { Renderer } from '../systems/Renderer';
 import { Player } from './Player';
+import { AnimationController, Direction } from '../systems/AnimationController';
 
 export class Enemy {
     x: number;
@@ -44,6 +45,7 @@ export class Enemy {
 
     // 애니메이션
     private animationTime: number = 0;
+    private animationController: AnimationController;
 
     constructor(x: number, y: number, type: EnemyType, isBoss: boolean = false) {
         this.x = x;
@@ -70,6 +72,9 @@ export class Enemy {
             this.height = 48;
             this.detectionRange = 300; // 보스는 더 먼 거리에서 감지
         }
+
+        // 애니메이션 컨트롤러 초기화
+        this.animationController = new AnimationController(200, 4); // 적은 조금 느리게
     }
 
     /**
@@ -134,6 +139,7 @@ export class Enemy {
         if (this.health <= 0) return;
 
         this.animationTime += deltaTime;
+        this.animationController.update(deltaTime);
 
         const distanceToPlayer = this.getDistanceToPlayer(player);
 
@@ -141,6 +147,7 @@ export class Enemy {
         if (distanceToPlayer <= this.attackRange) {
             this.aiState = 'attack';
             this.attackPlayer(player);
+            this.animationController.stop();
         } else if (distanceToPlayer <= this.detectionRange) {
             this.aiState = 'chase';
             this.moveTowardsPlayer(player, deltaTime);
@@ -168,8 +175,14 @@ export class Enemy {
         const distance = Math.sqrt(dx * dx + dy * dy);
 
         if (distance > 0) {
-            this.x += (dx / distance) * this.speed * deltaTime;
-            this.y += (dy / distance) * this.speed * deltaTime;
+            const moveX = (dx / distance) * this.speed * deltaTime;
+            const moveY = (dy / distance) * this.speed * deltaTime;
+
+            this.x += moveX;
+            this.y += moveY;
+
+            // 애니메이션 방향 설정
+            this.animationController.setDirectionFromMovement(dx, dy);
         }
     }
 
@@ -183,8 +196,16 @@ export class Enemy {
 
         if (distance > this.patrolRadius) {
             // 순찰 영역으로 돌아가기
-            this.x += (dx / distance) * this.speed * 0.5 * deltaTime;
-            this.y += (dy / distance) * this.speed * 0.5 * deltaTime;
+            const moveX = (dx / distance) * this.speed * 0.5 * deltaTime;
+            const moveY = (dy / distance) * this.speed * 0.5 * deltaTime;
+
+            this.x += moveX;
+            this.y += moveY;
+
+            // 애니메이션 방향 설정
+            this.animationController.setDirectionFromMovement(dx, dy);
+        } else {
+            this.animationController.stop();
         }
     }
 
@@ -350,6 +371,13 @@ export class Enemy {
         const G = Math.max(0, (num >> 8 & 0x00FF) - amt);
         const B = Math.max(0, (num & 0x0000FF) - amt);
         return `#${(0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1)}`;
+    }
+
+    /**
+     * 애니메이션 컨트롤러 가져오기
+     */
+    getAnimationController(): AnimationController {
+        return this.animationController;
     }
 
     /**

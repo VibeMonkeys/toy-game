@@ -60,10 +60,17 @@ export class InputManager {
         let x = 0;
         let y = 0;
 
+        // WASD 키
         if (this.isKeyPressed(CONTROLS.MOVE_LEFT)) x -= 1;
         if (this.isKeyPressed(CONTROLS.MOVE_RIGHT)) x += 1;
         if (this.isKeyPressed(CONTROLS.MOVE_UP)) y -= 1;
         if (this.isKeyPressed(CONTROLS.MOVE_DOWN)) y += 1;
+
+        // 방향키 (Arrow Keys)
+        if (this.isKeyPressed('ArrowLeft')) x -= 1;
+        if (this.isKeyPressed('ArrowRight')) x += 1;
+        if (this.isKeyPressed('ArrowUp')) y -= 1;
+        if (this.isKeyPressed('ArrowDown')) y += 1;
 
         // 대각선 이동 정규화
         if (x !== 0 && y !== 0) {

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="128" height="128" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .label { font-family: Arial; font-size: 8px; fill: white; text-anchor: middle; }
+    </style>
+  </defs>
+  <rect x="0" y="0" width="32" height="32" fill="#1A1A1A" stroke="#000" stroke-width="1"/>
+  <circle cx="11.2" cy="12.8" r="2" fill="#fff"/>
+  <circle cx="20.8" cy="12.8" r="2" fill="#fff"/>
+  <text x="16" y="25.6" class="label">UP1</text>
+  <rect x="32" y="0" width="32" height="32" fill="#1A1A1A" stroke="#000" stroke-width="1"/>
+  <circle cx="43.2" cy="14.8" r="2" fill="#fff"/>
+  <circle cx="52.8" cy="14.8" r="2" fill="#fff"/>
+  <rect x="64" y="0" width="32" height="32" fill="#1A1A1A" stroke="#000" stroke-width="1"/>
+  <circle cx="75.2" cy="12.8" r="2" fill="#fff"/>
+  <circle cx="84.8" cy="12.8" r="2" fill="#fff"/>
+  <rect x="96" y="0" width="32" height="32" fill="#1A1A1A" stroke="#000" stroke-width="1"/>
+  <circle cx="107.2" cy="14.8" r="2" fill="#fff"/>
+  <circle cx="116.8" cy="14.8" r="2" fill="#fff"/>
+  <rect x="0" y="32" width="32" height="32" fill="#1A1A1A" stroke="#000" stroke-width="1"/>
+  <circle cx="11.2" cy="44.8" r="2" fill="#fff"/>
+  <circle cx="20.8" cy="44.8" r="2" fill="#fff"/>
+  <text x="16" y="57.6" class="label">LEFT1</text>
+  <rect x="32" y="32" width="32" height="32" fill="#1A1A1A" stroke="#000" stroke-width="1"/>
+  <circle cx="43.2" cy="46.8" r="2" fill="#fff"/>
+  <circle cx="52.8" cy="46.8" r="2" fill="#fff"/>
+  <rect x="64" y="32" width="32" height="32" fill="#1A1A1A" stroke="#000" stroke-width="1"/>
+  <circle cx="75.2" cy="44.8" r="2" fill="#fff"/>
+  <circle cx="84.8" cy="44.8" r="2" fill="#fff"/>
+  <rect x="96" y="32" width="32" height="32" fill="#1A1A1A" stroke="#000" stroke-width="1"/>
+  <circle cx="107.2" cy="46.8" r="2" fill="#fff"/>
+  <circle cx="116.8" cy="46.8" r="2" fill="#fff"/>
+  <rect x="0" y="64" width="32" height="32" fill="#1A1A1A" stroke="#000" stroke-width="1"/>
+  <circle cx="11.2" cy="76.8" r="2" fill="#fff"/>
+  <circle cx="20.8" cy="76.8" r="2" fill="#fff"/>
+  <text x="16" y="89.6" class="label">DOWN1</text>
+  <rect x="32" y="64" width="32" height="32" fill="#1A1A1A" stroke="#000" stroke-width="1"/>
+  <circle cx="43.2" cy="78.8" r="2" fill="#fff"/>
+  <circle cx="52.8" cy="78.8" r="2" fill="#fff"/>
+  <rect x="64" y="64" width="32" height="32" fill="#1A1A1A" stroke="#000" stroke-width="1"/>
+  <circle cx="75.2" cy="76.8" r="2" fill="#fff"/>
+  <circle cx="84.8" cy="76.8" r="2" fill="#fff"/>
+  <rect x="96" y="64" width="32" height="32" fill="#1A1A1A" stroke="#000" stroke-width="1"/>
+  <circle cx="107.2" cy="78.8" r="2" fill="#fff"/>
+  <circle cx="116.8" cy="78.8" r="2" fill="#fff"/>
+  <rect x="0" y="96" width="32" height="32" fill="#1A1A1A" stroke="#000" stroke-width="1"/>
+  <circle cx="11.2" cy="108.8" r="2" fill="#fff"/>
+  <circle cx="20.8" cy="108.8" r="2" fill="#fff"/>
+  <text x="16" y="121.6" class="label">RIGHT1</text>
+  <rect x="32" y="96" width="32" height="32" fill="#1A1A1A" stroke="#000" stroke-width="1"/>
+  <circle cx="43.2" cy="110.8" r="2" fill="#fff"/>
+  <circle cx="52.8" cy="110.8" r="2" fill="#fff"/>
+  <rect x="64" y="96" width="32" height="32" fill="#1A1A1A" stroke="#000" stroke-width="1"/>
+  <circle cx="75.2" cy="108.8" r="2" fill="#fff"/>
+  <circle cx="84.8" cy="108.8" r="2" fill="#fff"/>
+  <rect x="96" y="96" width="32" height="32" fill="#1A1A1A" stroke="#000" stroke-width="1"/>
+  <circle cx="107.2" cy="110.8" r="2" fill="#fff"/>
+  <circle cx="116.8" cy="110.8" r="2" fill="#fff"/>
+</svg>

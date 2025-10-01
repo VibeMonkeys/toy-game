@@ -15,8 +15,13 @@ import { ItemSystem } from '../systems/ItemSystem';
 import { Inventory } from '../systems/Inventory';
 import { Trait } from '../systems/TraitSystem';
 import { Minimap } from '../ui/Minimap';
+import { TitleScreen } from '../ui/TitleScreen';
+import { CreditsScreen } from '../ui/CreditsScreen';
+import { HowToPlayScreen } from '../ui/HowToPlayScreen';
+import { TutorialPopup } from '../ui/TutorialPopup';
 import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
+import { SpriteManager } from '../systems/SpriteManager';
 
 class Game {
     // 캔버스
@@ -31,6 +36,11 @@ class Game {
     private itemSystem: ItemSystem;
     private inventory: Inventory;
     private minimap: Minimap;
+    private spriteManager: SpriteManager;
+    private titleScreen: TitleScreen;
+    private creditsScreen: CreditsScreen;
+    private howToPlayScreen: HowToPlayScreen;
+    private tutorialPopup: TutorialPopup;
 
     // 게임 상태
     private gameMode: GameMode = GameMode.LOADING;
@@ -75,6 +85,11 @@ class Game {
         this.itemSystem = new ItemSystem();
         this.inventory = new Inventory();
         this.minimap = new Minimap();
+        this.spriteManager = new SpriteManager();
+        this.titleScreen = new TitleScreen();
+        this.creditsScreen = new CreditsScreen();
+        this.howToPlayScreen = new HowToPlayScreen();
+        this.tutorialPopup = new TutorialPopup();
 
         // 게임 초기화
         this.init();
@@ -85,6 +100,14 @@ class Game {
      */
     private async init(): Promise<void> {
         console.log('🔧 게임 초기화 중...');
+
+        // 스프라이트 로드
+        try {
+            await this.spriteManager.loadAll();
+            console.log('✅ 스프라이트 로드 완료!');
+        } catch (error) {
+            console.error('❌ 스프라이트 로드 실패:', error);
+        }
 
         // 로딩 화면 숨기기
         this.hideLoadingScreen();
@@ -151,6 +174,18 @@ class Game {
                 this.updateTitleScreen();
                 break;
 
+            case GameMode.CREDITS:
+                this.updateCreditsScreen();
+                break;
+
+            case GameMode.HOW_TO_PLAY:
+                this.updateHowToPlayScreen();
+                break;
+
+            case GameMode.TUTORIAL:
+                this.updateTutorial();
+                break;
+
             case GameMode.PLAYING:
                 this.updateGameplay();
                 break;
@@ -164,9 +199,95 @@ class Game {
      * 타이틀 화면 업데이트
      */
     private updateTitleScreen(): void {
-        // 스페이스바로 게임 시작
-        if (this.inputManager.isKeyPressed('Space')) {
+        this.titleScreen.update(this.deltaTime);
+
+        // 방향키로 메뉴 이동 (한 번만 눌렸을 때)
+        if (this.inputManager.isKeyJustPressed('ArrowUp')) {
+            this.titleScreen.moveUp();
+        }
+        if (this.inputManager.isKeyJustPressed('ArrowDown')) {
+            this.titleScreen.moveDown();
+        }
+
+        // Enter 또는 Space로 선택 (한 번만 눌렸을 때)
+        if (this.inputManager.isKeyJustPressed('Enter') || this.inputManager.isKeyJustPressed('Space')) {
+            const selected = this.titleScreen.getSelectedOption();
+
+            switch (selected) {
+                case 'start':
+                    // 튜토리얼 시작
+                    this.gameMode = GameMode.TUTORIAL;
+                    this.tutorialPopup.start();
+                    break;
+                case 'how_to_play':
+                    this.gameMode = GameMode.HOW_TO_PLAY;
+                    break;
+                case 'credits':
+                    this.gameMode = GameMode.CREDITS;
+                    break;
+            }
+        }
+    }
+
+    /**
+     * 크레딧 화면 업데이트
+     */
+    private updateCreditsScreen(): void {
+        this.creditsScreen.update(this.deltaTime);
+
+        // ESC로 타이틀로 돌아가기 (한 번만 눌렸을 때)
+        if (this.inputManager.isKeyJustPressed('Escape')) {
+            this.gameMode = GameMode.TITLE;
+        }
+    }
+
+    /**
+     * 조작법 화면 업데이트
+     */
+    private updateHowToPlayScreen(): void {
+        this.howToPlayScreen.update(this.deltaTime);
+
+        // ESC로 타이틀로 돌아가기 (한 번만 눌렸을 때)
+        if (this.inputManager.isKeyJustPressed('Escape')) {
+            this.gameMode = GameMode.TITLE;
+        }
+    }
+
+    /**
+     * 튜토리얼 업데이트
+     */
+    private updateTutorial(): void {
+        this.tutorialPopup.update(this.deltaTime);
+
+        // ESC로 스킵 (한 번만 눌렸을 때)
+        if (this.inputManager.isKeyJustPressed('Escape')) {
+            this.tutorialPopup.skip();
             this.startNewGame();
+            return;
+        }
+
+        // 방향키로 이동 (한 번만 눌렸을 때)
+        if (this.inputManager.isKeyJustPressed('ArrowLeft')) {
+            this.tutorialPopup.previousStep();
+        }
+        if (this.inputManager.isKeyJustPressed('ArrowRight')) {
+            if (this.tutorialPopup.getCurrentStep() === this.tutorialPopup.getTotalSteps() - 1) {
+                // 마지막 단계에서 다음 누르면 게임 시작
+                this.tutorialPopup.end();
+                this.startNewGame();
+            } else {
+                this.tutorialPopup.nextStep();
+            }
+        }
+
+        // Space 또는 Enter로 진행 (한 번만 눌렸을 때)
+        if (this.inputManager.isKeyJustPressed('Space') || this.inputManager.isKeyJustPressed('Enter')) {
+            if (this.tutorialPopup.getCurrentStep() === this.tutorialPopup.getTotalSteps() - 1) {
+                this.tutorialPopup.end();
+                this.startNewGame();
+            } else {
+                this.tutorialPopup.nextStep();
+            }
         }
     }
 
@@ -382,6 +503,18 @@ class Game {
                 this.renderTitleScreen();
                 break;
 
+            case GameMode.CREDITS:
+                this.renderCreditsScreen();
+                break;
+
+            case GameMode.HOW_TO_PLAY:
+                this.renderHowToPlayScreen();
+                break;
+
+            case GameMode.TUTORIAL:
+                this.renderTutorial();
+                break;
+
             case GameMode.PLAYING:
                 this.renderGameplay();
                 break;
@@ -400,32 +533,34 @@ class Game {
      * 타이틀 화면 렌더링
      */
     private renderTitleScreen(): void {
-        this.renderer.drawText(
-            '🗡️ 최진안의 이세계 모험기',
-            SCREEN.CENTER_X,
-            200,
-            'bold 48px Arial',
-            '#e94560',
-            'center'
-        );
+        this.titleScreen.render(this.renderer);
+    }
 
-        this.renderer.drawText(
-            'Press SPACE to Start',
-            SCREEN.CENTER_X,
-            400,
-            '24px Arial',
-            '#ffffff',
-            'center'
-        );
+    /**
+     * 크레딧 화면 렌더링
+     */
+    private renderCreditsScreen(): void {
+        this.creditsScreen.render(this.renderer);
+    }
 
-        this.renderer.drawText(
-            'TypeScript + Canvas로 만든 로그라이크 게임',
-            SCREEN.CENTER_X,
-            500,
-            '18px Arial',
-            '#cccccc',
-            'center'
-        );
+    /**
+     * 조작법 화면 렌더링
+     */
+    private renderHowToPlayScreen(): void {
+        this.howToPlayScreen.render(this.renderer);
+    }
+
+    /**
+     * 튜토리얼 렌더링
+     */
+    private renderTutorial(): void {
+        // 기본 배경 (검정색)
+        const ctx = this.renderer.getContext();
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, SCREEN.WIDTH, SCREEN.HEIGHT);
+
+        // 튜토리얼 팝업
+        this.tutorialPopup.render(this.renderer);
     }
 
     /**
@@ -443,68 +578,69 @@ class Game {
         const playerScreen = this.camera.worldToScreen(this.player.x, this.player.y);
         const ctx = this.renderer.getContext();
 
-        // 플레이어 그림자 (타원형)
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-        ctx.beginPath();
-        ctx.ellipse(playerScreen.x + 16, playerScreen.y + 30, 14, 6, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // 플레이어 몸체 (그라데이션)
-        const playerGradient = ctx.createRadialGradient(
-            playerScreen.x + 16, playerScreen.y + 14,
-            0,
-            playerScreen.x + 16, playerScreen.y + 16,
-            16
+        // 플레이어 스프라이트로 렌더링
+        const animController = this.player.getAnimationController();
+        this.spriteManager.drawAnimatedSprite(
+            ctx,
+            'player',
+            playerScreen.x - 16, // 중앙 정렬
+            playerScreen.y - 16,
+            animController.getCurrentDirection(),
+            animController.getCurrentFrame()
         );
-        playerGradient.addColorStop(0, '#6AB8F5');
-        playerGradient.addColorStop(0.7, GAMEPLAY.PLAYER_BASE.COLOR);
-        playerGradient.addColorStop(1, '#2C5F8D');
-
-        ctx.fillStyle = playerGradient;
-        ctx.beginPath();
-        ctx.arc(playerScreen.x + 16, playerScreen.y + 16, 14, 0, Math.PI * 2);
-        ctx.fill();
-
-        // 플레이어 하이라이트
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-        ctx.beginPath();
-        ctx.arc(playerScreen.x + 13, playerScreen.y + 13, 5, 0, Math.PI * 2);
-        ctx.fill();
-
-        // 플레이어 테두리 (이중)
-        ctx.strokeStyle = '#1A3A5C';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.arc(playerScreen.x + 16, playerScreen.y + 16, 14, 0, Math.PI * 2);
-        ctx.stroke();
-
-        ctx.strokeStyle = '#6AB8F5';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.arc(playerScreen.x + 16, playerScreen.y + 16, 15, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // 방향 표시 (발광 점)
-        const dirGradient = ctx.createRadialGradient(
-            playerScreen.x + 16, playerScreen.y + 9,
-            0,
-            playerScreen.x + 16, playerScreen.y + 9,
-            5
-        );
-        dirGradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-        dirGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-        ctx.fillStyle = dirGradient;
-        ctx.fillRect(playerScreen.x + 11, playerScreen.y + 4, 10, 10);
-
-        ctx.fillStyle = '#FFFFFF';
-        ctx.beginPath();
-        ctx.arc(playerScreen.x + 16, playerScreen.y + 9, 3, 0, Math.PI * 2);
-        ctx.fill();
 
         // 적 렌더링 (화면 좌표로 변환)
         for (const enemy of this.enemies) {
             const enemyScreen = this.camera.worldToScreen(enemy.x, enemy.y);
-            enemy.renderAtPosition(this.renderer, enemyScreen.x, enemyScreen.y);
+
+            // 적 스프라이트로 렌더링
+            const enemyAnimController = enemy.getAnimationController();
+            const spriteKey = enemy.isBoss ? `${enemy.type}_chieftain` : enemy.type;
+
+            this.spriteManager.drawAnimatedSprite(
+                ctx,
+                spriteKey,
+                enemyScreen.x - 16,
+                enemyScreen.y - 16,
+                enemyAnimController.getCurrentDirection(),
+                enemyAnimController.getCurrentFrame()
+            );
+
+            // 체력바는 그대로 유지
+            if (enemy.health < enemy.maxHealth) {
+                const barWidth = 32;
+                const barHeight = 4;
+                const barX = enemyScreen.x - 16;
+                const barY = enemyScreen.y - 20;
+
+                // 배경
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                ctx.fillRect(barX, barY, barWidth, barHeight);
+
+                // 체력
+                const healthPercent = enemy.health / enemy.maxHealth;
+                const healthColor = healthPercent > 0.5 ? '#4CAF50' : healthPercent > 0.25 ? '#FFC107' : '#F44336';
+                ctx.fillStyle = healthColor;
+                ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+
+                // 테두리
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(barX, barY, barWidth, barHeight);
+            }
+
+            // 보스 표시
+            if (enemy.isBoss) {
+                const pulse = Math.sin(Date.now() / 200) * 0.3 + 0.7;
+                this.renderer.drawText(
+                    '👑 BOSS',
+                    enemyScreen.x,
+                    enemyScreen.y - 30,
+                    'bold 12px Arial',
+                    `rgba(255, ${Math.floor(pulse * 100)}, 0, 1)`,
+                    'center'
+                );
+            }
         }
 
         // 드롭된 아이템 렌더링

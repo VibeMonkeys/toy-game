@@ -227,13 +227,13 @@ export class MapManager {
             const height = room.bounds.height * this.tileSize;
 
             // 방 타입별 색상
-            let color = COLORS.DEBUG;
+            let color: string = COLORS.DEBUG;
             switch (room.type) {
-                case 'start': color = '#00ff00'; break;
-                case 'exit': color = '#ff0000'; break;
-                case 'boss': color = '#ff00ff'; break;
-                case 'treasure': color = '#ffff00'; break;
-                case 'shop': color = '#00ffff'; break;
+                case 'start': color = '#00FF00'; break;
+                case 'exit': color = '#FF0000'; break;
+                case 'boss': color = '#FF00FF'; break;
+                case 'treasure': color = '#FFFF00'; break;
+                case 'shop': color = '#00FFFF'; break;
             }
 
             renderer.drawRectOutline(screenX, screenY, width, height, color, 2);

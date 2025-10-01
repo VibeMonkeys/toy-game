@@ -9,6 +9,7 @@ import { GAMEPLAY, COLORS } from '../utils/Constants';
 import { CombatSystem } from '../systems/CombatSystem';
 import { TraitSystem } from '../systems/TraitSystem';
 import { Renderer } from '../systems/Renderer';
+import { AnimationController, Direction } from '../systems/AnimationController';
 
 export class Player {
     // 위치 & 이동
@@ -41,6 +42,7 @@ export class Player {
 
     // 애니메이션
     private animationTime: number = 0;
+    private animationController: AnimationController;
 
     constructor(x: number, y: number) {
         this.x = x;
@@ -64,6 +66,7 @@ export class Player {
 
         this.combatSystem = new CombatSystem();
         this.traitSystem = new TraitSystem();
+        this.animationController = new AnimationController(150, 4);
     }
 
     /**
@@ -80,6 +83,7 @@ export class Player {
 
         // 애니메이션
         this.animationTime += deltaTime;
+        this.animationController.update(deltaTime);
     }
 
     /**
@@ -87,6 +91,9 @@ export class Player {
      */
     move(direction: Vector2D, deltaTime: number, collisionCheck?: (x: number, y: number, w: number, h: number) => boolean): void {
         if (this.isDodging) return;
+
+        // 애니메이션 방향 설정
+        this.animationController.setDirectionFromMovement(direction.x, direction.y);
 
         // 이동 방향이 없으면 리턴
         if (direction.x === 0 && direction.y === 0) return;
@@ -272,6 +279,13 @@ export class Player {
      */
     getTraitSystem(): TraitSystem {
         return this.traitSystem;
+    }
+
+    /**
+     * 애니메이션 컨트롤러 가져오기
+     */
+    getAnimationController(): AnimationController {
+        return this.animationController;
     }
 
     /**

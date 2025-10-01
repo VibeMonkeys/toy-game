@@ -289,7 +289,8 @@ export const COLORS = {
     CRITICAL_HIT: '#FF0000',
     LEVEL_UP: '#FFD700',
     QUEST_COMPLETE: '#00FF00',
-    ITEM: '#FFAA00'
+    ITEM: '#FFAA00',
+    DEBUG: '#00FF00'
 } as const;
 
 // 애니메이션 상수

@@ -10,6 +10,9 @@
 export enum GameMode {
     LOADING = 'LOADING',
     TITLE = 'TITLE',
+    CREDITS = 'CREDITS',
+    HOW_TO_PLAY = 'HOW_TO_PLAY',
+    TUTORIAL = 'TUTORIAL',
     INTRO = 'INTRO',
     PLAYING = 'PLAYING',
     TRAIT_SELECTION = 'TRAIT_SELECTION',
