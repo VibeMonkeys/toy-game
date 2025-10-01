@@ -404,6 +404,18 @@ export class DungeonGenerator {
             }
         }
 
+        // NPC 스폰 (층별 2-3명)
+        const npcRooms = this.getNPCSpawnRooms(floor);
+        for (const room of npcRooms) {
+            const npcX = room.center.x * 32;
+            const npcY = room.center.y * 32;
+
+            spawnPoints.npcs.push({
+                x: npcX,
+                y: npcY
+            });
+        }
+
         return spawnPoints;
     }
 
@@ -441,5 +453,41 @@ export class DungeonGenerator {
             if (rand < 0.7) return 'skeleton';
             return 'wraith';
         }
+    }
+
+    /**
+     * NPC 스폰할 방 선택 (층별 2-3명)
+     */
+    private getNPCSpawnRooms(floor: number): Room[] {
+        const npcRooms: Room[] = [];
+        const candidateRooms = this.rooms.filter(r =>
+            r.type !== RoomType.START &&
+            r.type !== RoomType.EXIT &&
+            r.type !== RoomType.BOSS &&
+            r.type !== RoomType.COMBAT // 전투 방에는 NPC 배치 안 함
+        );
+
+        // 층별 NPC 수 결정
+        const npcCount = floor <= 2 ? 2 : 3;
+
+        // 랜덤하게 방 선택
+        const shuffled = [...candidateRooms].sort(() => Math.random() - 0.5);
+
+        for (let i = 0; i < Math.min(npcCount, shuffled.length); i++) {
+            npcRooms.push(shuffled[i]);
+        }
+
+        // NPC 배치 못 할 경우 일반 방 중에서 선택
+        if (npcRooms.length === 0 && this.rooms.length > 2) {
+            const fallbackRoom = this.rooms.find(r =>
+                r.type !== RoomType.START &&
+                r.type !== RoomType.EXIT
+            );
+            if (fallbackRoom) {
+                npcRooms.push(fallbackRoom);
+            }
+        }
+
+        return npcRooms;
     }
 }

@@ -18,8 +18,12 @@ export interface NPCData {
         greeting: string;
         default: string;
         farewell: string;
+        questAvailable?: string; // 퀘스트 있을 때
+        questInProgress?: string; // 퀘스트 진행 중
+        questComplete?: string; // 퀘스트 완료 가능
     };
     services?: ('shop' | 'upgrade' | 'quest')[];
+    questIds?: string[]; // 제공하는 퀘스트 ID 목록
 }
 
 export class NPC {
@@ -60,9 +64,13 @@ export class NPC {
                 dialogues: {
                     greeting: '죽음조차 끝이 아니군요. 당신은 특별합니다.',
                     default: '더 강해지고 싶으십니까? 소울 포인트로 업그레이드할 수 있습니다.',
-                    farewell: '행운을 빕니다, 용사여.'
+                    farewell: '행운을 빕니다, 용사여.',
+                    questAvailable: '당신에게 맡길 중요한 임무가 있습니다.',
+                    questInProgress: '임무는 잘 진행되고 있습니까?',
+                    questComplete: '임무를 완수했군요. 훌륭합니다!'
                 },
-                services: ['upgrade']
+                services: ['upgrade', 'quest'],
+                questIds: ['floor4_troll', 'floor4_treasure']
             },
             blacksmith: {
                 name: '무기 대장장이',
@@ -71,9 +79,13 @@ export class NPC {
                 dialogues: {
                     greeting: '좋은 무기가 좋은 영웅을 만들지요.',
                     default: '새로운 무기가 필요하신가요?',
-                    farewell: '좋은 전투 되시길!'
+                    farewell: '좋은 전투 되시길!',
+                    questAvailable: '도와줄 일이 있는데...',
+                    questInProgress: '일은 잘 되어가나?',
+                    questComplete: '고맙네! 약속대로 보상을 주지.'
                 },
-                services: ['shop', 'upgrade']
+                services: ['shop', 'upgrade', 'quest'],
+                questIds: ['floor2_combat', 'floor2_equipment']
             },
             skill_master: {
                 name: '기술 스승',
@@ -82,9 +94,13 @@ export class NPC {
                 dialogues: {
                     greeting: '힘만으로는 부족합니다. 기술을 배우세요.',
                     default: '새로운 기술을 배울 준비가 되셨나요?',
-                    farewell: '당신의 잠재력을 믿습니다.'
+                    farewell: '당신의 잠재력을 믿습니다.',
+                    questAvailable: '수행해야 할 시험이 있소.',
+                    questInProgress: '시험은 어떻게 진행되고 있소?',
+                    questComplete: '훌륭하오! 당신은 자격이 있소.'
                 },
-                services: ['upgrade']
+                services: ['upgrade', 'quest'],
+                questIds: ['floor3_undead', 'floor3_magic']
             },
             sage: {
                 name: '현자',
@@ -93,9 +109,13 @@ export class NPC {
                 dialogues: {
                     greeting: '이곳은 영혼이 시험받는 공간입니다...',
                     default: '진정한 용기를 증명하십시오.',
-                    farewell: '지혜가 함께하길.'
+                    farewell: '지혜가 함께하길.',
+                    questAvailable: '당신에게 맡길 시련이 있습니다.',
+                    questInProgress: '시련은 계속되고 있군요.',
+                    questComplete: '놀랍군요! 당신은 진정한 영웅입니다!'
                 },
-                services: ['quest']
+                services: ['quest'],
+                questIds: ['floor1_tutorial', 'floor5_final']
             },
             merchant: {
                 name: '떠돌이 상인',
@@ -104,9 +124,13 @@ export class NPC {
                 dialogues: {
                     greeting: '오! 손님이시군요. 좋은 물건 많습니다!',
                     default: '뭐 필요한 거 있으세요?',
-                    farewell: '또 오세요!'
+                    farewell: '또 오세요!',
+                    questAvailable: '재미있는 제안이 있는데요...',
+                    questInProgress: '일은 잘 되고 있나요?',
+                    questComplete: '오! 훌륭해요! 보상 여기 있습니다!'
                 },
-                services: ['shop']
+                services: ['shop', 'quest'],
+                questIds: ['floor1_exploration', 'daily_collector']
             }
         };
 
