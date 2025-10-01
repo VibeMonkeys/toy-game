@@ -14,6 +14,8 @@ import { DamageNumberSystem } from '../systems/DamageNumberSystem';
 import { ItemSystem } from '../systems/ItemSystem';
 import { Inventory } from '../systems/Inventory';
 import { Trait } from '../systems/TraitSystem';
+import { QuestSystem } from '../systems/QuestSystem';
+import { DialogueSystem } from '../systems/DialogueSystem';
 import { Minimap } from '../ui/Minimap';
 import { TitleScreen } from '../ui/TitleScreen';
 import { CreditsScreen } from '../ui/CreditsScreen';
@@ -22,11 +24,14 @@ import { TutorialPopup } from '../ui/TutorialPopup';
 import { SoulChamberUI } from '../ui/SoulChamberUI';
 import { WeaponSelectUI } from '../ui/WeaponSelectUI';
 import { CharacterCreateUI } from '../ui/CharacterCreateUI';
+import { QuestUI } from '../ui/QuestUI';
 import { UpgradeSystem } from '../systems/UpgradeSystem';
 import { WeaponSystem } from '../systems/WeaponSystem';
 import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
+import { NPC } from '../entities/NPC';
 import { SpriteManager } from '../systems/SpriteManager';
+import { QUEST_DATABASE, getQuestsForFloor, getQuestsForNPC } from '../data/QuestData';
 
 class Game {
     // 캔버스
@@ -40,6 +45,8 @@ class Game {
     private damageNumberSystem: DamageNumberSystem;
     private itemSystem: ItemSystem;
     private inventory: Inventory;
+    private questSystem: QuestSystem;
+    private dialogueSystem: DialogueSystem;
     private minimap: Minimap;
     private spriteManager: SpriteManager;
     private titleScreen: TitleScreen;
@@ -49,6 +56,7 @@ class Game {
     private soulChamberUI: SoulChamberUI;
     private weaponSelectUI: WeaponSelectUI;
     private characterCreateUI: CharacterCreateUI;
+    private questUI: QuestUI;
     private upgradeSystem: UpgradeSystem;
 
     // 게임 상태
@@ -70,6 +78,7 @@ class Game {
     // 엔티티
     private player: Player | null = null;
     private enemies: Enemy[] = [];
+    private npcs: NPC[] = [];
 
     // 특성 선택
     private traitChoices: Trait[] = [];
@@ -103,6 +112,8 @@ class Game {
         this.damageNumberSystem = new DamageNumberSystem();
         this.itemSystem = new ItemSystem();
         this.inventory = new Inventory();
+        this.questSystem = new QuestSystem();
+        this.dialogueSystem = new DialogueSystem();
         this.minimap = new Minimap();
         this.spriteManager = new SpriteManager();
         this.titleScreen = new TitleScreen();
@@ -112,6 +123,7 @@ class Game {
         this.soulChamberUI = new SoulChamberUI();
         this.weaponSelectUI = new WeaponSelectUI();
         this.characterCreateUI = new CharacterCreateUI();
+        this.questUI = new QuestUI(this.questSystem);
         this.upgradeSystem = new UpgradeSystem();
 
         // 로컬스토리지에서 플레이어 이름 로드
@@ -564,6 +576,23 @@ class Game {
             return;
         }
 
+        // 퀘스트 UI 토글 (Q 키)
+        if (this.inputManager.isKeyJustPressed('KeyQ')) {
+            this.questUI.toggle();
+        }
+
+        // 퀘스트 UI가 열려있으면 일부 입력 차단
+        if (this.questUI.isQuestUIOpen()) {
+            // ESC로 닫기
+            if (this.inputManager.isKeyJustPressed('Escape')) {
+                this.questUI.close();
+                return;
+            }
+            // 다른 입력은 차단
+            this.inputManager.clearJustPressed();
+            return;
+        }
+
         // ESC로 Soul Chamber 토글
         if (this.inputManager.isKeyJustPressed('Escape')) {
             this.previousGameMode = this.gameMode;
@@ -620,6 +649,16 @@ class Game {
             }
         }
 
+        // NPC 업데이트
+        for (const npc of this.npcs) {
+            npc.update(this.deltaTime);
+        }
+
+        // NPC 상호작용 체크 (E 키)
+        if (this.inputManager.isKeyJustPressed('KeyE')) {
+            this.checkNPCInteraction();
+        }
+
         // 데미지 숫자 업데이트
         this.damageNumberSystem.update(this.deltaTime);
 
@@ -632,6 +671,8 @@ class Game {
             const added = this.inventory.addItem(pickedItem.item);
             if (added) {
                 console.log(`📦 ${pickedItem.item.name} 획득!`);
+                // 퀘스트 진행도 업데이트
+                this.questSystem.onItemCollected(pickedItem.item.id, 1);
             } else {
                 console.log('❌ 인벤토리가 가득 찼습니다');
             }
@@ -714,6 +755,9 @@ class Game {
         // 아이템 드롭
         this.itemSystem.dropRandomItem(enemy.x, enemy.y, enemy.type, this.currentFloor);
 
+        // 퀘스트 진행도 업데이트
+        this.questSystem.onEnemyKilled(enemy.type);
+
         if (leveledUp) {
             console.log(`✨ 레벨업! 현재 레벨: ${this.player.level}`);
             // 레벨업 이펙트 (화면 번쩍임)
@@ -736,6 +780,163 @@ class Game {
         const exp = baseExp[enemyType] || 10;
         // 층수에 따라 보너스 (+10% per floor)
         return Math.floor(exp * (1 + this.currentFloor * 0.1));
+    }
+
+    /**
+     * NPC 상호작용 체크
+     */
+    private checkNPCInteraction(): void {
+        if (!this.player) return;
+
+        // 가까운 NPC 찾기
+        for (const npc of this.npcs) {
+            if (npc.isPlayerInRange(this.player.x, this.player.y)) {
+                this.startNPCDialogue(npc);
+                return;
+            }
+        }
+    }
+
+    /**
+     * NPC 대화 시작
+     */
+    private startNPCDialogue(npc: NPC): void {
+        console.log(`💬 ${npc.data.name}와 대화 시작`);
+
+        // NPC가 제공하는 퀘스트 확인
+        const npcQuests = getQuestsForNPC(npc.type);
+        let dialogue = npc.data.dialogues.default;
+        let questChoices: string[] = [];
+
+        // 퀘스트 상태에 따라 대화 변경
+        for (const quest of npcQuests) {
+            const canStart = this.questSystem.canStartQuest(quest.id);
+            const isActive = this.questSystem.getActiveQuests().some(q => q.id === quest.id);
+            const isReady = this.questSystem.isQuestReadyToComplete(quest.id);
+
+            if (canStart && !isActive) {
+                // 새 퀘스트 제공 가능
+                dialogue = npc.data.dialogues.questAvailable || dialogue;
+                questChoices.push(`[퀘스트] ${quest.title}`);
+            } else if (isActive && isReady) {
+                // 퀘스트 완료 가능
+                dialogue = npc.data.dialogues.questComplete || dialogue;
+                questChoices.push(`[완료] ${quest.title}`);
+            } else if (isActive) {
+                // 퀘스트 진행 중
+                dialogue = npc.data.dialogues.questInProgress || dialogue;
+            }
+        }
+
+        // 대화 시스템 시작
+        const choices: string[] = [];
+
+        // 퀘스트 선택지 추가
+        choices.push(...questChoices);
+
+        // 서비스 선택지 추가
+        if (npc.data.services?.includes('shop')) {
+            choices.push('🛒 상점');
+        }
+        if (npc.data.services?.includes('upgrade')) {
+            choices.push('⚡ 업그레이드');
+        }
+
+        choices.push('👋 작별 인사');
+
+        // DialogueChoice 배열 생성
+        const dialogueChoices: { text: string; action: () => void }[] = choices.map((text, index) => ({
+            text,
+            action: () => this.handleNPCChoice(npc, index, questChoices.length)
+        }));
+
+        this.dialogueSystem.startDialogue(npc, dialogue, dialogueChoices);
+    }
+
+    /**
+     * NPC 대화 선택 처리
+     */
+    private handleNPCChoice(npc: NPC, choiceIndex: number, questChoiceCount: number): void {
+        if (choiceIndex < questChoiceCount) {
+            // 퀘스트 선택
+            const npcQuests = getQuestsForNPC(npc.type);
+            let questIndex = 0;
+
+            for (const quest of npcQuests) {
+                const canStart = this.questSystem.canStartQuest(quest.id);
+                const isActive = this.questSystem.getActiveQuests().some(q => q.id === quest.id);
+                const isReady = this.questSystem.isQuestReadyToComplete(quest.id);
+
+                if ((canStart && !isActive) || (isActive && isReady)) {
+                    if (questIndex === choiceIndex) {
+                        if (canStart && !isActive) {
+                            // 퀘스트 시작
+                            const started = this.questSystem.startQuest(quest);
+                            if (started) {
+                                console.log(`📜 퀘스트 시작: ${quest.title}`);
+                                this.dialogueSystem.startDialogue(
+                                    npc,
+                                    quest.storyText || `${quest.title} 퀘스트를 시작합니다.`,
+                                    [{
+                                        text: '확인',
+                                        action: () => {
+                                            npc.endInteraction();
+                                        }
+                                    }]
+                                );
+                            }
+                        } else if (isReady) {
+                            // 퀘스트 완료
+                            const rewards = this.questSystem.completeQuest(quest.id, this.player!, this.inventory);
+                            if (rewards) {
+                                console.log(`✅ 퀘스트 완료: ${quest.title}`);
+                                let rewardText = quest.completionText || '퀘스트를 완료했습니다!\n\n보상:\n';
+                                if (rewards.experience) rewardText += `경험치 +${rewards.experience}\n`;
+                                if (rewards.soulPoints) rewardText += `소울 포인트 +${rewards.soulPoints}\n`;
+                                if (rewards.items) rewardText += `아이템: ${rewards.items.join(', ')}\n`;
+
+                                this.dialogueSystem.startDialogue(
+                                    npc,
+                                    rewardText,
+                                    [{
+                                        text: '감사합니다',
+                                        action: () => {
+                                            npc.endInteraction();
+                                        }
+                                    }]
+                                );
+                            }
+                        }
+                        return;
+                    }
+                    questIndex++;
+                }
+            }
+        } else {
+            // 서비스 또는 작별 인사
+            const serviceIndex = choiceIndex - questChoiceCount;
+            const services = [];
+            if (npc.data.services?.includes('shop')) services.push('shop');
+            if (npc.data.services?.includes('upgrade')) services.push('upgrade');
+
+            if (serviceIndex < services.length) {
+                const service = services[serviceIndex];
+                if (service === 'shop') {
+                    console.log('🛒 상점 기능은 아직 구현되지 않았습니다');
+                } else if (service === 'upgrade') {
+                    console.log('⚡ 업그레이드 기능은 아직 구현되지 않았습니다');
+                }
+            } else {
+                // 작별 인사
+                this.dialogueSystem.startDialogue(
+                    npc,
+                    npc.data.dialogues.farewell,
+                    []
+                );
+            }
+        }
+
+        npc.endInteraction();
     }
 
     /**
@@ -1021,6 +1222,63 @@ class Game {
             }
         }
 
+        // NPC 렌더링 (화면 좌표로 변환)
+        for (const npc of this.npcs) {
+            const npcScreen = this.camera.worldToScreen(npc.x, npc.y);
+
+            // NPC 스프라이트로 렌더링
+            const npcAnimController = npc.getAnimationController();
+            this.spriteManager.drawAnimatedSprite(
+                ctx,
+                npc.data.spriteKey,
+                npcScreen.x - 16,
+                npcScreen.y - 16,
+                npcAnimController.getCurrentDirection(),
+                npcAnimController.getCurrentFrame()
+            );
+
+            // NPC 이름 표시
+            const npcName = npc.data.name;
+            const nameY = npcScreen.y - 30;
+
+            // 이름 폰트 설정
+            ctx.font = 'bold 11px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // 이름 배경
+            const nameWidth = ctx.measureText(npcName).width;
+            ctx.fillStyle = 'rgba(0, 100, 200, 0.9)';
+            ctx.fillRect(npcScreen.x - nameWidth / 2 - 3, nameY - 7, nameWidth + 6, 14);
+
+            // 이름 테두리
+            ctx.strokeStyle = 'rgba(100, 200, 255, 0.8)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(npcScreen.x - nameWidth / 2 - 3, nameY - 7, nameWidth + 6, 14);
+
+            // 이름 텍스트
+            ctx.fillStyle = '#FFFFFF';
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+            ctx.shadowBlur = 3;
+            ctx.fillText(npcName, npcScreen.x, nameY);
+
+            // 그림자 리셋
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+
+            // 상호작용 가능 힌트 표시 (플레이어가 가까이 있을 때)
+            if (npc.isPlayerInRange(this.player.x, this.player.y)) {
+                const hintY = npcScreen.y + 25;
+                ctx.font = 'bold 10px Arial';
+                ctx.fillStyle = '#FFD700';
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+                ctx.shadowBlur = 2;
+                ctx.fillText('[E] 대화하기', npcScreen.x, hintY);
+                ctx.shadowColor = 'transparent';
+                ctx.shadowBlur = 0;
+            }
+        }
+
         // 데미지 숫자 렌더링
         this.damageNumberSystem.render(this.renderer);
 
@@ -1045,6 +1303,12 @@ class Game {
             const weaponSystem = this.player.getWeaponSystem();
             this.weaponSelectUI.render(this.renderer, weaponSystem, this.soulPoints);
         }
+
+        // 퀘스트 UI 렌더링 (Q 키로 토글, 간단한 뷰는 항상 표시)
+        this.questUI.render(this.renderer);
+
+        // 대화 시스템 렌더링 (활성화 시)
+        this.dialogueSystem.render(this.renderer);
     }
 
     /**
@@ -1415,6 +1679,45 @@ class Game {
         }
 
         console.log(`✅ ${this.enemies.length}마리 적 생성 완료 (보스층: ${floor % 5 === 0})`);
+
+        // NPC 스폰
+        this.npcs = [];
+        const npcSpawns = dungeonMap.spawnPoints.npcs;
+        const npcTypes: Array<'sage' | 'merchant' | 'blacksmith' | 'skill_master' | 'soul_keeper'> = [];
+
+        // 층별 NPC 타입 결정
+        if (floor === 1) {
+            npcTypes.push('sage', 'merchant');
+        } else if (floor === 2) {
+            npcTypes.push('blacksmith', 'merchant');
+        } else if (floor === 3) {
+            npcTypes.push('skill_master', 'merchant');
+        } else if (floor === 4) {
+            npcTypes.push('soul_keeper', 'blacksmith', 'merchant');
+        } else if (floor === 5) {
+            npcTypes.push('sage', 'soul_keeper', 'merchant');
+        } else {
+            // 6층 이상은 랜덤
+            npcTypes.push('merchant', 'blacksmith');
+        }
+
+        // NPC 생성
+        for (let i = 0; i < Math.min(npcSpawns.length, npcTypes.length); i++) {
+            const spawn = npcSpawns[i];
+            const npcType = npcTypes[i];
+            this.npcs.push(new NPC(spawn.x, spawn.y, npcType));
+        }
+
+        console.log(`👤 ${this.npcs.length}명 NPC 생성 완료`);
+
+        // 해당 층의 퀘스트 활성화 (첫 방문 시)
+        const floorQuests = getQuestsForFloor(floor);
+        floorQuests.forEach(quest => {
+            if (this.questSystem.canStartQuest(quest.id)) {
+                // 자동 시작하지 않고, NPC와 대화 시 시작하도록 함
+                console.log(`📜 ${floor}층 퀘스트 준비: ${quest.title}`);
+            }
+        });
     }
 
     /**
