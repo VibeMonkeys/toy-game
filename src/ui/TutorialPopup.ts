@@ -5,6 +5,7 @@
  */
 
 import { Renderer } from '../systems/Renderer';
+import { GAME_INFO } from '../utils/Constants';
 
 export interface TutorialStep {
     title: string;
@@ -17,6 +18,14 @@ export class TutorialPopup {
     private currentStepIndex: number = 0;
     private steps: TutorialStep[] = [];
     private animationTime: number = 0;
+    private playerName: string = GAME_INFO.DEFAULT_PLAYER_NAME;
+
+    /**
+     * 플레이어 이름 설정
+     */
+    setPlayerName(name: string): void {
+        this.playerName = name;
+    }
 
     /**
      * 튜토리얼 시작
@@ -29,8 +38,8 @@ export class TutorialPopup {
         // 튜토리얼 단계 정의
         this.steps = [
             {
-                title: '환영합니다!',
-                message: '최진안의 이세계 모험기에 오신 것을 환영합니다.\n이 던전을 탐험하고 강력한 적들을 물리치세요!',
+                title: `환영합니다, ${this.playerName}님!`,
+                message: `${GAME_INFO.TITLE}에 오신 것을 환영합니다.\n이 던전을 탐험하고 강력한 적들을 물리치세요!`,
                 icon: '👋'
             },
             {

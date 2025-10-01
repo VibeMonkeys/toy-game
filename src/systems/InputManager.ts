@@ -13,6 +13,7 @@ export class InputManager {
     private mouseButtons: { left: boolean; right: boolean } = { left: false, right: false };
     private mouseJustPressed: { left: boolean; right: boolean } = { left: false, right: false };
     private keyJustPressed: Set<string> = new Set();
+    private charInput: string[] = []; // 문자 입력용
 
     constructor() {
         this.setupEventListeners();
@@ -25,6 +26,11 @@ export class InputManager {
                 this.keyJustPressed.add(e.code);
             }
             this.keys.add(e.code);
+
+            // 문자 입력 처리 (한글, 영문, 숫자)
+            if (e.key.length === 1) {
+                this.charInput.push(e.key);
+            }
         });
 
         window.addEventListener('keyup', (e) => {
@@ -135,6 +141,12 @@ export class InputManager {
         this.keyJustPressed.clear();
         this.mouseJustPressed.left = false;
         this.mouseJustPressed.right = false;
+        this.charInput = []; // 문자 입력도 클리어
+    }
+
+    // 입력된 문자들 가져오기
+    getCharInput(): string[] {
+        return [...this.charInput];
     }
 
     // 마우스 위치 (캔버스 기준)

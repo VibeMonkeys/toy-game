@@ -5,6 +5,7 @@
  */
 
 import { Renderer } from '../systems/Renderer';
+import { GAME_INFO } from '../utils/Constants';
 
 export type TitleMenuOption = 'start' | 'how_to_play' | 'credits' | 'exit';
 
@@ -68,10 +69,10 @@ export class TitleScreen {
 
         // 로고 그림자
         renderer.drawText(
-            '⚔️ 최진안의 이세계 모험기',
+            `⚔️ ${GAME_INFO.TITLE}`,
             642,
             logoY + 3,
-            'bold 52px Arial',
+            'bold 56px Arial',
             'rgba(0, 0, 0, 0.5)',
             'center'
         );
@@ -79,21 +80,21 @@ export class TitleScreen {
         // 로고 본체 (발광 효과)
         const glowIntensity = Math.sin(this.animationTime * 2) * 0.3 + 0.7;
         renderer.drawText(
-            '⚔️ 최진안의 이세계 모험기',
+            `⚔️ ${GAME_INFO.TITLE}`,
             640,
             logoY,
-            'bold 52px Arial',
+            'bold 56px Arial',
             `rgba(233, 69, 96, ${glowIntensity})`,
             'center'
         );
 
         // 서브타이틀
         renderer.drawText(
-            'RPG × Roguelike Adventure',
+            GAME_INFO.TITLE_EN,
             640,
             logoY + 50,
-            'italic 20px Arial',
-            '#aaaaaa',
+            'italic 24px Arial',
+            'rgba(255, 255, 255, 0.6)',
             'center'
         );
 

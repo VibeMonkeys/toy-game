@@ -1,11 +1,11 @@
 /**
- * 🎮 최진안의 이세계 모험기 - 메인 게임 클래스
+ * 🎮 던전 오딧세이 - 메인 게임 클래스
  *
  * docs/OPTIMIZED_GAME_DESIGN.md 기반으로 완전 새로 구현
  */
 
 import { GameMode } from '../types';
-import { GAME_MODES, SCREEN, GAMEPLAY } from '../utils/Constants';
+import { GAME_MODES, SCREEN, GAMEPLAY, GAME_INFO } from '../utils/Constants';
 import { InputManager } from '../systems/InputManager';
 import { Renderer } from '../systems/Renderer';
 import { MapManager } from '../systems/MapManager';
@@ -21,6 +21,7 @@ import { HowToPlayScreen } from '../ui/HowToPlayScreen';
 import { TutorialPopup } from '../ui/TutorialPopup';
 import { SoulChamberUI } from '../ui/SoulChamberUI';
 import { WeaponSelectUI } from '../ui/WeaponSelectUI';
+import { CharacterCreateUI } from '../ui/CharacterCreateUI';
 import { UpgradeSystem } from '../systems/UpgradeSystem';
 import { WeaponSystem } from '../systems/WeaponSystem';
 import { Player } from '../entities/Player';
@@ -47,6 +48,7 @@ class Game {
     private tutorialPopup: TutorialPopup;
     private soulChamberUI: SoulChamberUI;
     private weaponSelectUI: WeaponSelectUI;
+    private characterCreateUI: CharacterCreateUI;
     private upgradeSystem: UpgradeSystem;
 
     // 게임 상태
@@ -56,6 +58,9 @@ class Game {
     private currentFloor: number = 1;
     private inventoryOpen: boolean = false;
     private soulChamberOpen: boolean = false;
+
+    // 플레이어 정보
+    private playerName: string = GAME_INFO.DEFAULT_PLAYER_NAME;
 
     // 메타 진행도
     private soulPoints: number = 0;
@@ -82,7 +87,7 @@ class Game {
     private fpsTime: number = 0;
 
     constructor() {
-        console.log('🎮 최진안의 이세계 모험기 시작!');
+        console.log(`🎮 ${GAME_INFO.TITLE} (${GAME_INFO.TITLE_EN}) 시작!`);
 
         // 캔버스 가져오기
         this.canvas = document.getElementById('gameCanvas') as HTMLCanvasElement;
@@ -106,7 +111,11 @@ class Game {
         this.tutorialPopup = new TutorialPopup();
         this.soulChamberUI = new SoulChamberUI();
         this.weaponSelectUI = new WeaponSelectUI();
+        this.characterCreateUI = new CharacterCreateUI();
         this.upgradeSystem = new UpgradeSystem();
+
+        // 로컬스토리지에서 플레이어 이름 로드
+        this.loadPlayerName();
 
         // 게임 초기화
         this.init();
@@ -191,6 +200,10 @@ class Game {
                 this.updateTitleScreen();
                 break;
 
+            case GameMode.CHARACTER_CREATE:
+                this.updateCharacterCreate();
+                break;
+
             case GameMode.CREDITS:
                 this.updateCreditsScreen();
                 break;
@@ -236,9 +249,9 @@ class Game {
 
             switch (selected) {
                 case 'start':
-                    // 튜토리얼 시작
-                    this.gameMode = GameMode.TUTORIAL;
-                    this.tutorialPopup.start();
+                    // 캐릭터 생성 화면으로 이동
+                    this.characterCreateUI.reset();
+                    this.gameMode = GameMode.CHARACTER_CREATE;
                     break;
                 case 'how_to_play':
                     this.gameMode = GameMode.HOW_TO_PLAY;
@@ -247,6 +260,47 @@ class Game {
                     this.gameMode = GameMode.CREDITS;
                     break;
             }
+        }
+    }
+
+    /**
+     * 캐릭터 생성 화면 업데이트
+     */
+    private updateCharacterCreate(): void {
+        this.characterCreateUI.update(this.deltaTime);
+
+        // Backspace 처리
+        if (this.inputManager.isKeyJustPressed('Backspace')) {
+            this.characterCreateUI.handleBackspace();
+        }
+
+        // ESC로 기본 이름 사용 후 시작
+        if (this.inputManager.isKeyJustPressed('Escape')) {
+            this.characterCreateUI.handleUseDefault();
+            this.playerName = this.characterCreateUI.getPlayerName();
+            this.savePlayerName();
+            console.log(`✅ 플레이어: ${this.playerName}`);
+            this.characterCreateUI.deactivateInput();
+            // 튜토리얼로 이동
+            this.tutorialPopup.setPlayerName(this.playerName);
+            this.gameMode = GameMode.TUTORIAL;
+            this.tutorialPopup.start();
+            return;
+        }
+
+        // Enter로 확인
+        if (this.inputManager.isKeyJustPressed('Enter')) {
+            if (this.characterCreateUI.handleConfirm()) {
+                this.playerName = this.characterCreateUI.getPlayerName();
+                this.savePlayerName();
+                console.log(`✅ 플레이어: ${this.playerName}`);
+                this.characterCreateUI.deactivateInput();
+                // 튜토리얼로 이동
+                this.tutorialPopup.setPlayerName(this.playerName);
+                this.gameMode = GameMode.TUTORIAL;
+                this.tutorialPopup.start();
+            }
+            return;
         }
     }
 
@@ -738,6 +792,10 @@ class Game {
                 this.renderTitleScreen();
                 break;
 
+            case GameMode.CHARACTER_CREATE:
+                this.renderCharacterCreate();
+                break;
+
             case GameMode.CREDITS:
                 this.renderCreditsScreen();
                 break;
@@ -773,6 +831,13 @@ class Game {
      */
     private renderTitleScreen(): void {
         this.titleScreen.render(this.renderer);
+    }
+
+    /**
+     * 캐릭터 생성 화면 렌더링
+     */
+    private renderCharacterCreate(): void {
+        this.characterCreateUI.render(this.renderer);
     }
 
     /**
@@ -994,7 +1059,7 @@ class Game {
 
         // 플레이어 이름
         this.renderer.drawText(
-            '최진안',
+            this.playerName,
             75,
             35,
             'bold 16px Arial',
@@ -1003,7 +1068,7 @@ class Game {
         );
 
         this.renderer.drawText(
-            `모험가`,
+            `Lv.${this.player.level}`,
             75,
             50,
             '12px Arial',
@@ -1194,6 +1259,33 @@ class Game {
         // 재시작
         if (this.inputManager.isKeyPressed('Space')) {
             this.startNewGame();
+        }
+    }
+
+    /**
+     * 플레이어 이름 저장
+     */
+    private savePlayerName(): void {
+        try {
+            localStorage.setItem('dungeonOdyssey_playerName', this.playerName);
+            console.log(`💾 플레이어 이름 저장: ${this.playerName}`);
+        } catch (error) {
+            console.error('❌ 플레이어 이름 저장 실패:', error);
+        }
+    }
+
+    /**
+     * 플레이어 이름 로드
+     */
+    private loadPlayerName(): void {
+        try {
+            const savedName = localStorage.getItem('dungeonOdyssey_playerName');
+            if (savedName) {
+                this.playerName = savedName;
+                console.log(`💾 플레이어 이름 로드: ${this.playerName}`);
+            }
+        } catch (error) {
+            console.error('❌ 플레이어 이름 로드 실패:', error);
         }
     }
 

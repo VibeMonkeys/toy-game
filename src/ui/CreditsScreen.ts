@@ -5,6 +5,7 @@
  */
 
 import { Renderer } from '../systems/Renderer';
+import { GAME_INFO } from '../utils/Constants';
 
 export class CreditsScreen {
     private scrollOffset: number = 0;
@@ -50,7 +51,7 @@ export class CreditsScreen {
 
         // 타이틀
         renderer.drawText(
-            '⚔️ 최진안의 이세계 모험기',
+            `⚔️ ${GAME_INFO.TITLE}`,
             640,
             currentY,
             'bold 42px Arial',

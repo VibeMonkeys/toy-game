@@ -1,5 +1,5 @@
 /**
- * 🎮 최진안의 이세계 모험기 - 타입 정의
+ * 🎮 던전 오딧세이 - 타입 정의
  *
  * 게임의 모든 타입을 중앙에서 관리합니다.
  */
@@ -10,6 +10,7 @@
 export enum GameMode {
     LOADING = 'LOADING',
     TITLE = 'TITLE',
+    CHARACTER_CREATE = 'CHARACTER_CREATE',
     CREDITS = 'CREDITS',
     HOW_TO_PLAY = 'HOW_TO_PLAY',
     TUTORIAL = 'TUTORIAL',

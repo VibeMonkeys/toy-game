@@ -1,5 +1,5 @@
 /**
- * 🎮 최진안의 이세계 모험기 - 게임 상수 정의 (TypeScript)
+ * 🎮 던전 오딧세이 (Dungeon Odyssey) - 게임 상수 정의 (TypeScript)
  *
  * 모든 게임 상수를 중앙에서 관리합니다.
  * 기획서 문서와 일치하도록 설계되었습니다.
@@ -7,10 +7,19 @@
 
 import { GameMode, WeaponType, SkillType, EnemyType, BossType, ItemRarity } from '../types';
 
+// 게임 정보
+export const GAME_INFO = {
+    TITLE: '던전 오딧세이',
+    TITLE_EN: 'Dungeon Odyssey',
+    VERSION: '1.0.0',
+    DEFAULT_PLAYER_NAME: '모험가'
+} as const;
+
 // 게임 모드 정의
 export const GAME_MODES = {
     LOADING: GameMode.LOADING,
     TITLE: GameMode.TITLE,
+    CHARACTER_CREATE: 'character_create' as GameMode,
     INTRO: GameMode.INTRO,
     PLAYING: GameMode.PLAYING,
     PAUSED: GameMode.PAUSED,

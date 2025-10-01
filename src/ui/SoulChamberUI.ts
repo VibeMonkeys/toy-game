@@ -157,12 +157,14 @@ export class SoulChamberUI {
 
             // 업그레이드 아이템 클릭 확인
             const upgrades = upgradeSystem.getUpgradesByCategory(this.selectedCategory);
-            const listStartY = 280;
-            const itemHeight = 70;
+            const listStartY = 290;
+            const itemHeight = 80;
+            const listPadding = 120;
+            const itemWidth = 1280 - listPadding * 2;
 
             for (let i = 0; i < upgrades.length; i++) {
                 const itemY = listStartY + i * itemHeight;
-                if (x >= 105 && x <= 1175 && y >= itemY + 2 && y <= itemY + itemHeight - 7) {
+                if (x >= listPadding && x <= listPadding + itemWidth && y >= itemY + 2 && y <= itemY + itemHeight - 12) {
                     this.selectedUpgradeIndex = i;
                     return { action: 'upgrade', upgradeId: upgrades[i].id };
                 }
@@ -261,13 +263,15 @@ export class SoulChamberUI {
      */
     private renderTabs(renderer: Renderer): void {
         const ctx = renderer.getContext();
-        const tabWidth = 350;
-        const tabHeight = 60;
-        const startX = (1280 - tabWidth * this.tabs.length) / 2;
-        const tabY = 110;
+        const tabWidth = 340;
+        const tabHeight = 70;
+        const gap = 20;
+        const totalWidth = (tabWidth * this.tabs.length) + (gap * (this.tabs.length - 1));
+        const startX = (1280 - totalWidth) / 2;
+        const tabY = 120;
 
         this.tabs.forEach((tab, index) => {
-            const tabX = startX + index * tabWidth;
+            const tabX = startX + index * (tabWidth + gap);
             const isSelected = tab.id === this.currentTab;
 
             // 탭 배경
@@ -366,8 +370,10 @@ export class SoulChamberUI {
 
         // 업그레이드 리스트
         const upgrades = upgradeSystem.getUpgradesByCategory(this.selectedCategory);
-        const listStartY = 280;
-        const itemHeight = 70;
+        const listStartY = 290;
+        const itemHeight = 80;
+        const listPadding = 120;
+        const itemWidth = 1280 - listPadding * 2;
 
         upgrades.forEach((upgrade, index) => {
             const itemY = listStartY + index * itemHeight;
@@ -380,21 +386,21 @@ export class SoulChamberUI {
             if (isSelected) {
                 const pulse = Math.sin(this.animationTime * 5) * 0.2 + 0.8;
                 ctx.fillStyle = `rgba(233, 69, 96, ${pulse * 0.3})`;
-                ctx.fillRect(100, itemY, 1080, itemHeight - 5);
+                ctx.fillRect(listPadding - 5, itemY, itemWidth + 10, itemHeight - 10);
             }
 
             ctx.fillStyle = 'rgba(30, 30, 40, 0.8)';
-            ctx.fillRect(105, itemY + 2, 1070, itemHeight - 9);
+            ctx.fillRect(listPadding, itemY + 2, itemWidth, itemHeight - 12);
             ctx.strokeStyle = isSelected ? '#e94560' : '#555555';
             ctx.lineWidth = isSelected ? 2 : 1;
-            ctx.strokeRect(105, itemY + 2, 1070, itemHeight - 9);
+            ctx.strokeRect(listPadding, itemY + 2, itemWidth, itemHeight - 12);
 
             // 업그레이드 이름
             renderer.drawText(
                 upgrade.name,
-                120,
-                itemY + 22,
-                'bold 18px Arial',
+                listPadding + 20,
+                itemY + 25,
+                'bold 20px Arial',
                 '#FFFFFF',
                 'left'
             );
@@ -402,8 +408,8 @@ export class SoulChamberUI {
             // 설명
             renderer.drawText(
                 upgrade.description,
-                120,
-                itemY + 45,
+                listPadding + 20,
+                itemY + 52,
                 '14px Arial',
                 '#AAAAAA',
                 'left'
@@ -412,9 +418,9 @@ export class SoulChamberUI {
             // 레벨 표시
             renderer.drawText(
                 `Lv.${upgrade.currentLevel}/${upgrade.maxLevel}`,
-                850,
-                itemY + 35,
-                'bold 16px Arial',
+                listPadding + itemWidth - 200,
+                itemY + 40,
+                'bold 18px Arial',
                 '#FFD700',
                 'left'
             );
@@ -423,18 +429,18 @@ export class SoulChamberUI {
             if (isMaxLevel) {
                 renderer.drawText(
                     'MAX',
-                    1050,
-                    itemY + 35,
-                    'bold 20px Arial',
+                    listPadding + itemWidth - 50,
+                    itemY + 40,
+                    'bold 22px Arial',
                     '#4CAF50',
                     'center'
                 );
             } else {
                 renderer.drawText(
                     `💜 ${cost}`,
-                    1050,
-                    itemY + 35,
-                    'bold 18px Arial',
+                    listPadding + itemWidth - 50,
+                    itemY + 40,
+                    'bold 20px Arial',
                     canAfford ? '#9C27B0' : '#666666',
                     'center'
                 );
@@ -608,15 +614,15 @@ export class SoulChamberUI {
         );
 
         // 통계 패널
-        const panelX = 340;
-        const panelY = 280;
-        const panelWidth = 600;
-        const panelHeight = 300;
+        const panelX = 240;
+        const panelY = 250;
+        const panelWidth = 800;
+        const panelHeight = 350;
 
         ctx.fillStyle = 'rgba(30, 30, 40, 0.9)';
         ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
         ctx.strokeStyle = '#e94560';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 3;
         ctx.strokeRect(panelX, panelY, panelWidth, panelHeight);
 
         const stats = [
@@ -626,22 +632,22 @@ export class SoulChamberUI {
         ];
 
         stats.forEach((stat, index) => {
-            const statY = panelY + 80 + index * 60;
+            const statY = panelY + 100 + index * 80;
 
             renderer.drawText(
                 stat.label,
-                panelX + 50,
+                panelX + 60,
                 statY,
-                '20px Arial',
+                '22px Arial',
                 '#AAAAAA',
                 'left'
             );
 
             renderer.drawText(
                 stat.value,
-                panelX + panelWidth - 50,
+                panelX + panelWidth - 60,
                 statY,
-                'bold 24px Arial',
+                'bold 28px Arial',
                 '#FFD700',
                 'right'
             );
