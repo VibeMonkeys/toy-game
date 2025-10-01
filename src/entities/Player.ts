@@ -345,4 +345,22 @@ export class Player {
             progress: this.experience / this.experienceToNextLevel
         };
     }
+
+    /**
+     * 업그레이드된 스탯 적용
+     */
+    applyUpgradedStats(upgradedStats: PlayerStats): void {
+        // 현재 체력 비율 유지
+        const healthRatio = this.stats.health / this.stats.maxHealth;
+        const manaRatio = this.stats.mana / this.stats.maxMana;
+        const staminaRatio = this.stats.stamina / this.stats.maxStamina;
+
+        // 업그레이드된 스탯 적용
+        this.stats = { ...upgradedStats };
+
+        // 현재 비율로 리소스 재설정
+        this.stats.health = this.stats.maxHealth * healthRatio;
+        this.stats.mana = this.stats.maxMana * manaRatio;
+        this.stats.stamina = this.stats.maxStamina * staminaRatio;
+    }
 }

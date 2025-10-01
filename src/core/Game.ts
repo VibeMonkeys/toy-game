@@ -19,6 +19,8 @@ import { TitleScreen } from '../ui/TitleScreen';
 import { CreditsScreen } from '../ui/CreditsScreen';
 import { HowToPlayScreen } from '../ui/HowToPlayScreen';
 import { TutorialPopup } from '../ui/TutorialPopup';
+import { SoulChamberUI } from '../ui/SoulChamberUI';
+import { UpgradeSystem } from '../systems/UpgradeSystem';
 import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
 import { SpriteManager } from '../systems/SpriteManager';
@@ -41,12 +43,21 @@ class Game {
     private creditsScreen: CreditsScreen;
     private howToPlayScreen: HowToPlayScreen;
     private tutorialPopup: TutorialPopup;
+    private soulChamberUI: SoulChamberUI;
+    private upgradeSystem: UpgradeSystem;
 
     // 게임 상태
     private gameMode: GameMode = GameMode.LOADING;
+    private previousGameMode: GameMode = GameMode.PLAYING; // Soul Chamber 토글용
     private isRunning: boolean = false;
     private currentFloor: number = 1;
     private inventoryOpen: boolean = false;
+    private soulChamberOpen: boolean = false;
+
+    // 메타 진행도
+    private soulPoints: number = 0;
+    private totalRuns: number = 0;
+    private highestFloor: number = 0;
 
     // 엔티티
     private player: Player | null = null;
@@ -90,6 +101,8 @@ class Game {
         this.creditsScreen = new CreditsScreen();
         this.howToPlayScreen = new HowToPlayScreen();
         this.tutorialPopup = new TutorialPopup();
+        this.soulChamberUI = new SoulChamberUI();
+        this.upgradeSystem = new UpgradeSystem();
 
         // 게임 초기화
         this.init();
@@ -184,6 +197,10 @@ class Game {
 
             case GameMode.TUTORIAL:
                 this.updateTutorial();
+                break;
+
+            case GameMode.SOUL_CHAMBER:
+                this.updateSoulChamber();
                 break;
 
             case GameMode.PLAYING:
@@ -284,9 +301,142 @@ class Game {
         if (this.inputManager.isKeyJustPressed('Space') || this.inputManager.isKeyJustPressed('Enter')) {
             if (this.tutorialPopup.getCurrentStep() === this.tutorialPopup.getTotalSteps() - 1) {
                 this.tutorialPopup.end();
+                // 튜토리얼 완료 후 바로 게임 시작
+                this.soulPoints = 50; // 초기 소울 포인트 지급
                 this.startNewGame();
             } else {
                 this.tutorialPopup.nextStep();
+            }
+        }
+    }
+
+    /**
+     * Soul Chamber 업데이트
+     */
+    private updateSoulChamber(): void {
+        this.soulChamberUI.update(this.deltaTime);
+        this.soulChamberUI.setSoulPoints(this.soulPoints);
+        this.soulChamberUI.setStats(this.totalRuns, this.highestFloor);
+
+        const currentTab = this.soulChamberUI.getCurrentTab();
+
+        // 마우스 처리
+        const mousePos = this.inputManager.getMousePosition(this.canvas);
+
+        // 마우스 커서 변경 (호버 효과)
+        const isOverClickable = this.soulChamberUI.isMouseOverClickable(mousePos.x, mousePos.y, this.upgradeSystem);
+        this.canvas.style.cursor = isOverClickable ? 'pointer' : 'default';
+
+        // 마우스 클릭 처리
+        if (this.inputManager.isKeyJustPressed('MouseLeft')) {
+            const clickResult = this.soulChamberUI.handleClick(mousePos.x, mousePos.y, this.upgradeSystem);
+
+            if (clickResult.action === 'upgrade' && clickResult.upgradeId) {
+                const result = this.upgradeSystem.purchaseUpgrade(clickResult.upgradeId, this.soulPoints);
+                console.log('🛒 업그레이드 구매 시도:', clickResult.upgradeId, result);
+                if (result.success) {
+                    this.soulPoints = result.newSoulPoints;
+                    const upgrade = this.upgradeSystem.getUpgrade(clickResult.upgradeId);
+                    console.log('✅ 구매 완료! 현재 레벨:', upgrade?.currentLevel);
+                } else {
+                    console.log('❌ 구매 실패:', result.message);
+                }
+            } else if (clickResult.action === 'start') {
+                this.startNewGame();
+                return;
+            }
+        }
+
+        // 탭 이동 (Q/E 키)
+        if (this.inputManager.isKeyJustPressed('KeyQ')) {
+            this.soulChamberUI.moveTabLeft();
+        }
+        if (this.inputManager.isKeyJustPressed('KeyE')) {
+            this.soulChamberUI.moveTabRight();
+        }
+
+        if (currentTab === 'upgrades') {
+            // 카테고리 변경 (좌우 화살표)
+            if (this.inputManager.isKeyJustPressed('ArrowLeft')) {
+                const categories: ('offense' | 'defense' | 'utility')[] = ['offense', 'defense', 'utility'];
+                const currentIndex = categories.indexOf(this.soulChamberUI.getCurrentCategory());
+                const newIndex = (currentIndex - 1 + categories.length) % categories.length;
+                this.soulChamberUI.changeCategory(categories[newIndex]);
+            }
+            if (this.inputManager.isKeyJustPressed('ArrowRight')) {
+                const categories: ('offense' | 'defense' | 'utility')[] = ['offense', 'defense', 'utility'];
+                const currentIndex = categories.indexOf(this.soulChamberUI.getCurrentCategory());
+                const newIndex = (currentIndex + 1) % categories.length;
+                this.soulChamberUI.changeCategory(categories[newIndex]);
+            }
+
+            // 업그레이드 선택 이동
+            if (this.inputManager.isKeyJustPressed('ArrowUp')) {
+                this.soulChamberUI.moveUpgradeUp();
+            }
+            if (this.inputManager.isKeyJustPressed('ArrowDown')) {
+                const category = this.soulChamberUI.getCurrentCategory();
+                const upgrades = this.upgradeSystem.getUpgradesByCategory(category);
+                this.soulChamberUI.moveUpgradeDown(upgrades.length - 1);
+            }
+
+            // 업그레이드 구매
+            if (this.inputManager.isKeyJustPressed('Enter') || this.inputManager.isKeyJustPressed('Space')) {
+                const category = this.soulChamberUI.getCurrentCategory();
+                const upgrades = this.upgradeSystem.getUpgradesByCategory(category);
+                const selectedIndex = this.soulChamberUI.getSelectedUpgradeIndex();
+
+                if (selectedIndex < upgrades.length) {
+                    const upgrade = upgrades[selectedIndex];
+                    const result = this.upgradeSystem.purchaseUpgrade(upgrade.id, this.soulPoints);
+                    console.log('🛒 업그레이드 구매 시도 (키보드):', upgrade.id, result);
+
+                    if (result.success) {
+                        this.soulPoints = result.newSoulPoints;
+                        console.log('✅ 구매 완료! 현재 레벨:', upgrade.currentLevel);
+                    } else {
+                        console.log(result.message);
+                    }
+                }
+            }
+        }
+
+        // 도전 시작 탭에서 Enter
+        if (currentTab === 'start' && this.inputManager.isKeyJustPressed('Enter')) {
+            this.startNewGame();
+        }
+
+        // ESC로 돌아가기
+        if (this.inputManager.isKeyJustPressed('Escape')) {
+            if (this.soulChamberOpen) {
+                // 게임 중에 연 경우 게임으로 복귀 (업그레이드 재적용)
+                if (this.player) {
+                    const baseStats: PlayerStats = {
+                        health: GAMEPLAY.PLAYER_BASE.HEALTH,
+                        maxHealth: GAMEPLAY.PLAYER_BASE.HEALTH,
+                        mana: GAMEPLAY.PLAYER_BASE.MANA,
+                        maxMana: GAMEPLAY.PLAYER_BASE.MANA,
+                        stamina: GAMEPLAY.PLAYER_BASE.STAMINA,
+                        maxStamina: GAMEPLAY.PLAYER_BASE.STAMINA,
+                        attack: GAMEPLAY.PLAYER_BASE.ATTACK,
+                        defense: GAMEPLAY.PLAYER_BASE.DEFENSE,
+                        speed: GAMEPLAY.PLAYER_BASE.SPEED,
+                        criticalChance: GAMEPLAY.PLAYER_BASE.CRITICAL_CHANCE,
+                        criticalDamage: GAMEPLAY.PLAYER_BASE.CRITICAL_DAMAGE,
+                        luck: GAMEPLAY.PLAYER_BASE.LUCK
+                    };
+                    const upgradedStats = this.upgradeSystem.applyUpgradesToStats(baseStats);
+                    console.log('🔄 영혼의 성소 닫기 - 업그레이드 재적용');
+                    console.log('  기본:', baseStats);
+                    console.log('  업그레이드 후:', upgradedStats);
+                    this.player.applyUpgradedStats(upgradedStats);
+                    console.log('  플레이어 최종:', this.player.stats);
+                }
+                this.gameMode = this.previousGameMode;
+                this.soulChamberOpen = false;
+            } else {
+                // 사망 후 자동으로 온 경우 타이틀로
+                this.gameMode = GameMode.TITLE;
             }
         }
     }
@@ -296,6 +446,14 @@ class Game {
      */
     private updateGameplay(): void {
         if (!this.player) return;
+
+        // ESC로 Soul Chamber 토글
+        if (this.inputManager.isKeyJustPressed('Escape')) {
+            this.previousGameMode = this.gameMode;
+            this.gameMode = GameMode.SOUL_CHAMBER;
+            this.soulChamberOpen = true;
+            return;
+        }
 
         // 인벤토리 토글 (I 키)
         if (this.inputManager.isInventoryToggled()) {
@@ -470,7 +628,21 @@ class Game {
      */
     private handlePlayerDeath(): void {
         console.log('💀 플레이어 사망');
-        this.changeGameMode(GameMode.GAME_OVER);
+
+        // 소울 포인트 획득 (진행한 층수에 비례)
+        const earnedSouls = this.currentFloor * 5;
+        this.soulPoints += earnedSouls;
+        console.log(`💜 소울 포인트 ${earnedSouls} 획득! (총: ${this.soulPoints})`);
+
+        // 통계 업데이트
+        this.totalRuns++;
+        if (this.currentFloor > this.highestFloor) {
+            this.highestFloor = this.currentFloor;
+        }
+
+        // Soul Chamber로 복귀 (사망으로 인한 자동 복귀)
+        this.soulChamberOpen = false;
+        this.changeGameMode(GameMode.SOUL_CHAMBER);
     }
 
     /**
@@ -513,6 +685,10 @@ class Game {
 
             case GameMode.TUTORIAL:
                 this.renderTutorial();
+                break;
+
+            case GameMode.SOUL_CHAMBER:
+                this.renderSoulChamber();
                 break;
 
             case GameMode.PLAYING:
@@ -561,6 +737,13 @@ class Game {
 
         // 튜토리얼 팝업
         this.tutorialPopup.render(this.renderer);
+    }
+
+    /**
+     * Soul Chamber 렌더링
+     */
+    private renderSoulChamber(): void {
+        this.soulChamberUI.render(this.renderer, this.upgradeSystem);
     }
 
     /**
@@ -966,6 +1149,27 @@ class Game {
         // 플레이어 생성 (맵 스폰 위치)
         const spawnPos = this.mapManager.getPlayerSpawnPosition();
         this.player = new Player(spawnPos.x, spawnPos.y);
+
+        // 업그레이드된 스탯 적용
+        const baseStats: PlayerStats = {
+            health: GAMEPLAY.PLAYER_BASE.HEALTH,
+            maxHealth: GAMEPLAY.PLAYER_BASE.HEALTH,
+            mana: GAMEPLAY.PLAYER_BASE.MANA,
+            maxMana: GAMEPLAY.PLAYER_BASE.MANA,
+            stamina: GAMEPLAY.PLAYER_BASE.STAMINA,
+            maxStamina: GAMEPLAY.PLAYER_BASE.STAMINA,
+            attack: GAMEPLAY.PLAYER_BASE.ATTACK,
+            defense: GAMEPLAY.PLAYER_BASE.DEFENSE,
+            speed: GAMEPLAY.PLAYER_BASE.SPEED,
+            criticalChance: GAMEPLAY.PLAYER_BASE.CRITICAL_CHANCE,
+            criticalDamage: GAMEPLAY.PLAYER_BASE.CRITICAL_DAMAGE,
+            luck: GAMEPLAY.PLAYER_BASE.LUCK
+        };
+        const upgradedStats = this.upgradeSystem.applyUpgradesToStats(baseStats);
+        console.log('⚡ 업그레이드 적용 전:', baseStats);
+        console.log('⚡ 업그레이드 적용 후:', upgradedStats);
+        this.player.applyUpgradedStats(upgradedStats);
+        console.log('⚡ 플레이어 최종 스탯:', this.player.stats);
 
         // 카메라를 플레이어 위치로 즉시 이동
         this.camera.snapToTarget(this.player.getPosition());

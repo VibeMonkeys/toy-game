@@ -11,6 +11,7 @@ export class InputManager {
     private keys: Set<string> = new Set();
     private mousePos: { x: number; y: number } = { x: 0, y: 0 };
     private mouseButtons: { left: boolean; right: boolean } = { left: false, right: false };
+    private mouseJustPressed: { left: boolean; right: boolean } = { left: false, right: false };
     private keyJustPressed: Set<string> = new Set();
 
     constructor() {
@@ -37,8 +38,18 @@ export class InputManager {
         });
 
         window.addEventListener('mousedown', (e) => {
-            if (e.button === 0) this.mouseButtons.left = true;
-            if (e.button === 2) this.mouseButtons.right = true;
+            if (e.button === 0) {
+                if (!this.mouseButtons.left) {
+                    this.mouseJustPressed.left = true;
+                }
+                this.mouseButtons.left = true;
+            }
+            if (e.button === 2) {
+                if (!this.mouseButtons.right) {
+                    this.mouseJustPressed.right = true;
+                }
+                this.mouseButtons.right = true;
+            }
         });
 
         window.addEventListener('mouseup', (e) => {
@@ -109,6 +120,8 @@ export class InputManager {
 
     // 한 번만 눌림 체크 (토글용)
     isKeyJustPressed(code: string): boolean {
+        if (code === 'MouseLeft') return this.mouseJustPressed.left;
+        if (code === 'MouseRight') return this.mouseJustPressed.right;
         return this.keyJustPressed.has(code);
     }
 
@@ -120,6 +133,8 @@ export class InputManager {
     // 프레임 끝에 호출 (just pressed 클리어)
     clearJustPressed(): void {
         this.keyJustPressed.clear();
+        this.mouseJustPressed.left = false;
+        this.mouseJustPressed.right = false;
     }
 
     // 마우스 위치 (캔버스 기준)
