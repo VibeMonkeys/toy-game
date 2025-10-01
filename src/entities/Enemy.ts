@@ -34,14 +34,25 @@ export class Enemy {
     targetPlayer: boolean = false;
     detectionRange: number = 150;
     attackRange: number = 40;
+    fleeHealthThreshold: number = 0.3; // 30% 이하면 도망
 
     // 순찰
     private patrolCenter: Position;
     private patrolRadius: number = 60;
+    private patrolWaitTime: number = 0;
+    private patrolWaitDuration: number = 2000; // 2초간 대기
+    private isWaiting: boolean = false;
 
     // 공격
     private lastAttackTime: number = 0;
     private attackCooldown: number = 1000;
+    private attackWindupTime: number = 300; // 공격 예비동작 시간
+    private isWindingUp: boolean = false;
+    private windupStartTime: number = 0;
+
+    // 회피/도망
+    private fleeDirection: Vector2D = { x: 0, y: 0 };
+    private lastFleeUpdate: number = 0;
 
     // 애니메이션
     private animationTime: number = 0;
@@ -71,6 +82,10 @@ export class Enemy {
             this.width = 48;
             this.height = 48;
             this.detectionRange = 300; // 보스는 더 먼 거리에서 감지
+            this.attackRange = 50; // 보스 공격 범위 증가
+            this.attackCooldown = 800; // 보스는 더 빠르게 공격
+            this.attackWindupTime = 500; // 보스 예비동작 시간 증가 (회피 가능)
+            this.fleeHealthThreshold = 0; // 보스는 도망치지 않음
         }
 
         // 애니메이션 컨트롤러 초기화
@@ -154,16 +169,24 @@ export class Enemy {
         this.animationController.update(deltaTime);
 
         const distanceToPlayer = this.getDistanceToPlayer(player);
+        const healthRatio = this.health / this.maxHealth;
 
-        // AI 상태 결정
-        if (distanceToPlayer <= this.attackRange) {
+        // AI 상태 결정 (우선순위: 도망 > 공격 > 추적 > 순찰)
+        if (healthRatio <= this.fleeHealthThreshold && !this.isBoss) {
+            // 체력이 낮으면 도망 (보스는 도망치지 않음)
+            this.aiState = 'retreat';
+            this.flee(player, deltaTime);
+        } else if (distanceToPlayer <= this.attackRange) {
+            // 공격 범위 안
             this.aiState = 'attack';
-            this.attackPlayer(player);
+            this.attackPlayer(player, deltaTime);
             this.animationController.stop();
         } else if (distanceToPlayer <= this.detectionRange) {
+            // 감지 범위 안 - 추적
             this.aiState = 'chase';
             this.moveTowardsPlayer(player, deltaTime);
         } else {
+            // 평화로운 순찰
             this.aiState = 'patrol';
             this.patrol(deltaTime);
         }
@@ -199,9 +222,21 @@ export class Enemy {
     }
 
     /**
-     * 순찰
+     * 순찰 (개선됨 - 랜덤 대기 추가)
      */
     private patrol(deltaTime: number): void {
+        const now = Date.now();
+
+        // 대기 중이면 시간 체크
+        if (this.isWaiting) {
+            if (now - this.patrolWaitTime >= this.patrolWaitDuration) {
+                this.isWaiting = false;
+            } else {
+                this.animationController.stop();
+                return;
+            }
+        }
+
         const dx = this.patrolCenter.x - this.x;
         const dy = this.patrolCenter.y - this.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -217,22 +252,105 @@ export class Enemy {
             // 애니메이션 방향 설정
             this.animationController.setDirectionFromMovement(dx, dy);
         } else {
+            // 순찰 영역 안에 있으면 가끔 멈춤
+            if (Math.random() < 0.01) { // 1% 확률로 멈춤
+                this.isWaiting = true;
+                this.patrolWaitTime = now;
+            }
             this.animationController.stop();
         }
     }
 
     /**
-     * 플레이어 공격
+     * 도망 (새로운 기능)
      */
-    private attackPlayer(player: Player): void {
+    private flee(player: Player, deltaTime: number): void {
         const now = Date.now();
 
+        // 1초마다 도망 방향 재계산
+        if (now - this.lastFleeUpdate > 1000) {
+            const dx = this.x - player.x;
+            const dy = this.y - player.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance > 0) {
+                this.fleeDirection.x = dx / distance;
+                this.fleeDirection.y = dy / distance;
+            }
+            this.lastFleeUpdate = now;
+        }
+
+        // 플레이어 반대 방향으로 빠르게 도망
+        const fleeSpeed = this.speed * 1.5; // 1.5배 빠르게
+        this.x += this.fleeDirection.x * fleeSpeed * deltaTime;
+        this.y += this.fleeDirection.y * fleeSpeed * deltaTime;
+
+        // 애니메이션 방향
+        this.animationController.setDirectionFromMovement(
+            this.fleeDirection.x,
+            this.fleeDirection.y
+        );
+    }
+
+    /**
+     * 플레이어 공격 (개선됨 - 예비동작 추가)
+     */
+    private attackPlayer(player: Player, deltaTime: number): void {
+        const now = Date.now();
+
+        // 공격 쿨다운 체크
         if (now - this.lastAttackTime < this.attackCooldown) {
             return;
         }
 
+        // 예비동작 시작
+        if (!this.isWindingUp) {
+            this.isWindingUp = true;
+            this.windupStartTime = now;
+            return;
+        }
+
+        // 예비동작 중
+        if (now - this.windupStartTime < this.attackWindupTime) {
+            return;
+        }
+
+        // 실제 공격 실행
+        this.isWindingUp = false;
         this.lastAttackTime = now;
-        player.takeDamage(this.attack);
+
+        // 타입별 공격력 보정
+        let finalDamage = this.attack;
+
+        switch(this.type) {
+            case 'goblin':
+                // 고블린: 빠른 약한 공격
+                finalDamage = this.attack * (Math.random() < 0.2 ? 1.5 : 1.0);
+                break;
+            case 'orc':
+                // 오크: 강력한 일격
+                finalDamage = this.attack * (Math.random() < 0.3 ? 2.0 : 1.2);
+                break;
+            case 'skeleton':
+                // 스켈레톤: 안정적인 데미지
+                finalDamage = this.attack * 1.1;
+                break;
+            case 'troll':
+                // 트롤: 매우 강력하지만 느림
+                finalDamage = this.attack * 1.5;
+                break;
+            case 'wraith':
+                // 레이스: 변칙적인 데미지
+                finalDamage = this.attack * (0.8 + Math.random() * 0.8);
+                break;
+        }
+
+        // 보스는 더 강함
+        if (this.isBoss) {
+            finalDamage *= 1.5;
+        }
+
+        player.takeDamage(Math.floor(finalDamage));
     }
 
     /**
@@ -265,9 +383,11 @@ export class Enemy {
         ctx.ellipse(centerX, y + this.height + 2, this.width / 2, this.height / 6, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // 보스면 붉은 오라 (발광 효과)
+        // AI 상태에 따른 오라 효과
+        const pulse = Math.sin(Date.now() / 200) * 0.3 + 0.7;
+
         if (this.isBoss) {
-            const pulse = Math.sin(Date.now() / 200) * 0.3 + 0.7;
+            // 보스 - 붉은 오라
             const auraGradient = ctx.createRadialGradient(
                 centerX, centerY, 0,
                 centerX, centerY, this.width
@@ -276,6 +396,27 @@ export class Enemy {
             auraGradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
             ctx.fillStyle = auraGradient;
             ctx.fillRect(x - 10, y - 10, this.width + 20, this.height + 20);
+        } else if (this.aiState === 'retreat') {
+            // 도망 - 노란색 오라
+            const auraGradient = ctx.createRadialGradient(
+                centerX, centerY, 0,
+                centerX, centerY, this.width * 0.8
+            );
+            auraGradient.addColorStop(0, `rgba(255, 255, 0, ${pulse * 0.2})`);
+            auraGradient.addColorStop(1, 'rgba(255, 255, 0, 0)');
+            ctx.fillStyle = auraGradient;
+            ctx.fillRect(x - 5, y - 5, this.width + 10, this.height + 10);
+        } else if (this.aiState === 'attack' || this.isWindingUp) {
+            // 공격 - 주황색 깜빡임
+            const attackPulse = this.isWindingUp ? Math.sin(Date.now() / 100) * 0.5 + 0.5 : 0.3;
+            const auraGradient = ctx.createRadialGradient(
+                centerX, centerY, 0,
+                centerX, centerY, this.width * 0.7
+            );
+            auraGradient.addColorStop(0, `rgba(255, 100, 0, ${attackPulse * 0.4})`);
+            auraGradient.addColorStop(1, 'rgba(255, 100, 0, 0)');
+            ctx.fillStyle = auraGradient;
+            ctx.fillRect(x - 3, y - 3, this.width + 6, this.height + 6);
         }
 
         // 적 몸체 (그라데이션)
