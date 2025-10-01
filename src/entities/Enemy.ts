@@ -55,7 +55,7 @@ export class Enemy {
         this.patrolCenter = { x, y };
 
         // 타입별 스탯 설정
-        const data = this.getEnemyData(type);
+        const data = this.getEnemyDataInternal(type);
         this.health = data.health;
         this.maxHealth = data.health;
         this.attack = data.attack;
@@ -78,12 +78,20 @@ export class Enemy {
     }
 
     /**
-     * 적 타입별 데이터
+     * 적 타입별 데이터 (public)
      */
-    private getEnemyData(type: EnemyType): EnemyData {
-        const enemyDataMap: Record<EnemyType, EnemyData> = {
+    getEnemyData(): EnemyData & { name: string } {
+        return this.getEnemyDataInternal(this.type);
+    }
+
+    /**
+     * 적 타입별 데이터 (internal)
+     */
+    private getEnemyDataInternal(type: EnemyType): EnemyData & { name: string } {
+        const enemyDataMap: Record<EnemyType, EnemyData & { name: string }> = {
             goblin: {
-                health: 30,
+                name: '고블린',
+                health: 50, // 30 → 50
                 attack: 8,
                 defense: 2,
                 speed: 80,
@@ -92,7 +100,8 @@ export class Enemy {
                 color: COLORS.GOBLIN
             },
             orc: {
-                health: 60,
+                name: '오크',
+                health: 100, // 60 → 100
                 attack: 15,
                 defense: 5,
                 speed: 60,
@@ -101,7 +110,8 @@ export class Enemy {
                 color: COLORS.ORC
             },
             skeleton: {
-                health: 40,
+                name: '스켈레톤',
+                health: 70, // 40 → 70
                 attack: 12,
                 defense: 3,
                 speed: 70,
@@ -110,7 +120,8 @@ export class Enemy {
                 color: COLORS.SKELETON
             },
             troll: {
-                health: 120,
+                name: '트롤',
+                health: 180, // 120 → 180
                 attack: 25,
                 defense: 8,
                 speed: 40,
@@ -119,7 +130,8 @@ export class Enemy {
                 color: COLORS.TROLL
             },
             wraith: {
-                health: 80,
+                name: '레이스',
+                health: 120, // 80 → 120
                 attack: 20,
                 defense: 2,
                 speed: 100,
@@ -242,7 +254,7 @@ export class Enemy {
      * 특정 위치에 렌더링 (카메라용)
      */
     renderAtPosition(renderer: Renderer, x: number, y: number): void {
-        const data = this.getEnemyData(this.type);
+        const data = this.getEnemyDataInternal(this.type);
         const ctx = renderer.getContext();
         const centerX = x + this.width / 2;
         const centerY = y + this.height / 2;
@@ -306,47 +318,67 @@ export class Enemy {
         ctx.arc(x + this.width * 0.65, eyeY, 3, 0, Math.PI * 2);
         ctx.fill();
 
-        // 보스 라벨 (더 화려하게)
+        // 체력바 먼저 그리기
+        const barWidth = this.width;
+        const barHeight = 6;
+        const barX = x;
+        const barY = y - 12;
+
+        // 배경 (어두운 회색)
+        ctx.fillStyle = 'rgba(50, 50, 50, 0.8)';
+        ctx.fillRect(barX, barY, barWidth, barHeight);
+
+        // 체력 (색상 변화)
+        const healthRatio = this.health / this.maxHealth;
+        const healthColor = healthRatio > 0.5 ? '#4CAF50' : healthRatio > 0.25 ? '#FF9800' : '#F44336';
+        ctx.fillStyle = healthColor;
+        ctx.fillRect(barX, barY, barWidth * healthRatio, barHeight);
+
+        // 테두리 (흰색)
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(barX, barY, barWidth, barHeight);
+
+        // 몬스터 이름 표시 (체력바 위에)
+        const enemyName = data.name || this.type; // fallback
+        const displayName = this.isBoss ? `👑 ${enemyName} BOSS` : enemyName;
+        const nameY = barY - 10; // 체력바 위 10px
+
+        // 이름 폰트 설정
+        ctx.font = this.isBoss ? 'bold 12px Arial' : 'bold 11px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // 이름 배경 (검은색)
+        const nameWidth = ctx.measureText(displayName).width;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+        ctx.fillRect(centerX - nameWidth / 2 - 3, nameY - 7, nameWidth + 6, 14);
+
+        // 이름 테두리
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(centerX - nameWidth / 2 - 3, nameY - 7, nameWidth + 6, 14);
+
+        // 이름 텍스트 (그림자 효과)
+        ctx.shadowColor = 'rgba(0, 0, 0, 1)';
+        ctx.shadowBlur = 3;
+        ctx.shadowOffsetX = 1;
+        ctx.shadowOffsetY = 1;
+
         if (this.isBoss) {
             const pulse = Math.sin(Date.now() / 200) * 0.3 + 0.7;
-
-            // 배경
-            ctx.fillStyle = `rgba(0, 0, 0, ${pulse * 0.7})`;
-            ctx.fillRect(centerX - 30, y - 25, 60, 18);
-
-            // 텍스트
-            renderer.drawText(
-                '👑 BOSS',
-                centerX,
-                y - 12,
-                'bold 14px Arial',
-                `rgba(255, ${Math.floor(pulse * 100)}, 0, 1)`,
-                'center'
-            );
+            ctx.fillStyle = `rgba(255, ${Math.floor(pulse * 150)}, 0, 1)`;
+        } else {
+            ctx.fillStyle = '#FFFFFF';
         }
 
-        // 체력바 (더 세련되게)
-        if (this.health < this.maxHealth) {
-            const barWidth = this.width;
-            const barHeight = 6;
-            const barX = x;
-            const barY = y - 10;
+        ctx.fillText(displayName, centerX, nameY);
 
-            // 배경
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-            ctx.fillRect(barX, barY, barWidth, barHeight);
-
-            // 체력
-            const healthRatio = this.health / this.maxHealth;
-            const healthColor = healthRatio > 0.5 ? '#4CAF50' : healthRatio > 0.25 ? '#FF9800' : '#F44336';
-            ctx.fillStyle = healthColor;
-            ctx.fillRect(barX, barY, barWidth * healthRatio, barHeight);
-
-            // 테두리
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(barX, barY, barWidth, barHeight);
-        }
+        // 그림자 리셋
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
     }
 
     /**

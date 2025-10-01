@@ -27,7 +27,7 @@ export class WeaponSystem {
                 category: 'melee',
                 baseDamage: 15,
                 attackSpeed: 1.2, // 1.2초당 1회
-                range: 32,
+                range: 80, // 32 → 80 (2.5배 증가)
                 criticalChance: 0.08,
                 comboBonus: 0.5, // 3연속 공격 시 마지막 공격 +50%
                 knockback: 10,
@@ -48,7 +48,7 @@ export class WeaponSystem {
                 category: 'melee',
                 baseDamage: 10,
                 attackSpeed: 2.0, // 2.0초당 1회 (빠름)
-                range: 20,
+                range: 60, // 20 → 60 (3배 증가)
                 criticalChance: 0.15,
                 backstabBonus: 0.20, // 뒤에서 공격 시 크리티컬 +20%
                 knockback: 5,
@@ -112,7 +112,7 @@ export class WeaponSystem {
                 category: 'melee',
                 baseDamage: 25,
                 attackSpeed: 0.8, // 0.8초당 1회 (느림)
-                range: 28,
+                range: 70, // 28 → 70 (2.5배 증가)
                 criticalChance: 0.05,
                 knockback: 30, // 강력한 넉백
                 aoeRadius: 40, // 광역 범위

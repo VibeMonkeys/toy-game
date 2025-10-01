@@ -589,7 +589,7 @@ class Game {
             return this.mapManager.isColliding(x, y, w, h);
         });
 
-        // 플레이어 공격
+        // 플레이어 공격 (스페이스바)
         if (this.inputManager.isAttackPressed()) {
             if (this.player.attack()) {
                 this.handlePlayerAttack();
@@ -688,8 +688,6 @@ class Game {
                 } else {
                     this.camera.shake(5, 100);
                 }
-
-                console.log(`💥 ${combatResult.damage} 데미지! (콤보: ${combatResult.comboMultiplier.toFixed(1)}x)`);
             }
         }
     }
@@ -918,41 +916,68 @@ class Game {
                 enemyAnimController.getCurrentFrame()
             );
 
-            // 체력바는 그대로 유지
-            if (enemy.health < enemy.maxHealth) {
-                const barWidth = 32;
-                const barHeight = 4;
-                const barX = enemyScreen.x - 16;
-                const barY = enemyScreen.y - 20;
+            // 체력바 (항상 표시)
+            const barWidth = 32;
+            const barHeight = 4;
+            const barX = enemyScreen.x - 16;
+            const barY = enemyScreen.y - 20;
 
-                // 배경
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-                ctx.fillRect(barX, barY, barWidth, barHeight);
+            // 배경
+            ctx.fillStyle = 'rgba(50, 50, 50, 0.8)';
+            ctx.fillRect(barX, barY, barWidth, barHeight);
 
-                // 체력
-                const healthPercent = enemy.health / enemy.maxHealth;
-                const healthColor = healthPercent > 0.5 ? '#4CAF50' : healthPercent > 0.25 ? '#FFC107' : '#F44336';
-                ctx.fillStyle = healthColor;
-                ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+            // 체력
+            const healthPercent = enemy.health / enemy.maxHealth;
+            const healthColor = healthPercent > 0.5 ? '#4CAF50' : healthPercent > 0.25 ? '#FF9800' : '#F44336';
+            ctx.fillStyle = healthColor;
+            ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
 
-                // 테두리
-                ctx.strokeStyle = '#000';
-                ctx.lineWidth = 1;
-                ctx.strokeRect(barX, barY, barWidth, barHeight);
-            }
+            // 테두리
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(barX, barY, barWidth, barHeight);
 
-            // 보스 표시
+            // 몬스터 이름 표시 (체력바 위)
+            const enemyData = enemy.getEnemyData();
+            const enemyName = enemyData.name || enemy.type;
+            const displayName = enemy.isBoss ? `👑 ${enemyName} BOSS` : enemyName;
+            const nameY = barY - 10;
+
+            // 이름 폰트 설정
+            ctx.font = enemy.isBoss ? 'bold 11px Arial' : 'bold 10px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // 이름 배경
+            const nameWidth = ctx.measureText(displayName).width;
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+            ctx.fillRect(enemyScreen.x - nameWidth / 2 - 3, nameY - 7, nameWidth + 6, 14);
+
+            // 이름 테두리
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(enemyScreen.x - nameWidth / 2 - 3, nameY - 7, nameWidth + 6, 14);
+
+            // 이름 텍스트
+            ctx.shadowColor = 'rgba(0, 0, 0, 1)';
+            ctx.shadowBlur = 3;
+            ctx.shadowOffsetX = 1;
+            ctx.shadowOffsetY = 1;
+
             if (enemy.isBoss) {
                 const pulse = Math.sin(Date.now() / 200) * 0.3 + 0.7;
-                this.renderer.drawText(
-                    '👑 BOSS',
-                    enemyScreen.x,
-                    enemyScreen.y - 30,
-                    'bold 12px Arial',
-                    `rgba(255, ${Math.floor(pulse * 100)}, 0, 1)`,
-                    'center'
-                );
+                ctx.fillStyle = `rgba(255, ${Math.floor(pulse * 150)}, 0, 1)`;
+            } else {
+                ctx.fillStyle = '#FFFFFF';
             }
+
+            ctx.fillText(displayName, enemyScreen.x, nameY);
+
+            // 그림자 리셋
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
         }
 
         // 드롭된 아이템 렌더링
@@ -1287,6 +1312,32 @@ class Game {
         } catch (error) {
             console.error('❌ 플레이어 이름 로드 실패:', error);
         }
+    }
+
+    /**
+     * 가장 가까운 적 찾기
+     */
+    private findNearestEnemy(): Enemy | null {
+        if (!this.player || this.enemies.length === 0) {
+            return null;
+        }
+
+        const playerPos = this.player.getPosition();
+        let nearestEnemy: Enemy | null = null;
+        let minDistance = Infinity;
+
+        for (const enemy of this.enemies) {
+            const dx = enemy.x - playerPos.x;
+            const dy = enemy.y - playerPos.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance < minDistance) {
+                minDistance = distance;
+                nearestEnemy = enemy;
+            }
+        }
+
+        return nearestEnemy;
     }
 
     /**

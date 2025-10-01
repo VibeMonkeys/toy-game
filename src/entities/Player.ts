@@ -285,38 +285,106 @@ export class Player {
     render(renderer: Renderer): void {
         const ctx = renderer.getContext();
 
-        // 회피 중이면 반투명
+        // 회피 중이면 반투명 + 잔상 효과
         if (this.isDodging) {
+            ctx.globalAlpha = 0.5;
+
+            // 잔상 효과 (3개)
+            for (let i = 0; i < 3; i++) {
+                const trailAlpha = 0.1 - (i * 0.03);
+                const trailOffset = i * 8;
+                ctx.globalAlpha = trailAlpha;
+
+                renderer.drawRect(
+                    this.x - this.width / 2 - trailOffset,
+                    this.y - this.height / 2,
+                    this.width,
+                    this.height,
+                    COLORS.PLAYER
+                );
+            }
             ctx.globalAlpha = 0.5;
         }
 
-        // 플레이어 몸체
-        renderer.drawRect(
-            this.x - this.width / 2,
-            this.y - this.height / 2,
-            this.width,
-            this.height,
-            COLORS.PLAYER
-        );
+        // 플레이어 몸체 (둥근 모서리)
+        ctx.fillStyle = COLORS.PLAYER;
+        ctx.beginPath();
+        const bodyX = this.x - this.width / 2;
+        const bodyY = this.y - this.height / 2;
+        const radius = 4;
+        ctx.moveTo(bodyX + radius, bodyY);
+        ctx.lineTo(bodyX + this.width - radius, bodyY);
+        ctx.quadraticCurveTo(bodyX + this.width, bodyY, bodyX + this.width, bodyY + radius);
+        ctx.lineTo(bodyX + this.width, bodyY + this.height - radius);
+        ctx.quadraticCurveTo(bodyX + this.width, bodyY + this.height, bodyX + this.width - radius, bodyY + this.height);
+        ctx.lineTo(bodyX + radius, bodyY + this.height);
+        ctx.quadraticCurveTo(bodyX, bodyY + this.height, bodyX, bodyY + this.height - radius);
+        ctx.lineTo(bodyX, bodyY + radius);
+        ctx.quadraticCurveTo(bodyX, bodyY, bodyX + radius, bodyY);
+        ctx.closePath();
+        ctx.fill();
 
-        // 테두리
-        renderer.drawRectOutline(
-            this.x - this.width / 2,
-            this.y - this.height / 2,
-            this.width,
-            this.height,
-            '#000000',
-            2
-        );
+        // 그라데이션 효과
+        const gradient = ctx.createRadialGradient(this.x, this.y - 8, 0, this.x, this.y, this.width / 2);
+        gradient.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
+        gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = gradient;
+        ctx.fill();
+
+        // 테두리 (더 두껍고 선명)
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        // 눈 (애니메이션)
+        const eyeBlinkPhase = Math.sin(this.animationTime * 0.002);
+        if (eyeBlinkPhase > -0.9) { // 대부분의 시간 눈 뜨고 있음
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.arc(this.x - 6, this.y - 4, 2, 0, Math.PI * 2);
+            ctx.arc(this.x + 6, this.y - 4, 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
 
         // 투명도 리셋
         ctx.globalAlpha = 1.0;
 
-        // 공격 중 이펙트
+        // 공격 중 이펙트 (개선)
         if (this.isAttacking) {
-            ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+            const weapon = this.weaponSystem.getCurrentWeapon();
+            const attackRadius = this.weaponSystem.getAttackRange();
+
+            // 무기별 색상
+            let effectColor = 'rgba(255, 215, 0, 0.4)'; // 기본 금색
+            if (weapon) {
+                if (weapon.category === 'magic') effectColor = 'rgba(138, 43, 226, 0.4)'; // 보라색
+                if (weapon.category === 'ranged') effectColor = 'rgba(0, 191, 255, 0.4)'; // 청록색
+            }
+
+            // 공격 범위 표시 (펄스)
+            const pulsePhase = 1 - (Date.now() - this.lastAttackTime) / 300;
+            const pulseRadius = attackRadius * (0.7 + pulsePhase * 0.3);
+
+            ctx.fillStyle = effectColor;
             ctx.beginPath();
-            ctx.arc(this.x, this.y, 50, 0, Math.PI * 2);
+            ctx.arc(this.x, this.y, pulseRadius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 콤보 표시
+            if (this.comboCount >= 2) {
+                ctx.fillStyle = 'rgba(255, 69, 0, 0.5)'; // 붉은색
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, pulseRadius * 0.7, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // 레벨업 파티클 효과 (체력 100%일 때 반짝임)
+        if (this.stats.health === this.stats.maxHealth) {
+            const sparkle = Math.sin(this.animationTime * 0.005) * 0.5 + 0.5;
+            ctx.fillStyle = `rgba(255, 215, 0, ${sparkle * 0.3})`;
+            ctx.beginPath();
+            ctx.arc(this.x + 12, this.y - 12, 3, 0, Math.PI * 2);
             ctx.fill();
         }
     }
