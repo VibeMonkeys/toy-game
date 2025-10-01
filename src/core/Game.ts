@@ -564,6 +564,38 @@ class Game {
     private updateGameplay(): void {
         if (!this.player) return;
 
+        // 대화 시스템이 활성화되어 있으면 대화 입력만 처리
+        if (this.dialogueSystem.isDialogueActive()) {
+            this.dialogueSystem.update(this.deltaTime);
+
+            // Space로 텍스트 스킵 또는 진행
+            if (this.inputManager.isKeyJustPressed('Space')) {
+                if (this.dialogueSystem.isTextComplete()) {
+                    if (!this.dialogueSystem.hasChoices()) {
+                        this.dialogueSystem.confirmChoice();
+                    }
+                } else {
+                    this.dialogueSystem.skipTyping();
+                }
+            }
+
+            // 선택지가 있을 때 화살표 키로 선택
+            if (this.dialogueSystem.hasChoices() && this.dialogueSystem.isTextComplete()) {
+                if (this.inputManager.isKeyJustPressed('ArrowUp')) {
+                    this.dialogueSystem.moveChoiceUp();
+                }
+                if (this.inputManager.isKeyJustPressed('ArrowDown')) {
+                    this.dialogueSystem.moveChoiceDown();
+                }
+                if (this.inputManager.isKeyJustPressed('Enter')) {
+                    this.dialogueSystem.confirmChoice();
+                }
+            }
+
+            this.inputManager.clearJustPressed();
+            return;
+        }
+
         // 무기 선택 UI 처리 (W 키)
         if (this.inputManager.isKeyJustPressed('KeyW')) {
             this.weaponSelectUI.toggle();
@@ -1237,8 +1269,8 @@ class Game {
                 npcAnimController.getCurrentFrame()
             );
 
-            // NPC 이름 표시
-            const npcName = npc.data.name;
+            // NPC 이름 표시 (NPC: 현자 형태)
+            const npcLabel = `NPC: ${npc.data.name}`;
             const nameY = npcScreen.y - 30;
 
             // 이름 폰트 설정
@@ -1247,20 +1279,20 @@ class Game {
             ctx.textBaseline = 'middle';
 
             // 이름 배경
-            const nameWidth = ctx.measureText(npcName).width;
-            ctx.fillStyle = 'rgba(0, 100, 200, 0.9)';
-            ctx.fillRect(npcScreen.x - nameWidth / 2 - 3, nameY - 7, nameWidth + 6, 14);
+            const nameWidth = ctx.measureText(npcLabel).width;
+            ctx.fillStyle = 'rgba(50, 200, 100, 0.95)'; // 초록색으로 변경
+            ctx.fillRect(npcScreen.x - nameWidth / 2 - 4, nameY - 8, nameWidth + 8, 16);
 
             // 이름 테두리
-            ctx.strokeStyle = 'rgba(100, 200, 255, 0.8)';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(npcScreen.x - nameWidth / 2 - 3, nameY - 7, nameWidth + 6, 14);
+            ctx.strokeStyle = 'rgba(150, 255, 150, 0.9)';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(npcScreen.x - nameWidth / 2 - 4, nameY - 8, nameWidth + 8, 16);
 
             // 이름 텍스트
             ctx.fillStyle = '#FFFFFF';
             ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
             ctx.shadowBlur = 3;
-            ctx.fillText(npcName, npcScreen.x, nameY);
+            ctx.fillText(npcLabel, npcScreen.x, nameY);
 
             // 그림자 리셋
             ctx.shadowColor = 'transparent';
