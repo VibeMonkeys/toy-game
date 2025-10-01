@@ -4,7 +4,7 @@
  * docs/OPTIMIZED_GAME_DESIGN.md 기반으로 완전 새로 구현
  */
 
-import { GameMode } from '../types';
+import { GameMode, PlayerStats, Vector2D } from '../types';
 import { GAME_MODES, SCREEN, GAMEPLAY, GAME_INFO } from '../utils/Constants';
 import { InputManager } from '../systems/InputManager';
 import { Renderer } from '../systems/Renderer';

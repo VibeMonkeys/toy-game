@@ -90,7 +90,7 @@ export const GAMEPLAY = {
 export const WEAPON_TYPES: Record<string, WeaponType> = {
     SWORD: 'sword',
     DAGGER: 'dagger',
-    AXE: 'axe',
+    HAMMER: 'hammer',
     BOW: 'bow',
     STAFF: 'staff'
 } as const;

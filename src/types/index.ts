@@ -395,13 +395,42 @@ export enum ItemRarity {
     LEGENDARY = 'legendary'
 }
 
+export type ItemType = 'weapon' | 'armor' | 'consumable' | 'material' | 'quest';
+export type ArmorSlot = 'helmet' | 'chest' | 'legs' | 'boots' | 'accessory';
+
+export interface ItemEffect {
+    type: 'heal' | 'mana' | 'buff' | 'damage' | 'stat';
+    value: number;
+    duration?: number; // 버프 지속시간 (초)
+    stat?: 'attack' | 'defense' | 'speed' | 'critChance' | 'critDamage';
+}
+
 export interface Item {
     id: string;
     name: string;
-    type: 'weapon' | 'armor' | 'consumable' | 'rune';
+    type: ItemType;
     rarity: ItemRarity;
     description: string;
-    effect?: any;
+    stackable?: boolean;
+    maxStack?: number;
+
+    // 장비 아이템 (무기/방어구)
+    slot?: ArmorSlot;
+    stats?: {
+        attack?: number;
+        defense?: number;
+        health?: number;
+        speed?: number;
+        critChance?: number;
+        critDamage?: number;
+    };
+
+    // 소모품
+    effects?: ItemEffect[];
+
+    // 가치
+    sellPrice?: number;
+    buyPrice?: number;
 }
 
 // ============================================

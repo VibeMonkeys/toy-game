@@ -6,8 +6,8 @@
 
 import { Renderer } from '../systems/Renderer';
 import { UpgradeSystem, Upgrade } from '../systems/UpgradeSystem';
-import { WeaponSystem, WeaponData } from '../systems/WeaponSystem';
-import { WeaponType } from '../types';
+import { WeaponSystem } from '../systems/WeaponSystem';
+import { WeaponType, WeaponData } from '../types';
 
 type MenuTab = 'upgrades' | 'stats' | 'start';
 

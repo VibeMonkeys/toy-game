@@ -4,7 +4,7 @@
  * 기본 적 AI와 전투를 관리합니다.
  */
 
-import { Position, EnemyType, EnemyData, AIState } from '../types';
+import { Position, EnemyType, EnemyData, AIState, Vector2D } from '../types';
 import { COLORS } from '../utils/Constants';
 import { Renderer } from '../systems/Renderer';
 import { Player } from './Player';

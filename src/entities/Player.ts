@@ -4,11 +4,13 @@
  * 플레이어 캐릭터를 관리합니다.
  */
 
-import { Position, Vector2D, PlayerStats, WeaponType } from '../types';
+import { Position, Vector2D, PlayerStats, WeaponType, Item } from '../types';
 import { GAMEPLAY, COLORS } from '../utils/Constants';
 import { CombatSystem } from '../systems/CombatSystem';
 import { TraitSystem } from '../systems/TraitSystem';
 import { WeaponSystem } from '../systems/WeaponSystem';
+import { EquipmentSystem } from '../systems/EquipmentSystem';
+import { BuffSystem } from '../systems/BuffSystem';
 import { Renderer } from '../systems/Renderer';
 import { AnimationController, Direction } from '../systems/AnimationController';
 
@@ -34,11 +36,16 @@ export class Player {
     private combatSystem: CombatSystem;
     private traitSystem: TraitSystem;
     private weaponSystem: WeaponSystem;
+    private equipmentSystem: EquipmentSystem;
+    private buffSystem: BuffSystem;
     private isAttacking: boolean = false;
     private attackCooldown: number = 500;
     private lastAttackTime: number = 0;
     private comboCount: number = 0;
     private lastComboTime: number = 0;
+
+    // 기본 스탯 (장비/버프 적용 전)
+    private baseStats: PlayerStats;
 
     // 회피
     private isDodging: boolean = false;
@@ -68,9 +75,14 @@ export class Player {
             luck: GAMEPLAY.PLAYER_BASE.LUCK
         };
 
+        // 기본 스탯 백업 (장비/버프 적용 전)
+        this.baseStats = { ...this.stats };
+
         this.combatSystem = new CombatSystem();
         this.traitSystem = new TraitSystem();
         this.weaponSystem = new WeaponSystem();
+        this.equipmentSystem = new EquipmentSystem();
+        this.buffSystem = new BuffSystem();
         this.animationController = new AnimationController(150, 4);
 
         // 무기 시스템에 따라 공격 쿨다운 설정
@@ -88,6 +100,12 @@ export class Player {
      * 업데이트
      */
     update(deltaTime: number): void {
+        // 버프 시스템 업데이트 (만료된 버프 제거)
+        this.buffSystem.update();
+
+        // 스탯 재계산 (기본 스탯 + 장비 + 버프)
+        this.calculateFinalStats();
+
         // 스태미나 자동 회복
         if (this.stats.stamina < this.stats.maxStamina) {
             this.stats.stamina = Math.min(
@@ -496,5 +514,134 @@ export class Player {
         this.stats.health = this.stats.maxHealth * healthRatio;
         this.stats.mana = this.stats.maxMana * manaRatio;
         this.stats.stamina = this.stats.maxStamina * staminaRatio;
+    }
+
+    /**
+     * 최종 스탯 계산 (기본 스탯 + 장비 + 버프)
+     */
+    private calculateFinalStats(): void {
+        // 현재 체력/마나/스태미나 비율 유지
+        const healthRatio = this.stats.health / this.stats.maxHealth;
+        const manaRatio = this.stats.mana / this.stats.maxMana;
+        const staminaRatio = this.stats.stamina / this.stats.maxStamina;
+
+        // 1. 기본 스탯에서 시작
+        const tempStats = { ...this.baseStats };
+
+        // 2. 장비 보너스 적용
+        const equipBonus = this.equipmentSystem.calculateBonusStats();
+        if (equipBonus.attack) tempStats.attack += equipBonus.attack;
+        if (equipBonus.defense) tempStats.defense += equipBonus.defense;
+        if (equipBonus.maxHealth) tempStats.maxHealth += equipBonus.maxHealth;
+        if (equipBonus.speed) tempStats.speed += equipBonus.speed;
+        if (equipBonus.criticalChance) tempStats.criticalChance += equipBonus.criticalChance;
+        if (equipBonus.criticalDamage) tempStats.criticalDamage += equipBonus.criticalDamage;
+
+        // 3. 버프 배율 적용
+        this.stats = this.buffSystem.applyBuffs(tempStats);
+
+        // 4. 현재 리소스를 비율로 복원
+        this.stats.health = this.stats.maxHealth * healthRatio;
+        this.stats.mana = this.stats.maxMana * manaRatio;
+        this.stats.stamina = this.stats.maxStamina * staminaRatio;
+    }
+
+    /**
+     * 장비 착용
+     */
+    equipItem(item: Item): Item | null {
+        const previousItem = this.equipmentSystem.equip(item);
+        this.calculateFinalStats(); // 스탯 재계산
+        return previousItem;
+    }
+
+    /**
+     * 장비 해제
+     */
+    unequipItem(slot: string): Item | null {
+        const item = this.equipmentSystem.unequip(slot as any);
+        if (item) {
+            this.calculateFinalStats(); // 스탯 재계산
+        }
+        return item;
+    }
+
+    /**
+     * 소모품 사용
+     */
+    useConsumable(item: Item): boolean {
+        if (item.type !== 'consumable' || !item.effects) {
+            console.warn('소모품이 아니거나 효과가 없습니다:', item.name);
+            return false;
+        }
+
+        // 각 효과 적용
+        item.effects.forEach(effect => {
+            switch (effect.type) {
+                case 'heal':
+                    this.heal(effect.value);
+                    console.log(`💚 ${item.name} 사용: 체력 ${effect.value} 회복`);
+                    break;
+
+                case 'mana':
+                    this.restoreMana(effect.value);
+                    console.log(`💙 ${item.name} 사용: 마나 ${effect.value} 회복`);
+                    break;
+
+                case 'buff':
+                    if (effect.stat && effect.duration) {
+                        this.buffSystem.addBuff({
+                            name: item.name,
+                            stat: effect.stat,
+                            value: effect.value,
+                            duration: effect.duration
+                        });
+                        console.log(`✨ ${item.name} 사용: ${effect.stat} +${(effect.value * 100).toFixed(0)}% (${effect.duration}초)`);
+                    }
+                    break;
+
+                case 'stat':
+                    // 영구 스탯 증가 (기본 스탯 수정)
+                    if (effect.stat) {
+                        switch (effect.stat) {
+                            case 'attack':
+                                this.baseStats.attack += effect.value;
+                                break;
+                            case 'defense':
+                                this.baseStats.defense += effect.value;
+                                break;
+                            case 'speed':
+                                this.baseStats.speed += effect.value;
+                                break;
+                        }
+                        this.calculateFinalStats();
+                        console.log(`📈 ${item.name} 사용: ${effect.stat} +${effect.value} (영구)`);
+                    }
+                    break;
+            }
+        });
+
+        return true;
+    }
+
+    /**
+     * 장비 시스템 가져오기
+     */
+    getEquipmentSystem(): EquipmentSystem {
+        return this.equipmentSystem;
+    }
+
+    /**
+     * 버프 시스템 가져오기
+     */
+    getBuffSystem(): BuffSystem {
+        return this.buffSystem;
+    }
+
+    /**
+     * 활성 버프 목록
+     */
+    getActiveBuffs() {
+        return this.buffSystem.getActiveBuffs();
     }
 }
