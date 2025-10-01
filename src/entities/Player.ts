@@ -8,6 +8,7 @@ import { Position, Vector2D, PlayerStats, WeaponType } from '../types';
 import { GAMEPLAY, COLORS } from '../utils/Constants';
 import { CombatSystem } from '../systems/CombatSystem';
 import { TraitSystem } from '../systems/TraitSystem';
+import { WeaponSystem } from '../systems/WeaponSystem';
 import { Renderer } from '../systems/Renderer';
 import { AnimationController, Direction } from '../systems/AnimationController';
 
@@ -32,9 +33,12 @@ export class Player {
     // 전투
     private combatSystem: CombatSystem;
     private traitSystem: TraitSystem;
+    private weaponSystem: WeaponSystem;
     private isAttacking: boolean = false;
     private attackCooldown: number = 500;
     private lastAttackTime: number = 0;
+    private comboCount: number = 0;
+    private lastComboTime: number = 0;
 
     // 회피
     private isDodging: boolean = false;
@@ -66,7 +70,18 @@ export class Player {
 
         this.combatSystem = new CombatSystem();
         this.traitSystem = new TraitSystem();
+        this.weaponSystem = new WeaponSystem();
         this.animationController = new AnimationController(150, 4);
+
+        // 무기 시스템에 따라 공격 쿨다운 설정
+        this.updateAttackCooldown();
+    }
+
+    /**
+     * 무기에 따른 공격 쿨다운 업데이트
+     */
+    private updateAttackCooldown(): void {
+        this.attackCooldown = this.weaponSystem.getAttackCooldown();
     }
 
     /**
@@ -140,12 +155,63 @@ export class Player {
         this.isAttacking = true;
         this.lastAttackTime = now;
 
+        // 콤보 카운트 (1.5초 이내 연속 공격)
+        if (now - this.lastComboTime < 1500) {
+            this.comboCount++;
+        } else {
+            this.comboCount = 1;
+        }
+        this.lastComboTime = now;
+
+        console.log(`⚔️ 공격! 콤보: ${this.comboCount}`);
+
         // 공격 애니메이션 종료
         setTimeout(() => {
             this.isAttacking = false;
         }, 300);
 
         return true;
+    }
+
+    /**
+     * 공격 데미지 계산
+     */
+    getAttackDamage(isCharged: boolean = false): number {
+        return this.weaponSystem.calculateDamage(this.stats.attack, isCharged, this.comboCount);
+    }
+
+    /**
+     * 크리티컬 판정
+     */
+    rollCritical(isBackstab: boolean = false): boolean {
+        const critChance = this.weaponSystem.getCriticalChance(this.stats.criticalChance, isBackstab);
+        return Math.random() < critChance;
+    }
+
+    /**
+     * 공격 범위
+     */
+    getAttackRange(): number {
+        return this.weaponSystem.getAttackRange();
+    }
+
+    /**
+     * 무기 시스템 가져오기
+     */
+    getWeaponSystem(): WeaponSystem {
+        return this.weaponSystem;
+    }
+
+    /**
+     * 무기 변경
+     */
+    changeWeapon(weaponType: WeaponType): boolean {
+        const success = this.weaponSystem.equipWeapon(weaponType);
+        if (success) {
+            this.updateAttackCooldown();
+            this.comboCount = 0; // 콤보 리셋
+        }
+        return success;
     }
 
     /**

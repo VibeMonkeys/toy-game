@@ -20,7 +20,9 @@ import { CreditsScreen } from '../ui/CreditsScreen';
 import { HowToPlayScreen } from '../ui/HowToPlayScreen';
 import { TutorialPopup } from '../ui/TutorialPopup';
 import { SoulChamberUI } from '../ui/SoulChamberUI';
+import { WeaponSelectUI } from '../ui/WeaponSelectUI';
 import { UpgradeSystem } from '../systems/UpgradeSystem';
+import { WeaponSystem } from '../systems/WeaponSystem';
 import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
 import { SpriteManager } from '../systems/SpriteManager';
@@ -44,6 +46,7 @@ class Game {
     private howToPlayScreen: HowToPlayScreen;
     private tutorialPopup: TutorialPopup;
     private soulChamberUI: SoulChamberUI;
+    private weaponSelectUI: WeaponSelectUI;
     private upgradeSystem: UpgradeSystem;
 
     // 게임 상태
@@ -102,6 +105,7 @@ class Game {
         this.howToPlayScreen = new HowToPlayScreen();
         this.tutorialPopup = new TutorialPopup();
         this.soulChamberUI = new SoulChamberUI();
+        this.weaponSelectUI = new WeaponSelectUI();
         this.upgradeSystem = new UpgradeSystem();
 
         // 게임 초기화
@@ -302,10 +306,57 @@ class Game {
             if (this.tutorialPopup.getCurrentStep() === this.tutorialPopup.getTotalSteps() - 1) {
                 this.tutorialPopup.end();
                 // 튜토리얼 완료 후 바로 게임 시작
-                this.soulPoints = 50; // 초기 소울 포인트 지급
+                this.soulPoints = 500; // 초기 소울 포인트 지급 (테스트용)
                 this.startNewGame();
             } else {
                 this.tutorialPopup.nextStep();
+            }
+        }
+    }
+
+    /**
+     * 무기 선택 UI 업데이트
+     */
+    private updateWeaponSelect(): void {
+        if (!this.player) return;
+
+        const weaponSystem = this.player.getWeaponSystem();
+
+        // ESC 또는 W로 닫기
+        if (this.inputManager.isKeyJustPressed('Escape') || this.inputManager.isKeyJustPressed('KeyW')) {
+            this.weaponSelectUI.close();
+            return;
+        }
+
+        // 선택 이동
+        if (this.inputManager.isKeyJustPressed('ArrowUp')) {
+            this.weaponSelectUI.moveUp();
+        }
+        if (this.inputManager.isKeyJustPressed('ArrowDown')) {
+            const weapons = weaponSystem.getAllWeapons();
+            this.weaponSelectUI.moveDown(weapons.length - 1);
+        }
+
+        // 무기 해금 또는 장착
+        if (this.inputManager.isKeyJustPressed('Enter') || this.inputManager.isKeyJustPressed('Space')) {
+            const selectedIndex = this.weaponSelectUI.getSelectedIndex();
+            const weapons = weaponSystem.getAllWeapons();
+
+            if (selectedIndex < weapons.length) {
+                const weapon = weapons[selectedIndex];
+
+                if (!weapon.unlocked) {
+                    // 해금 시도
+                    const result = weaponSystem.unlockWeapon(weapon.id, this.soulPoints);
+                    console.log(`🔓 무기 해금 시도:`, result);
+                    if (result.success) {
+                        this.soulPoints = result.newSoulPoints;
+                    }
+                } else {
+                    // 장착 시도
+                    this.player.changeWeapon(weapon.id);
+                    this.weaponSelectUI.close();
+                }
             }
         }
     }
@@ -447,6 +498,18 @@ class Game {
     private updateGameplay(): void {
         if (!this.player) return;
 
+        // 무기 선택 UI 처리 (W 키)
+        if (this.inputManager.isKeyJustPressed('KeyW')) {
+            this.weaponSelectUI.toggle();
+            return;
+        }
+
+        // 무기 선택 UI가 열려있으면 해당 입력만 처리
+        if (this.weaponSelectUI.isOpened()) {
+            this.updateWeaponSelect();
+            return;
+        }
+
         // ESC로 Soul Chamber 토글
         if (this.inputManager.isKeyJustPressed('Escape')) {
             this.previousGameMode = this.gameMode;
@@ -538,7 +601,7 @@ class Game {
         if (!this.player) return;
 
         const playerPos = this.player.getPosition();
-        const attackRange = 60;
+        const attackRange = this.player.getAttackRange();
 
         // 범위 내 적 탐지
         for (const enemy of this.enemies) {
@@ -547,26 +610,26 @@ class Game {
             const distance = Math.sqrt(dx * dx + dy * dy);
 
             if (distance <= attackRange) {
-                // 전투 시스템으로 데미지 계산
-                const combatResult = this.player.getCombatSystem().attack(
-                    this.player.stats.attack,
-                    this.player.stats.criticalChance,
-                    false
-                );
+                // 무기 시스템으로 데미지 계산
+                const baseDamage = this.player.getAttackDamage(false);
+                const isCritical = this.player.rollCritical(false);
+                const finalDamage = isCritical ? baseDamage * this.player.stats.criticalDamage : baseDamage;
 
-                enemy.takeDamage(combatResult.damage);
+                enemy.takeDamage(finalDamage);
 
                 // 데미지 숫자 표시 (화면 좌표로 변환)
                 const enemyScreen = this.camera.worldToScreen(enemy.x, enemy.y);
                 this.damageNumberSystem.spawn(
                     enemyScreen.x,
                     enemyScreen.y - 20,
-                    combatResult.damage,
-                    combatResult.isCritical
+                    finalDamage,
+                    isCritical
                 );
 
+                console.log(`💥 데미지: ${finalDamage}${isCritical ? ' (크리티컬!)' : ''}`);
+
                 // 카메라 흔들림 (크리티컬이면 강하게)
-                if (combatResult.isCritical) {
+                if (isCritical) {
                     this.camera.shake(15, 200);
                 } else {
                     this.camera.shake(5, 100);
@@ -743,7 +806,8 @@ class Game {
      * Soul Chamber 렌더링
      */
     private renderSoulChamber(): void {
-        this.soulChamberUI.render(this.renderer, this.upgradeSystem);
+        const weaponSystem = this.player?.getWeaponSystem();
+        this.soulChamberUI.render(this.renderer, this.upgradeSystem, weaponSystem);
     }
 
     /**
@@ -884,6 +948,12 @@ class Game {
         // 인벤토리 렌더링 (I 키로 토글)
         if (this.inventory) {
             this.inventory.render(this.renderer, this.inventoryOpen);
+        }
+
+        // 무기 선택 UI 렌더링 (W 키로 토글)
+        if (this.player && this.weaponSelectUI.isOpened()) {
+            const weaponSystem = this.player.getWeaponSystem();
+            this.weaponSelectUI.render(this.renderer, weaponSystem, this.soulPoints);
         }
     }
 

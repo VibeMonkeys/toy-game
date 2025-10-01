@@ -77,8 +77,49 @@ export interface PlayerState {
     enemiesKilled: number;
 }
 
-export type WeaponType = 'sword' | 'dagger' | 'axe' | 'bow' | 'staff';
+// 무기 타입 (디자인 문서 기준)
+export type WeaponType = 'sword' | 'dagger' | 'staff' | 'bow' | 'hammer';
 export type SkillType = 'fireball' | 'lightning' | 'iceSpike' | 'heal' | 'dash' | 'shield';
+
+// 무기 데이터 인터페이스
+export interface WeaponData {
+    id: WeaponType;
+    name: string;
+    description: string;
+    category: 'melee' | 'ranged' | 'magic';
+
+    // 기본 스탯
+    baseDamage: number;
+    attackSpeed: number; // 초당 공격 횟수
+    range: number; // 픽셀
+    criticalChance: number;
+
+    // 특성
+    comboBonus?: number; // 콤보 보너스 (검)
+    backstabBonus?: number; // 백스탭 보너스 (단검)
+    penetration?: boolean; // 관통 여부
+    knockback?: number; // 넉백 거리
+    aoeRadius?: number; // 광역 범위 (망치)
+
+    // 차지 공격
+    chargedAttack: {
+        chargeTime: number; // 초
+        damageMultiplier: number;
+        specialEffect: string;
+        effectValue?: number;
+    };
+
+    // 잠금 상태
+    unlocked: boolean;
+    unlockCost?: number; // 소울 포인트
+}
+
+// 장착 가능한 무기 슬롯
+export interface EquippedWeapon {
+    weapon: WeaponData;
+    level: number;
+    upgradeCount: number;
+}
 
 // ============================================
 // 적 (Enemy)

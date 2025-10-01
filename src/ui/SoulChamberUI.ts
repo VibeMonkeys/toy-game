@@ -6,21 +6,23 @@
 
 import { Renderer } from '../systems/Renderer';
 import { UpgradeSystem, Upgrade } from '../systems/UpgradeSystem';
+import { WeaponSystem, WeaponData } from '../systems/WeaponSystem';
+import { WeaponType } from '../types';
 
-type MenuTab = 'upgrades' | 'weapons' | 'stats' | 'start';
+type MenuTab = 'upgrades' | 'stats' | 'start';
 
 export class SoulChamberUI {
     private currentTab: MenuTab = 'upgrades';
     private selectedUpgradeIndex: number = 0;
     private selectedCategory: 'offense' | 'defense' | 'utility' = 'offense';
+    private selectedWeaponIndex: number = 0;
     private animationTime: number = 0;
     private soulPoints: number = 0;
     private totalRuns: number = 0;
     private highestFloor: number = 0;
 
     private readonly tabs: { id: MenuTab; label: string; icon: string }[] = [
-        { id: 'upgrades', label: '업그레이드', icon: '⬆️' },
-        { id: 'weapons', label: '무기', icon: '⚔️' },
+        { id: 'upgrades', label: '영구 업그레이드', icon: '⬆️' },
         { id: 'stats', label: '통계', icon: '📊' },
         { id: 'start', label: '도전 시작', icon: '🚪' }
     ];
@@ -173,7 +175,7 @@ export class SoulChamberUI {
     /**
      * 렌더링
      */
-    render(renderer: Renderer, upgradeSystem: UpgradeSystem): void {
+    render(renderer: Renderer, upgradeSystem: UpgradeSystem, weaponSystem?: WeaponSystem): void {
         const ctx = renderer.getContext();
 
         // 배경 그라데이션
@@ -208,9 +210,6 @@ export class SoulChamberUI {
         switch (this.currentTab) {
             case 'upgrades':
                 this.renderUpgradesTab(renderer, upgradeSystem);
-                break;
-            case 'weapons':
-                this.renderWeaponsTab(renderer);
                 break;
             case 'stats':
                 this.renderStatsTab(renderer);
@@ -262,10 +261,10 @@ export class SoulChamberUI {
      */
     private renderTabs(renderer: Renderer): void {
         const ctx = renderer.getContext();
-        const tabWidth = 280;
-        const tabHeight = 50;
+        const tabWidth = 350;
+        const tabHeight = 60;
         const startX = (1280 - tabWidth * this.tabs.length) / 2;
-        const tabY = 120;
+        const tabY = 110;
 
         this.tabs.forEach((tab, index) => {
             const tabX = startX + index * tabWidth;
@@ -286,12 +285,22 @@ export class SoulChamberUI {
                 ctx.strokeRect(tabX, tabY, tabWidth, tabHeight);
             }
 
+            // 탭 아이콘
+            renderer.drawText(
+                tab.icon,
+                tabX + tabWidth / 2,
+                tabY + 20,
+                '24px Arial',
+                isSelected ? '#FFFFFF' : '#888888',
+                'center'
+            );
+
             // 탭 텍스트
             renderer.drawText(
-                `${tab.icon} ${tab.label}`,
+                tab.label,
                 tabX + tabWidth / 2,
-                tabY + tabHeight / 2 + 5,
-                isSelected ? 'bold 18px Arial' : '16px Arial',
+                tabY + 48,
+                isSelected ? 'bold 16px Arial' : '14px Arial',
                 isSelected ? '#FFFFFF' : '#AAAAAA',
                 'center'
             );
@@ -436,24 +445,151 @@ export class SoulChamberUI {
     /**
      * 무기 탭 렌더링
      */
-    private renderWeaponsTab(renderer: Renderer): void {
+    private renderWeaponsTab(renderer: Renderer, weaponSystem?: WeaponSystem): void {
+        if (!weaponSystem) return;
+
+        const ctx = renderer.getContext();
+        const weapons = weaponSystem.getAllWeapons();
+        const currentWeapon = weaponSystem.getCurrentWeapon();
+
+        // 제목
         renderer.drawText(
             '⚔️ 무기 선택',
             640,
-            300,
+            200,
             'bold 32px Arial',
-            '#FFFFFF',
+            '#FFD700',
             'center'
         );
 
+        // 설명
         renderer.drawText(
-            '(준비 중)',
+            '보유한 무기를 선택하여 장착하거나 새로운 무기를 해금하세요',
             640,
-            350,
-            '20px Arial',
+            250,
+            '16px Arial',
             '#AAAAAA',
             'center'
         );
+
+        // 무기 리스트
+        const startY = 300;
+        const itemHeight = 100;
+
+        weapons.forEach((weapon, index) => {
+            const y = startY + index * itemHeight;
+            const isSelected = index === this.selectedWeaponIndex;
+            const isCurrent = currentWeapon?.id === weapon.id;
+
+            // 배경
+            if (isSelected) {
+                ctx.fillStyle = 'rgba(255, 215, 0, 0.1)';
+                ctx.fillRect(200, y - 10, 880, 90);
+                ctx.strokeStyle = '#FFD700';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(200, y - 10, 880, 90);
+            }
+
+            // 잠금 상태에 따른 색상
+            const nameColor = weapon.unlocked ? '#FFFFFF' : '#666666';
+            const descColor = weapon.unlocked ? '#AAAAAA' : '#444444';
+
+            // 무기 아이콘 (카테고리별)
+            const icon = weapon.category === 'melee' ? '⚔️' :
+                weapon.category === 'ranged' ? '🏹' : '🔮';
+
+            renderer.drawText(
+                icon,
+                230,
+                y + 30,
+                '32px Arial',
+                nameColor,
+                'left'
+            );
+
+            // 무기 이름
+            renderer.drawText(
+                weapon.name,
+                280,
+                y + 15,
+                'bold 20px Arial',
+                nameColor,
+                'left'
+            );
+
+            // 현재 장착 표시
+            if (isCurrent && weapon.unlocked) {
+                renderer.drawText(
+                    '(장착 중)',
+                    380,
+                    y + 15,
+                    '16px Arial',
+                    '#00FF00',
+                    'left'
+                );
+            }
+
+            // 설명
+            renderer.drawText(
+                weapon.description,
+                280,
+                y + 45,
+                '14px Arial',
+                descColor,
+                'left'
+            );
+
+            // 스탯 정보
+            const statInfo = `데미지: ${weapon.baseDamage} | 속도: ${weapon.attackSpeed.toFixed(1)}/s | 사거리: ${weapon.range}px | 크리: ${(weapon.criticalChance * 100).toFixed(0)}%`;
+            renderer.drawText(
+                statInfo,
+                280,
+                y + 65,
+                '12px Arial',
+                descColor,
+                'left'
+            );
+
+            // 잠금/해금 상태
+            if (!weapon.unlocked) {
+                renderer.drawText(
+                    `🔒 해금: ${weapon.unlockCost} 소울`,
+                    1000,
+                    y + 30,
+                    'bold 16px Arial',
+                    '#FFD700',
+                    'right'
+                );
+            } else if (!isCurrent) {
+                renderer.drawText(
+                    '장착 가능',
+                    1000,
+                    y + 30,
+                    '16px Arial',
+                    '#00FF00',
+                    'right'
+                );
+            }
+        });
+
+        // 조작 힌트
+        const hints = [
+            '↑↓: 무기 선택',
+            'Enter/Space: 장착 또는 해금',
+            'Q/E: 탭 전환',
+            'ESC: 돌아가기'
+        ];
+
+        hints.forEach((hint, index) => {
+            renderer.drawText(
+                hint,
+                640,
+                650 + index * 25,
+                '14px Arial',
+                '#888888',
+                'center'
+            );
+        });
     }
 
     /**
@@ -607,6 +743,31 @@ export class SoulChamberUI {
 
             ctx.fillStyle = `rgba(200, 200, 255, ${twinkle * 0.7})`;
             ctx.fillRect(x, y, size, size);
+        }
+    }
+
+    /**
+     * 무기 선택 인덱스 가져오기
+     */
+    getSelectedWeaponIndex(): number {
+        return this.selectedWeaponIndex;
+    }
+
+    /**
+     * 무기 선택 위로 이동
+     */
+    moveWeaponUp(): void {
+        if (this.selectedWeaponIndex > 0) {
+            this.selectedWeaponIndex--;
+        }
+    }
+
+    /**
+     * 무기 선택 아래로 이동
+     */
+    moveWeaponDown(maxIndex: number): void {
+        if (this.selectedWeaponIndex < maxIndex) {
+            this.selectedWeaponIndex++;
         }
     }
 }
