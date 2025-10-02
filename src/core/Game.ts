@@ -1903,6 +1903,9 @@ class Game {
                         console.log(`🔥 보스 페이즈 ${phase} 돌입!`);
                     });
 
+                    // 보스에게 맵 매니저 설정 (벽 충돌 체크용)
+                    boss.setMapManager(this.mapManager);
+
                     this.entityManager.addEnemy(boss);
                     this.bossUI.setBoss(boss);
                     bossSpawned = true;
@@ -1913,7 +1916,10 @@ class Game {
                     this.audioManager.fadeBGMIn('boss', 2000);
                 } else {
                     // 일반 적 생성 (isBoss=false이므로 EnemyType 보장)
-                    this.entityManager.addEnemy(new Enemy(spawn.x, spawn.y, spawn.type as EnemyType, false));
+                    const enemy = new Enemy(spawn.x, spawn.y, spawn.type as EnemyType, false);
+                    // 적에게 맵 매니저 설정 (벽 충돌 체크용)
+                    enemy.setMapManager(this.mapManager);
+                    this.entityManager.addEnemy(enemy);
                 }
             }
 

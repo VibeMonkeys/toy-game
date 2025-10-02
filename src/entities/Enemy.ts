@@ -10,6 +10,7 @@ import { Renderer } from '../systems/Renderer';
 import { Player } from './Player';
 import { AnimationController, Direction } from '../systems/AnimationController';
 import { getDistance } from '../utils/MathUtils';
+import { MapManager } from '../systems/MapManager';
 
 export class Enemy {
     x: number;
@@ -26,6 +27,9 @@ export class Enemy {
     // 크기
     width: number = 32;
     height: number = 32;
+
+    // 맵 참조 (충돌 체크용)
+    private mapManager: MapManager | null = null;
 
     // 보스 여부
     isBoss: boolean = false;
@@ -161,6 +165,13 @@ export class Enemy {
     }
 
     /**
+     * 맵 매니저 설정 (충돌 체크용)
+     */
+    setMapManager(mapManager: MapManager): void {
+        this.mapManager = mapManager;
+    }
+
+    /**
      * 업데이트
      */
     update(deltaTime: number, player: Player): void {
@@ -214,8 +225,23 @@ export class Enemy {
             const moveX = (dx / distance) * this.speed * deltaTime;
             const moveY = (dy / distance) * this.speed * deltaTime;
 
-            this.x += moveX;
-            this.y += moveY;
+            // 벽 충돌 체크하면서 이동 (히트박스 중심점 기준)
+            const newX = this.x + moveX;
+            const newY = this.y + moveY;
+
+            // X축 이동 체크 (히트박스의 왼쪽 상단 좌표 기준)
+            const hitboxX = newX - this.width / 2;
+            const hitboxY = this.y - this.height / 2;
+            if (!this.mapManager || !this.mapManager.isColliding(hitboxX, hitboxY, this.width, this.height)) {
+                this.x = newX;
+            }
+
+            // Y축 이동 체크
+            const hitboxX2 = this.x - this.width / 2;
+            const hitboxY2 = newY - this.height / 2;
+            if (!this.mapManager || !this.mapManager.isColliding(hitboxX2, hitboxY2, this.width, this.height)) {
+                this.y = newY;
+            }
 
             // 애니메이션 방향 설정
             this.animationController.setDirectionFromMovement(dx, dy);
@@ -247,8 +273,23 @@ export class Enemy {
             const moveX = (dx / distance) * this.speed * 0.5 * deltaTime;
             const moveY = (dy / distance) * this.speed * 0.5 * deltaTime;
 
-            this.x += moveX;
-            this.y += moveY;
+            // 벽 충돌 체크하면서 이동 (히트박스 중심점 기준)
+            const newX = this.x + moveX;
+            const newY = this.y + moveY;
+
+            // X축 이동 체크
+            const hitboxX = newX - this.width / 2;
+            const hitboxY = this.y - this.height / 2;
+            if (!this.mapManager || !this.mapManager.isColliding(hitboxX, hitboxY, this.width, this.height)) {
+                this.x = newX;
+            }
+
+            // Y축 이동 체크
+            const hitboxX2 = this.x - this.width / 2;
+            const hitboxY2 = newY - this.height / 2;
+            if (!this.mapManager || !this.mapManager.isColliding(hitboxX2, hitboxY2, this.width, this.height)) {
+                this.y = newY;
+            }
 
             // 애니메이션 방향 설정
             this.animationController.setDirectionFromMovement(dx, dy);
@@ -283,8 +324,26 @@ export class Enemy {
 
         // 플레이어 반대 방향으로 빠르게 도망
         const fleeSpeed = this.speed * 1.5; // 1.5배 빠르게
-        this.x += this.fleeDirection.x * fleeSpeed * deltaTime;
-        this.y += this.fleeDirection.y * fleeSpeed * deltaTime;
+        const moveX = this.fleeDirection.x * fleeSpeed * deltaTime;
+        const moveY = this.fleeDirection.y * fleeSpeed * deltaTime;
+
+        // 벽 충돌 체크하면서 이동 (히트박스 중심점 기준)
+        const newX = this.x + moveX;
+        const newY = this.y + moveY;
+
+        // X축 이동 체크
+        const hitboxX = newX - this.width / 2;
+        const hitboxY = this.y - this.height / 2;
+        if (!this.mapManager || !this.mapManager.isColliding(hitboxX, hitboxY, this.width, this.height)) {
+            this.x = newX;
+        }
+
+        // Y축 이동 체크
+        const hitboxX2 = this.x - this.width / 2;
+        const hitboxY2 = newY - this.height / 2;
+        if (!this.mapManager || !this.mapManager.isColliding(hitboxX2, hitboxY2, this.width, this.height)) {
+            this.y = newY;
+        }
 
         // 애니메이션 방향
         this.animationController.setDirectionFromMovement(
