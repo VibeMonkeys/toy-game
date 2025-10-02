@@ -9,12 +9,21 @@ import { Renderer } from './Renderer';
 import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
 import { Camera } from './Camera';
+import { ParticleSystem } from './ParticleSystem';
 
 export class ProjectileSystem {
     private projectiles: Projectile[] = [];
     private nextId: number = 0;
+    private particleSystem: ParticleSystem | null = null;
 
     constructor() {}
+
+    /**
+     * ParticleSystem 연결
+     */
+    setParticleSystem(system: ParticleSystem): void {
+        this.particleSystem = system;
+    }
 
     /**
      * 투사체 생성
@@ -142,6 +151,14 @@ export class ProjectileSystem {
                         enemy.takeDamage(proj.damage);
                         proj.hitCount = (proj.hitCount || 0) + 1;
 
+                        // 충돌 파티클 (적 피격)
+                        if (this.particleSystem) {
+                            this.particleSystem.emit('attack_hit', enemy.x, enemy.y, {
+                                count: 8,
+                                color: proj.color
+                            });
+                        }
+
                         if (!proj.piercing || proj.hitCount >= (proj.maxHits || 1)) {
                             shouldRemove = true;
                             break;
@@ -152,11 +169,28 @@ export class ProjectileSystem {
                 // 적/보스 투사체 -> 플레이어 충돌
                 if (this.checkCollision(proj, player.x, player.y, player.width / 2)) {
                     player.takeDamage(proj.damage);
+
+                    // 충돌 파티클 (플레이어 피격은 Player.takeDamage 콜백에서 처리됨)
+                    // 여기서는 투사체 소멸 효과만 추가
+                    if (this.particleSystem) {
+                        this.particleSystem.emit('sparkle', proj.x, proj.y, {
+                            count: 6,
+                            color: proj.color
+                        });
+                    }
+
                     shouldRemove = true;
                 }
             }
 
             if (shouldRemove) {
+                // 투사체 소멸 파티클
+                if (this.particleSystem && proj.owner === 'player') {
+                    this.particleSystem.emit('sparkle', proj.x, proj.y, {
+                        count: 5,
+                        color: proj.color
+                    });
+                }
                 this.projectiles.splice(i, 1);
             }
         }

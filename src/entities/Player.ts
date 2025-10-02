@@ -51,6 +51,9 @@ export class Player {
     private isDodging: boolean = false;
     private dodgeDirection: Vector2D = { x: 0, y: 0 };
 
+    // 콜백
+    private onTakeDamageCallback: ((damage: number, playerX: number, playerY: number) => void) | null = null;
+
     // 애니메이션
     private animationTime: number = 0;
     private animationController: AnimationController;
@@ -279,6 +282,11 @@ export class Player {
         const actualDamage = Math.max(1, damage - this.stats.defense);
         this.stats.health -= actualDamage;
 
+        // 피격 콜백 호출
+        if (this.onTakeDamageCallback) {
+            this.onTakeDamageCallback(actualDamage, this.x, this.y);
+        }
+
         // 콤보 리셋
         this.combatSystem.resetCombo();
     }
@@ -445,6 +453,20 @@ export class Player {
      */
     getPosition(): Position {
         return { x: this.x, y: this.y };
+    }
+
+    /**
+     * 피격 콜백 설정
+     */
+    setOnTakeDamage(callback: (damage: number, playerX: number, playerY: number) => void): void {
+        this.onTakeDamageCallback = callback;
+    }
+
+    /**
+     * 플레이어 ID 가져오기 (BuffSystem용)
+     */
+    getPlayerId(): string {
+        return 'player';
     }
 
     /**

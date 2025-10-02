@@ -124,6 +124,7 @@ class Game {
         this.damageNumberSystem = new DamageNumberSystem();
         this.particleSystem = new ParticleSystem();
         this.projectileSystem = new ProjectileSystem();
+        this.projectileSystem.setParticleSystem(this.particleSystem); // ParticleSystem 연결
         this.buffSystem = new BuffSystem();
         this.audioManager = new AudioManager();
         this.itemSystem = new ItemSystem();
@@ -1202,6 +1203,9 @@ class Game {
             animController.getCurrentFrame()
         );
 
+        // 플레이어 버프 아이콘 렌더링
+        this.buffSystem.renderBuffIcons(this.renderer, playerScreen.x, playerScreen.y, this.player.getPlayerId());
+
         // 적 렌더링 (화면 좌표로 변환)
         for (const enemy of this.enemies) {
             const enemyScreen = this.camera.worldToScreen(enemy.x, enemy.y);
@@ -1281,6 +1285,10 @@ class Game {
             ctx.shadowBlur = 0;
             ctx.shadowOffsetX = 0;
             ctx.shadowOffsetY = 0;
+
+            // 버프 아이콘 렌더링 (적/보스)
+            const enemyId = enemy.isBoss ? (enemy as Boss).getBossId() : `enemy_${enemy.type}_${this.enemies.indexOf(enemy)}`;
+            this.buffSystem.renderBuffIcons(this.renderer, enemyScreen.x, enemyScreen.y, enemyId);
         }
 
         // 드롭된 아이템 렌더링
@@ -1418,6 +1426,19 @@ class Game {
         // 보스 UI 렌더링 (보스 전투 시)
         if (this.bossUI.isBossActive()) {
             this.bossUI.render(this.renderer);
+        }
+
+        // 체력 경고 화면 효과 (체력 30% 이하)
+        const healthPercent = this.player.stats.health / this.player.stats.maxHealth;
+        if (healthPercent <= 0.3) {
+            const pulseIntensity = healthPercent <= 0.15 ? 0.5 : 0.3; // 체력 15% 이하면 더 강하게
+            const pulse = Math.sin(Date.now() / (healthPercent <= 0.15 ? 300 : 500)) * pulseIntensity + pulseIntensity;
+
+            ctx.save();
+            ctx.strokeStyle = `rgba(255, 0, 0, ${pulse})`;
+            ctx.lineWidth = 20;
+            ctx.strokeRect(10, 10, this.renderer.getCanvas().width - 20, this.renderer.getCanvas().height - 20);
+            ctx.restore();
         }
 
         // 대화 시스템 렌더링 (활성화 시)
@@ -1771,6 +1792,21 @@ class Game {
         // 플레이어 생성 (맵 스폰 위치)
         const spawnPos = this.mapManager.getPlayerSpawnPosition();
         this.player = new Player(spawnPos.x, spawnPos.y);
+
+        // 플레이어 피격 콜백 설정
+        this.player.setOnTakeDamage((damage: number, playerX: number, playerY: number) => {
+            // 피격 효과음
+            this.audioManager.playSFX('damage');
+            // 피격 파티클 (빨간색)
+            this.particleSystem.emit('attack_hit', playerX, playerY, {
+                count: 15,
+                color: '#FF0000'
+            });
+            // 카메라 쉐이크 (데미지에 비례)
+            const shakeIntensity = Math.min(15, damage / 2);
+            this.camera.shake(shakeIntensity, 200);
+            console.log(`💔 플레이어 피격: ${damage} 데미지`);
+        });
 
         // 업그레이드된 스탯 적용
         const baseStats: PlayerStats = {
