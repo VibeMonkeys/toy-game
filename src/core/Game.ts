@@ -1793,6 +1793,9 @@ class Game {
         const spawnPos = this.mapManager.getPlayerSpawnPosition();
         this.player = new Player(spawnPos.x, spawnPos.y);
 
+        // BuffSystem 주입
+        this.player.setBuffSystem(this.buffSystem);
+
         // 플레이어 피격 콜백 설정
         this.player.setOnTakeDamage((damage: number, playerX: number, playerY: number) => {
             // 피격 효과음

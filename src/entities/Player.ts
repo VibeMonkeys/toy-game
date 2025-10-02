@@ -37,7 +37,7 @@ export class Player {
     private traitSystem: TraitSystem;
     private weaponSystem: WeaponSystem;
     private equipmentSystem: EquipmentSystem;
-    private buffSystem: BuffSystem;
+    private buffSystem: BuffSystem | null = null; // Game에서 주입됨
     private isAttacking: boolean = false;
     private attackCooldown: number = 500;
     private lastAttackTime: number = 0;
@@ -85,7 +85,7 @@ export class Player {
         this.traitSystem = new TraitSystem();
         this.weaponSystem = new WeaponSystem();
         this.equipmentSystem = new EquipmentSystem();
-        this.buffSystem = new BuffSystem();
+        // buffSystem은 Game에서 주입됨
         this.animationController = new AnimationController(150, 4);
 
         // 무기 시스템에 따라 공격 쿨다운 설정
@@ -103,9 +103,7 @@ export class Player {
      * 업데이트
      */
     update(deltaTime: number): void {
-        // 버프 시스템 업데이트 (만료된 버프 제거)
-        // TODO: 새 BuffSystem API로 통합 필요
-        // this.buffSystem.update(deltaTime);
+        // 버프 시스템 업데이트는 Game.ts에서 처리됨
 
         // 스탯 재계산 (기본 스탯 + 장비 + 버프)
         this.calculateFinalStats();
@@ -561,8 +559,15 @@ export class Player {
         if (equipBonus.criticalDamage) tempStats.criticalDamage += equipBonus.criticalDamage;
 
         // 3. 버프 배율 적용
-        // TODO: 새 BuffSystem API로 통합 필요
-        // this.stats = this.buffSystem.applyBuffs(tempStats);
+        if (this.buffSystem) {
+            const playerId = this.getPlayerId();
+
+            // 버프 시스템에서 보정된 스탯 계산
+            tempStats.attack = this.buffSystem.getAttackModifier(playerId, tempStats.attack);
+            tempStats.defense = this.buffSystem.getDefenseModifier(playerId, tempStats.defense);
+            tempStats.speed = this.buffSystem.getSpeedModifier(playerId, tempStats.speed);
+        }
+
         this.stats = tempStats;
 
         // 4. 현재 리소스를 비율로 복원
@@ -614,17 +619,35 @@ export class Player {
                     break;
 
                 case 'buff':
-                    // TODO: 새 BuffSystem API로 통합 필요
-                    // if (effect.stat && effect.duration) {
-                    //     this.buffSystem.addBuff({
-                    //         name: item.name,
-                    //         stat: effect.stat,
-                    //         value: effect.value,
-                    //         duration: effect.duration
-                    //     });
-                    //     console.log(`✨ ${item.name} 사용: ${effect.stat} +${(effect.value * 100).toFixed(0)}% (${effect.duration}초)`);
-                    // }
-                    console.log(`⚠️ 버프 아이템 기능 임시 비활성화: ${item.name}`);
+                    if (this.buffSystem && effect.stat && effect.duration) {
+                        const playerId = this.getPlayerId();
+
+                        // ItemEffect.stat을 BuffType으로 매핑
+                        const buffTypeMap: Record<string, string> = {
+                            'attack': 'attack_up',
+                            'defense': 'defense_up',
+                            'speed': 'speed_up',
+                            'critChance': 'attack_up', // 크리티컬은 공격력 상승으로 처리
+                            'critDamage': 'attack_up'
+                        };
+
+                        const buffType = buffTypeMap[effect.stat];
+                        if (buffType) {
+                            this.buffSystem.applyBuff(
+                                playerId,
+                                buffType as any, // BuffType
+                                effect.duration * 1000, // 초 → ms
+                                effect.value,
+                                {
+                                    isMultiplier: true, // ItemEffect는 배율로 처리
+                                    stackable: false
+                                }
+                            );
+                            console.log(`✨ ${item.name} 사용: ${effect.stat} +${(effect.value * 100).toFixed(0)}% (${effect.duration}초)`);
+                        }
+                    } else {
+                        console.warn(`⚠️ BuffSystem 미연결 또는 효과 정보 부족: ${item.name}`);
+                    }
                     break;
 
                 case 'stat':
@@ -659,9 +682,16 @@ export class Player {
     }
 
     /**
+     * 버프 시스템 설정 (Game에서 주입)
+     */
+    setBuffSystem(buffSystem: BuffSystem): void {
+        this.buffSystem = buffSystem;
+    }
+
+    /**
      * 버프 시스템 가져오기
      */
-    getBuffSystem(): BuffSystem {
+    getBuffSystem(): BuffSystem | null {
         return this.buffSystem;
     }
 
@@ -669,8 +699,7 @@ export class Player {
      * 활성 버프 목록
      */
     getActiveBuffs() {
-        // TODO: 새 BuffSystem API로 통합 필요
-        // return this.buffSystem.getActiveBuffs();
-        return [];
+        if (!this.buffSystem) return [];
+        return this.buffSystem.getBuffs(this.getPlayerId());
     }
 }
