@@ -157,22 +157,42 @@ class Game {
     private async init(): Promise<void> {
         console.log('🔧 게임 초기화 중...');
 
-        // 스프라이트 로드
         try {
+            // 스프라이트 로드
             await this.spriteManager.loadAll();
             console.log('✅ 스프라이트 로드 완료!');
+
+            // 로딩 화면 숨기기
+            this.hideLoadingScreen();
+
+            // 타이틀 화면으로 전환
+            this.changeGameMode(GameMode.TITLE);
+
+            // 게임 시작
+            this.start();
         } catch (error) {
-            console.error('❌ 스프라이트 로드 실패:', error);
+            console.error('❌ 게임 초기화 실패:', error);
+            this.showFatalError('게임을 초기화하는 중 오류가 발생했습니다. 페이지를 새로고침해주세요.');
         }
+    }
 
-        // 로딩 화면 숨기기
-        this.hideLoadingScreen();
-
-        // 타이틀 화면으로 전환
-        this.changeGameMode(GameMode.TITLE);
-
-        // 게임 시작
-        this.start();
+    /**
+     * 치명적 에러 표시
+     */
+    private showFatalError(message: string): void {
+        const loadingScreen = document.getElementById('loading-screen');
+        if (loadingScreen) {
+            loadingScreen.innerHTML = `
+                <div style="color: #ff4444; text-align: center; padding: 40px;">
+                    <h2>⚠️ 오류 발생</h2>
+                    <p>${message}</p>
+                    <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; cursor: pointer;">
+                        새로고침
+                    </button>
+                </div>
+            `;
+            loadingScreen.style.display = 'flex';
+        }
     }
 
     /**
@@ -213,9 +233,16 @@ class Game {
             this.deltaTime = (currentTime - this.lastFrameTime) / 1000;
             this.lastFrameTime = currentTime;
 
-            // 업데이트 & 렌더링
-            this.update();
-            this.render();
+            // 업데이트 & 렌더링 (에러 방지)
+            try {
+                this.update();
+                this.render();
+            } catch (error) {
+                console.error('❌ 게임 루프 에러:', error);
+                // 에러 발생 시 게임 중단 (무한 에러 방지)
+                this.isRunning = false;
+                this.showFatalError('게임 실행 중 오류가 발생했습니다.');
+            }
         }
 
         requestAnimationFrame((time) => this.gameLoop(time));
@@ -1784,59 +1811,68 @@ class Game {
     private startNewGame(): void {
         console.log('🆕 새 게임 시작!');
 
-        this.currentFloor = 1;
+        try {
+            this.currentFloor = 1;
 
-        // 첫 번째 층 생성
-        this.generateFloor(1);
+            // 첫 번째 층 생성
+            this.generateFloor(1);
 
-        // 플레이어 생성 (맵 스폰 위치)
-        const spawnPos = this.mapManager.getPlayerSpawnPosition();
-        this.player = new Player(spawnPos.x, spawnPos.y);
+            // 플레이어 생성 (맵 스폰 위치)
+            const spawnPos = this.mapManager.getPlayerSpawnPosition();
+            if (!spawnPos) {
+                throw new Error('플레이어 스폰 위치를 찾을 수 없습니다');
+            }
 
-        // BuffSystem 주입
-        this.player.setBuffSystem(this.buffSystem);
+            this.player = new Player(spawnPos.x, spawnPos.y);
 
-        // 플레이어 피격 콜백 설정
-        this.player.setOnTakeDamage((damage: number, playerX: number, playerY: number) => {
-            // 피격 효과음
-            this.audioManager.playSFX('damage');
-            // 피격 파티클 (빨간색)
-            this.particleSystem.emit('attack_hit', playerX, playerY, {
-                count: 15,
-                color: '#FF0000'
+            // BuffSystem 주입
+            this.player.setBuffSystem(this.buffSystem);
+
+            // 플레이어 피격 콜백 설정
+            this.player.setOnTakeDamage((damage: number, playerX: number, playerY: number) => {
+                // 피격 효과음
+                this.audioManager.playSFX('damage');
+                // 피격 파티클 (빨간색)
+                this.particleSystem.emit('attack_hit', playerX, playerY, {
+                    count: 15,
+                    color: '#FF0000'
+                });
+                // 카메라 쉐이크 (데미지에 비례)
+                const shakeIntensity = Math.min(15, damage / 2);
+                this.camera.shake(shakeIntensity, 200);
+                console.log(`💔 플레이어 피격: ${damage} 데미지`);
             });
-            // 카메라 쉐이크 (데미지에 비례)
-            const shakeIntensity = Math.min(15, damage / 2);
-            this.camera.shake(shakeIntensity, 200);
-            console.log(`💔 플레이어 피격: ${damage} 데미지`);
-        });
 
-        // 업그레이드된 스탯 적용
-        const baseStats: PlayerStats = {
-            health: GAMEPLAY.PLAYER_BASE.HEALTH,
-            maxHealth: GAMEPLAY.PLAYER_BASE.HEALTH,
-            mana: GAMEPLAY.PLAYER_BASE.MANA,
-            maxMana: GAMEPLAY.PLAYER_BASE.MANA,
-            stamina: GAMEPLAY.PLAYER_BASE.STAMINA,
-            maxStamina: GAMEPLAY.PLAYER_BASE.STAMINA,
-            attack: GAMEPLAY.PLAYER_BASE.ATTACK,
-            defense: GAMEPLAY.PLAYER_BASE.DEFENSE,
-            speed: GAMEPLAY.PLAYER_BASE.SPEED,
-            criticalChance: GAMEPLAY.PLAYER_BASE.CRITICAL_CHANCE,
-            criticalDamage: GAMEPLAY.PLAYER_BASE.CRITICAL_DAMAGE,
-            luck: GAMEPLAY.PLAYER_BASE.LUCK
-        };
-        const upgradedStats = this.upgradeSystem.applyUpgradesToStats(baseStats);
-        console.log('⚡ 업그레이드 적용 전:', baseStats);
-        console.log('⚡ 업그레이드 적용 후:', upgradedStats);
-        this.player.applyUpgradedStats(upgradedStats);
-        console.log('⚡ 플레이어 최종 스탯:', this.player.stats);
+            // 업그레이드된 스탯 적용
+            const baseStats: PlayerStats = {
+                health: GAMEPLAY.PLAYER_BASE.HEALTH,
+                maxHealth: GAMEPLAY.PLAYER_BASE.HEALTH,
+                mana: GAMEPLAY.PLAYER_BASE.MANA,
+                maxMana: GAMEPLAY.PLAYER_BASE.MANA,
+                stamina: GAMEPLAY.PLAYER_BASE.STAMINA,
+                maxStamina: GAMEPLAY.PLAYER_BASE.STAMINA,
+                attack: GAMEPLAY.PLAYER_BASE.ATTACK,
+                defense: GAMEPLAY.PLAYER_BASE.DEFENSE,
+                speed: GAMEPLAY.PLAYER_BASE.SPEED,
+                criticalChance: GAMEPLAY.PLAYER_BASE.CRITICAL_CHANCE,
+                criticalDamage: GAMEPLAY.PLAYER_BASE.CRITICAL_DAMAGE,
+                luck: GAMEPLAY.PLAYER_BASE.LUCK
+            };
+            const upgradedStats = this.upgradeSystem.applyUpgradesToStats(baseStats);
+            console.log('⚡ 업그레이드 적용 전:', baseStats);
+            console.log('⚡ 업그레이드 적용 후:', upgradedStats);
+            this.player.applyUpgradedStats(upgradedStats);
+            console.log('⚡ 플레이어 최종 스탯:', this.player.stats);
 
-        // 카메라를 플레이어 위치로 즉시 이동
-        this.camera.snapToTarget(this.player.getPosition());
+            // 카메라를 플레이어 위치로 즉시 이동
+            this.camera.snapToTarget(this.player.getPosition());
 
-        // 게임플레이 모드로 전환
-        this.changeGameMode(GameMode.PLAYING);
+            // 게임플레이 모드로 전환
+            this.changeGameMode(GameMode.PLAYING);
+        } catch (error) {
+            console.error('❌ 새 게임 시작 실패:', error);
+            this.showFatalError('게임을 시작하는 중 오류가 발생했습니다.');
+        }
     }
 
     /**
@@ -1845,16 +1881,20 @@ class Game {
     private generateFloor(floor: number): void {
         console.log(`🗺️ ${floor}층 생성 중...`);
 
-        // 던전 맵 생성
-        const dungeonMap = this.mapManager.generateFloor(floor);
+        try {
+            // 던전 맵 생성
+            const dungeonMap = this.mapManager.generateFloor(floor);
+            if (!dungeonMap) {
+                throw new Error(`${floor}층 맵 생성 실패`);
+            }
 
-        // 카메라 맵 경계 설정
-        const mapSize = this.mapManager.getMapSize();
-        this.camera.setMapBounds(mapSize.width, mapSize.height);
+            // 카메라 맵 경계 설정
+            const mapSize = this.mapManager.getMapSize();
+            this.camera.setMapBounds(mapSize.width, mapSize.height);
 
-        // 적 초기화
-        this.enemies = [];
-        this.bossUI.setBoss(null); // 보스 UI 초기화
+            // 적 초기화
+            this.enemies = [];
+            this.bossUI.setBoss(null); // 보스 UI 초기화
 
         // 맵에서 생성된 적 스폰 포인트로 적 배치
         const enemySpawns = this.mapManager.getEnemySpawnPoints();
@@ -1925,14 +1965,20 @@ class Game {
 
         console.log(`👤 ${this.npcs.length}명 NPC 생성 완료`);
 
-        // 해당 층의 퀘스트 활성화 (첫 방문 시)
-        const floorQuests = getQuestsForFloor(floor);
-        floorQuests.forEach(quest => {
-            if (this.questSystem.canStartQuest(quest.id)) {
-                // 자동 시작하지 않고, NPC와 대화 시 시작하도록 함
-                console.log(`📜 ${floor}층 퀘스트 준비: ${quest.title}`);
-            }
-        });
+            // 해당 층의 퀘스트 활성화 (첫 방문 시)
+            const floorQuests = getQuestsForFloor(floor);
+            floorQuests.forEach(quest => {
+                if (this.questSystem.canStartQuest(quest.id)) {
+                    // 자동 시작하지 않고, NPC와 대화 시 시작하도록 함
+                    console.log(`📜 ${floor}층 퀘스트 준비: ${quest.title}`);
+                }
+            });
+        } catch (error) {
+            console.error(`❌ ${floor}층 생성 실패:`, error);
+            // 층 생성 실패 시 빈 층으로 진행 (게임 중단 방지)
+            this.enemies = [];
+            this.npcs = [];
+        }
     }
 
     /**
