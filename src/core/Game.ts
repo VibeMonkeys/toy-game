@@ -11,6 +11,8 @@ import { Renderer } from '../systems/Renderer';
 import { MapManager } from '../systems/MapManager';
 import { Camera } from '../systems/Camera';
 import { DamageNumberSystem } from '../systems/DamageNumberSystem';
+import { ProjectileSystem } from '../systems/ProjectileSystem';
+import { BuffSystem } from '../systems/BuffSystem';
 import { ItemSystem } from '../systems/ItemSystem';
 import { Inventory } from '../systems/Inventory';
 import { Trait } from '../systems/TraitSystem';
@@ -29,9 +31,12 @@ import { UpgradeSystem } from '../systems/UpgradeSystem';
 import { WeaponSystem } from '../systems/WeaponSystem';
 import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
+import { Boss } from '../entities/Boss';
 import { NPC } from '../entities/NPC';
 import { SpriteManager } from '../systems/SpriteManager';
 import { QUEST_DATABASE, getQuestsForFloor, getQuestsForNPC } from '../data/QuestData';
+import { BossUI } from '../ui/BossUI';
+import { getBossDataByFloor } from '../data/BossDatabase';
 
 class Game {
     // 캔버스
@@ -43,6 +48,8 @@ class Game {
     private mapManager: MapManager;
     private camera: Camera;
     private damageNumberSystem: DamageNumberSystem;
+    private projectileSystem: ProjectileSystem;
+    private buffSystem: BuffSystem;
     private itemSystem: ItemSystem;
     private inventory: Inventory;
     private questSystem: QuestSystem;
@@ -58,6 +65,7 @@ class Game {
     private characterCreateUI: CharacterCreateUI;
     private questUI: QuestUI;
     private upgradeSystem: UpgradeSystem;
+    private bossUI: BossUI;
 
     // 게임 상태
     private gameMode: GameMode = GameMode.LOADING;
@@ -110,6 +118,8 @@ class Game {
         this.mapManager = new MapManager();
         this.camera = new Camera();
         this.damageNumberSystem = new DamageNumberSystem();
+        this.projectileSystem = new ProjectileSystem();
+        this.buffSystem = new BuffSystem();
         this.itemSystem = new ItemSystem();
         this.inventory = new Inventory();
         this.questSystem = new QuestSystem();
@@ -125,6 +135,7 @@ class Game {
         this.characterCreateUI = new CharacterCreateUI();
         this.questUI = new QuestUI(this.questSystem);
         this.upgradeSystem = new UpgradeSystem();
+        this.bossUI = new BossUI();
 
         // 로컬스토리지에서 플레이어 이름 로드
         this.loadPlayerName();
@@ -694,6 +705,12 @@ class Game {
         // 데미지 숫자 업데이트
         this.damageNumberSystem.update(this.deltaTime);
 
+        // 투사체 시스템 업데이트
+        this.projectileSystem.update(this.deltaTime, this.player, this.enemies);
+
+        // 버프 시스템 업데이트
+        this.buffSystem.update(this.deltaTime);
+
         // 아이템 시스템 업데이트
         this.itemSystem.update(this.deltaTime);
 
@@ -770,6 +787,14 @@ class Game {
      */
     private handleEnemyKilled(enemy: Enemy): void {
         if (!this.player) return;
+
+        // 보스 처치 확인
+        const isBoss = enemy instanceof Boss;
+        if (isBoss) {
+            console.log(`👑 보스 처치! ${(enemy as Boss).getBossData().name}`);
+            this.bossUI.setBoss(null); // 보스 UI 비활성화
+            this.camera.shake(30, 500); // 강한 화면 흔들림
+        }
 
         // 경험치 획득
         const expGain = this.calculateExperienceReward(enemy.type);
@@ -1311,6 +1336,9 @@ class Game {
             }
         }
 
+        // 투사체 렌더링
+        this.projectileSystem.render(this.renderer, this.camera);
+
         // 데미지 숫자 렌더링
         this.damageNumberSystem.render(this.renderer);
 
@@ -1338,6 +1366,11 @@ class Game {
 
         // 퀘스트 UI 렌더링 (Q 키로 토글, 간단한 뷰는 항상 표시)
         this.questUI.render(this.renderer);
+
+        // 보스 UI 렌더링 (보스 전투 시)
+        if (this.bossUI.isBossActive()) {
+            this.bossUI.render(this.renderer);
+        }
 
         // 대화 시스템 렌더링 (활성화 시)
         this.dialogueSystem.render(this.renderer);
@@ -1702,15 +1735,32 @@ class Game {
 
         // 적 초기화
         this.enemies = [];
+        this.bossUI.setBoss(null); // 보스 UI 초기화
 
         // 맵에서 생성된 적 스폰 포인트로 적 배치
         const enemySpawns = this.mapManager.getEnemySpawnPoints();
+        const bossData = getBossDataByFloor(floor);
+        let bossSpawned = false;
+
         for (const spawn of enemySpawns) {
             const isBoss = spawn.isBoss || false;
-            this.enemies.push(new Enemy(spawn.x, spawn.y, spawn.type as any, isBoss));
+
+            if (isBoss && bossData) {
+                // 보스 생성
+                const boss = new Boss(spawn.x, spawn.y, bossData);
+                boss.setProjectileSystem(this.projectileSystem); // ProjectileSystem 연결
+                boss.setBuffSystem(this.buffSystem); // BuffSystem 연결
+                this.enemies.push(boss);
+                this.bossUI.setBoss(boss);
+                bossSpawned = true;
+                console.log(`👑 보스 생성: ${bossData.name} (${floor}층)`);
+            } else {
+                // 일반 적 생성
+                this.enemies.push(new Enemy(spawn.x, spawn.y, spawn.type as any, false));
+            }
         }
 
-        console.log(`✅ ${this.enemies.length}마리 적 생성 완료 (보스층: ${floor % 5 === 0})`);
+        console.log(`✅ ${this.enemies.length}마리 적 생성 완료 (보스층: ${bossSpawned ? 'YES' : 'NO'})`);
 
         // NPC 스폰
         this.npcs = [];

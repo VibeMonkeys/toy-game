@@ -17,6 +17,7 @@ import type {
     BossType
 } from '../types';
 import { GAMEPLAY } from '../utils/Constants';
+import { getBossDataByFloor } from '../data/BossDatabase';
 
 export class DungeonGenerator {
     private config: MapGenerationConfig;
@@ -385,22 +386,51 @@ export class DungeonGenerator {
             }]
         };
 
+        // 보스 체크 (5, 10, 15, 20층)
+        const bossData = getBossDataByFloor(floor);
+        const isBossFloorActual = bossData !== null;
+
         // 적 스폰
         for (const room of this.rooms) {
             if (room.type === RoomType.START) continue;
 
-            const enemyCount = this.getEnemyCountForRoom(room.type);
-
-            for (let i = 0; i < enemyCount; i++) {
-                const spawnX = room.bounds.x + 2 + Math.floor(Math.random() * (room.bounds.width - 4));
-                const spawnY = room.bounds.y + 2 + Math.floor(Math.random() * (room.bounds.height - 4));
-
+            // 보스 방인 경우
+            if (room.type === RoomType.BOSS && isBossFloorActual && bossData) {
+                // 보스 스폰 (방 중앙)
                 spawnPoints.enemies.push({
-                    x: spawnX * 32,
-                    y: spawnY * 32,
-                    type: this.getRandomEnemyType(floor),
-                    isBoss: room.type === RoomType.BOSS
+                    x: room.center.x * 32,
+                    y: room.center.y * 32,
+                    type: bossData.id,
+                    isBoss: true
                 });
+
+                // 보스방 졸개 (2마리만)
+                for (let i = 0; i < 2; i++) {
+                    const spawnX = room.bounds.x + 2 + Math.floor(Math.random() * (room.bounds.width - 4));
+                    const spawnY = room.bounds.y + 2 + Math.floor(Math.random() * (room.bounds.height - 4));
+
+                    spawnPoints.enemies.push({
+                        x: spawnX * 32,
+                        y: spawnY * 32,
+                        type: this.getRandomEnemyType(floor),
+                        isBoss: false
+                    });
+                }
+            } else {
+                // 일반 방 적 스폰
+                const enemyCount = this.getEnemyCountForRoom(room.type);
+
+                for (let i = 0; i < enemyCount; i++) {
+                    const spawnX = room.bounds.x + 2 + Math.floor(Math.random() * (room.bounds.width - 4));
+                    const spawnY = room.bounds.y + 2 + Math.floor(Math.random() * (room.bounds.height - 4));
+
+                    spawnPoints.enemies.push({
+                        x: spawnX * 32,
+                        y: spawnY * 32,
+                        type: this.getRandomEnemyType(floor),
+                        isBoss: false
+                    });
+                }
             }
         }
 
@@ -432,26 +462,33 @@ export class DungeonGenerator {
     }
 
     /**
-     * 층수별 랜덤 적 타입
+     * 층수별 랜덤 적 타입 (20층 대응)
      */
-    private getRandomEnemyType(floor: number): EnemyType | BossType {
-        if (floor <= 2) {
+    private getRandomEnemyType(floor: number): EnemyType {
+        // 1-4층: 입문 단계 (고블린, 스켈레톤)
+        if (floor <= 4) {
             return Math.random() < 0.7 ? 'goblin' : 'skeleton';
-        } else if (floor <= 4) {
+        }
+        // 6-9층: 성장 단계 (오크, 고블린, 스켈레톤)
+        else if (floor <= 9) {
             const rand = Math.random();
-            if (rand < 0.5) return 'goblin';
-            if (rand < 0.8) return 'orc';
+            if (rand < 0.5) return 'orc';
+            if (rand < 0.75) return 'goblin';
             return 'skeleton';
-        } else if (floor <= 6) {
-            const rand = Math.random();
-            if (rand < 0.4) return 'orc';
-            if (rand < 0.7) return 'skeleton';
-            return 'troll';
-        } else {
+        }
+        // 11-14층: 숙련 단계 (트롤, 오크, 스켈레톤)
+        else if (floor <= 14) {
             const rand = Math.random();
             if (rand < 0.4) return 'troll';
-            if (rand < 0.7) return 'skeleton';
-            return 'wraith';
+            if (rand < 0.7) return 'orc';
+            return 'skeleton';
+        }
+        // 16-20층: 극한 단계 (레이스, 트롤, 스켈레톤)
+        else {
+            const rand = Math.random();
+            if (rand < 0.5) return 'wraith';
+            if (rand < 0.8) return 'troll';
+            return 'skeleton';
         }
     }
 

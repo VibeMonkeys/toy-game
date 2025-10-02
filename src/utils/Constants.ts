@@ -39,7 +39,7 @@ export const SCREEN = {
 // 게임플레이 설정
 export const GAMEPLAY = {
     TARGET_FPS: 60,
-    MAX_FLOORS: 10,
+    MAX_FLOORS: 20,  // 10 → 20층으로 확장
 
     // 플레이어 기본 스탯
     PLAYER_BASE: {

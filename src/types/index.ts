@@ -126,7 +126,12 @@ export interface EquippedWeapon {
 // 적 (Enemy)
 // ============================================
 export type EnemyType = 'goblin' | 'orc' | 'skeleton' | 'troll' | 'wraith';
-export type BossType = 'goblin_chieftain' | 'orc_chieftain' | 'troll_king' | 'skeleton_lord' | 'death_knight' | 'chaos_lord';
+export type BossType =
+    | 'goblin_king'        // 5층 보스
+    | 'orc_warlord'        // 10층 보스
+    | 'undead_lord'        // 15층 보스
+    | 'chaos_dragon'       // 20층 최종 보스
+    | 'true_chaos';        // 25층 히든 보스 (추후)
 
 export type AIState = 'idle' | 'patrol' | 'chase' | 'attack' | 'retreat';
 export type BehaviorPattern = 'basic' | 'aggressive' | 'ranged' | 'tank' | 'ghost';
@@ -465,15 +470,17 @@ export interface GameProgress {
 // 보스 패턴
 // ============================================
 export interface BossPattern {
+    id: string;
     name: string;
     frequency: 'main' | 'filler' | 'special';
     cooldown: number;
+    lastUsed?: number;
     sequence: PatternSequence[];
     counterplay: string;
 }
 
 export interface PatternSequence {
-    action: string;
+    action: 'telegraph' | 'attack' | 'move' | 'summon' | 'buff' | 'projectile' | 'aoe' | 'recovery';
     duration: number;
     damage?: number;
     hitbox?: string;
@@ -481,6 +488,79 @@ export interface PatternSequence {
     audio?: string;
     vulnerable?: boolean;
     interrupt?: boolean;
+    invulnerable?: boolean;
+    // 공격 관련
+    range?: number;
+    aoeRadius?: number;
+    knockback?: number;
+    // 이동 관련
+    speed?: number;
+    distance?: number;
+    targetPlayer?: boolean;
+    // 소환 관련
+    summonType?: EnemyType;
+    summonCount?: number;
+    // 투사체 관련
+    projectileCount?: number;
+    projectileSpeed?: number;
+    homing?: boolean;
+    // 버프 관련
+    buffType?: string;
+    buffDuration?: number;
+    buffValue?: number;
+}
+
+export interface BossPhase {
+    phase: number;
+    healthRange: [number, number]; // [min%, max%]
+    patterns: BossPattern[];
+    phaseTransition?: {
+        animation: string;
+        duration: number;
+        message: string;
+        invulnerable: boolean;
+        effect?: string;
+    };
+    modifiers?: {
+        speed?: number;
+        attackSpeed?: number;
+        damage?: number;
+        defense?: number;
+    };
+}
+
+export interface BossData {
+    id: BossType;
+    name: string;
+    floor: number;
+    difficulty: 'easy' | 'medium' | 'hard' | 'extreme';
+
+    // 기본 스탯
+    health: number;
+    attack: number;
+    defense: number;
+    speed: number;
+
+    // 크기
+    width: number;
+    height: number;
+
+    // 페이즈
+    totalPhases: number;
+    phases: BossPhase[];
+
+    // 보상
+    rewards: {
+        soulPoints: number;
+        gold: number;
+        guaranteedDrops?: string[];
+        questProgress?: string;
+        unlocks?: string[];
+    };
+
+    // 렌더링
+    color: string;
+    spriteKey?: string;
 }
 
 // ============================================
@@ -528,6 +608,57 @@ export interface Particle {
     color: string;
     size: number;
     alpha: number;
+}
+
+// ============================================
+// 투사체 시스템
+// ============================================
+export interface Projectile {
+    id: string;
+    x: number;
+    y: number;
+    velocityX: number;
+    velocityY: number;
+    damage: number;
+    radius: number;
+    color: string;
+    owner: 'player' | 'enemy' | 'boss';
+    lifetime: number;
+    maxLifetime: number;
+    homing: boolean;
+    target?: Position;
+    piercing?: boolean;
+    hitCount?: number;
+    maxHits?: number;
+}
+
+// ============================================
+// 버프 시스템
+// ============================================
+export type BuffType =
+    | 'attack_up'
+    | 'attack_down'
+    | 'defense_up'
+    | 'defense_down'
+    | 'speed_up'
+    | 'speed_down'
+    | 'invulnerable'
+    | 'stun'
+    | 'burning'
+    | 'frozen'
+    | 'poisoned'
+    | 'regeneration';
+
+export interface Buff {
+    id: string;
+    type: BuffType;
+    duration: number;
+    remainingTime: number;
+    value: number;
+    isMultiplier: boolean; // true면 곱연산, false면 덧셈
+    stackable: boolean;
+    stacks: number;
+    maxStacks: number;
 }
 
 // ============================================
