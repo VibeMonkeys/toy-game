@@ -159,6 +159,21 @@ export const QUEST_TYPES = {
     SIDE: 'SIDE'
 } as const;
 
+// 경험치 보상
+export const EXPERIENCE_REWARDS: Record<string, number> = {
+    goblin: 15,
+    orc: 25,
+    skeleton: 20,
+    troll: 40,
+    wraith: 35,
+    // 보스들
+    goblin_king: 100,
+    orc_warlord: 150,
+    undead_lord: 200,
+    chaos_dragon: 300,
+    true_chaos: 500
+} as const;
+
 // 아이템 타입
 export const ITEMS = {
     // 포션
@@ -208,6 +223,40 @@ export const CONTROLS = {
     MAP: 'KeyM',
     PAUSE: 'Escape',
     INTERACT: 'KeyE'
+} as const;
+
+// 시각 효과 설정
+export const EFFECTS = {
+    // 파티클 개수
+    PARTICLES: {
+        ATTACK_SLASH: 10,
+        ATTACK_HIT: 12,
+        ATTACK_HIT_CRITICAL: 20,
+        ENEMY_DEATH: 25,
+        BOSS_DEATH: 50,
+        SPARKLE: 8,
+        LEVEL_UP: 30,
+        PLAYER_DEATH: 30,
+        QUEST_CHOICE_EFFECT: 15
+    },
+
+    // 카메라 흔들림
+    CAMERA_SHAKE: {
+        ATTACK: { strength: 5, duration: 100 },
+        ATTACK_CRITICAL: { strength: 15, duration: 200 },
+        LEVEL_UP: { strength: 20, duration: 300 },
+        PLAYER_DEATH: { strength: 25, duration: 400 },
+        BOSS_DEATH: { strength: 30, duration: 500 }
+    },
+
+    // Y 오프셋
+    DAMAGE_Y_OFFSET: -20,
+    EXP_Y_OFFSET: -40
+} as const;
+
+// 초기 값
+export const INITIAL_VALUES = {
+    SOUL_POINTS: 500  // 테스트용 초기 소울 포인트
 } as const;
 
 // 스토리 막 구성

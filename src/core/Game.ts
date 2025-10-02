@@ -5,7 +5,7 @@
  */
 
 import { GameMode, PlayerStats, Vector2D, EnemyType } from '../types';
-import { GAME_MODES, SCREEN, GAMEPLAY, GAME_INFO } from '../utils/Constants';
+import { GAME_MODES, SCREEN, GAMEPLAY, GAME_INFO, EXPERIENCE_REWARDS, EFFECTS, INITIAL_VALUES } from '../utils/Constants';
 import { InputManager } from '../systems/InputManager';
 import { Renderer } from '../systems/Renderer';
 import { MapManager } from '../systems/MapManager';
@@ -406,7 +406,7 @@ class Game {
             if (this.tutorialPopup.getCurrentStep() === this.tutorialPopup.getTotalSteps() - 1) {
                 this.tutorialPopup.end();
                 // 튜토리얼 완료 후 바로 게임 시작
-                this.soulPoints = 500; // 초기 소울 포인트 지급 (테스트용)
+                this.soulPoints = INITIAL_VALUES.SOUL_POINTS; // 초기 소울 포인트 지급 (테스트용)
                 this.startNewGame();
             } else {
                 this.tutorialPopup.nextStep();
@@ -778,7 +778,7 @@ class Game {
         const attackRange = this.player.getAttackRange();
 
         // 공격 슬래시 파티클
-        this.particleSystem.emit('attack_slash', playerPos.x, playerPos.y, { count: 10 });
+        this.particleSystem.emit('attack_slash', playerPos.x, playerPos.y, { count: EFFECTS.PARTICLES.ATTACK_SLASH });
 
         // 범위 내 적 탐지
         for (const enemy of this.enemies) {
@@ -796,14 +796,14 @@ class Game {
                 const enemyScreen = this.camera.worldToScreen(enemy.x, enemy.y);
                 this.damageNumberSystem.spawn(
                     enemyScreen.x,
-                    enemyScreen.y - 20,
+                    enemyScreen.y + EFFECTS.DAMAGE_Y_OFFSET,
                     finalDamage,
                     isCritical
                 );
 
                 // 공격 히트 파티클
                 this.particleSystem.emit('attack_hit', enemy.x, enemy.y, {
-                    count: isCritical ? 20 : 12,
+                    count: isCritical ? EFFECTS.PARTICLES.ATTACK_HIT_CRITICAL : EFFECTS.PARTICLES.ATTACK_HIT,
                     color: isCritical ? '#FFFF00' : '#FFFFFF'
                 });
 
@@ -811,9 +811,11 @@ class Game {
 
                 // 카메라 흔들림 (크리티컬이면 강하게)
                 if (isCritical) {
-                    this.camera.shake(15, 200);
+                    const { strength, duration } = EFFECTS.CAMERA_SHAKE.ATTACK_CRITICAL;
+                    this.camera.shake(strength, duration);
                 } else {
-                    this.camera.shake(5, 100);
+                    const { strength, duration } = EFFECTS.CAMERA_SHAKE.ATTACK;
+                    this.camera.shake(strength, duration);
                 }
             }
         }
@@ -830,14 +832,15 @@ class Game {
         if (isBoss) {
             console.log(`👑 보스 처치! ${(enemy as Boss).getBossData().name}`);
             this.bossUI.setBoss(null); // 보스 UI 비활성화
-            this.camera.shake(30, 500); // 강한 화면 흔들림
+            const { strength, duration } = EFFECTS.CAMERA_SHAKE.BOSS_DEATH;
+            this.camera.shake(strength, duration); // 강한 화면 흔들림
             // 보스 처치 폭발 파티클 (대규모)
-            this.particleSystem.emit('explosion', enemy.x, enemy.y, { count: 50 });
+            this.particleSystem.emit('explosion', enemy.x, enemy.y, { count: EFFECTS.PARTICLES.BOSS_DEATH });
             // BGM을 일반 floor BGM으로 변경
             this.audioManager.fadeBGMIn('floor', 2000);
         } else {
             // 일반 적 처치 폭발 파티클
-            this.particleSystem.emit('explosion', enemy.x, enemy.y, { count: 25 });
+            this.particleSystem.emit('explosion', enemy.x, enemy.y, { count: EFFECTS.PARTICLES.ENEMY_DEATH });
         }
 
         // 경험치 획득
@@ -848,7 +851,7 @@ class Game {
         const enemyScreen = this.camera.worldToScreen(enemy.x, enemy.y);
         this.damageNumberSystem.spawn(
             enemyScreen.x,
-            enemyScreen.y - 40,
+            enemyScreen.y + EFFECTS.EXP_Y_OFFSET,
             expGain,
             false
         );
@@ -856,7 +859,7 @@ class Game {
         // 아이템 드롭
         this.itemSystem.dropRandomItem(enemy.x, enemy.y, enemy.type, this.currentFloor);
         // 아이템 드롭 반짝임 파티클
-        this.particleSystem.emit('sparkle', enemy.x, enemy.y, { count: 8 });
+        this.particleSystem.emit('sparkle', enemy.x, enemy.y, { count: EFFECTS.PARTICLES.SPARKLE });
 
         // 퀘스트 진행도 업데이트
         this.questSystem.onEnemyKilled(enemy.type);
@@ -864,11 +867,12 @@ class Game {
         if (leveledUp) {
             console.log(`✨ 레벨업! 현재 레벨: ${this.player.level}`);
             // 레벨업 이펙트 (화면 번쩍임)
-            this.camera.shake(20, 300);
+            const { strength, duration } = EFFECTS.CAMERA_SHAKE.LEVEL_UP;
+            this.camera.shake(strength, duration);
             // 레벨업 효과음
             this.audioManager.playSFX('level_up');
             // 레벨업 파티클
-            this.particleSystem.emit('level_up', this.player.x, this.player.y);
+            this.particleSystem.emit('level_up', this.player.x, this.player.y, { count: EFFECTS.PARTICLES.LEVEL_UP });
         }
     }
 
@@ -876,15 +880,7 @@ class Game {
      * 적 타입별 경험치 계산
      */
     private calculateExperienceReward(enemyType: string): number {
-        const baseExp: Record<string, number> = {
-            goblin: 15,
-            orc: 25,
-            skeleton: 20,
-            troll: 40,
-            wraith: 35
-        };
-
-        const exp = baseExp[enemyType] || 10;
+        const exp = EXPERIENCE_REWARDS[enemyType] || 10;
         // 층수에 따라 보너스 (+10% per floor)
         return Math.floor(exp * (1 + this.currentFloor * 0.1));
     }
@@ -1059,8 +1055,9 @@ class Game {
 
         // 사망 효과
         this.audioManager.playSFX('player_death');
-        this.particleSystem.emit('explosion', this.player!.x, this.player!.y, { count: 30, color: '#8B0000' });
-        this.camera.shake(25, 400);
+        this.particleSystem.emit('explosion', this.player!.x, this.player!.y, { count: EFFECTS.PARTICLES.PLAYER_DEATH, color: '#8B0000' });
+        const { strength, duration } = EFFECTS.CAMERA_SHAKE.PLAYER_DEATH;
+        this.camera.shake(strength, duration);
 
         // 소울 포인트 획득 (진행한 층수에 비례)
         const earnedSouls = this.currentFloor * 5;
@@ -1821,7 +1818,7 @@ class Game {
                 this.audioManager.playSFX('damage');
                 // 피격 파티클 (빨간색)
                 this.particleSystem.emit('attack_hit', playerX, playerY, {
-                    count: 15,
+                    count: EFFECTS.PARTICLES.QUEST_CHOICE_EFFECT,
                     color: '#FF0000'
                 });
                 // 카메라 쉐이크 (데미지에 비례)
