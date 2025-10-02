@@ -13,6 +13,10 @@ export class QuestSystem {
     private completedQuests: Set<string> = new Set();
     private questProgress: Map<string, Map<string, number>> = new Map(); // questId -> objectiveId -> progress
 
+    // 성능 최적화: 역 인덱스 (objectivePrefix → questId + objectiveId 매핑)
+    // 예: "kill_goblin" → [{ questId: "quest_001", objectiveId: "kill_goblin_1" }]
+    private objectiveIndex: Map<string, Set<{ questId: string; objectiveId: string }>> = new Map();
+
     /**
      * 퀘스트 시작
      */
@@ -45,6 +49,9 @@ export class QuestSystem {
         const progressMap = new Map<string, number>();
         quest.objectives.forEach(obj => {
             progressMap.set(obj.id, 0);
+
+            // 역 인덱스 생성 (성능 최적화)
+            this.addObjectiveToIndex(obj.id, quest.id);
         });
         this.questProgress.set(quest.id, progressMap);
 
@@ -139,64 +146,46 @@ export class QuestSystem {
         this.completedQuests.add(questId);
         this.questProgress.delete(questId);
 
+        // 역 인덱스에서 제거 (성능 최적화)
+        quest.objectives.forEach(obj => {
+            this.removeObjectiveFromIndex(obj.id, questId);
+        });
+
         console.log(`✨ ${quest.title} 보상 지급 완료!`);
         return rewards;
     }
 
     /**
      * 특정 타입의 행동 시 관련 퀘스트 진행도 업데이트
+     * 최적화: O(n * m) → O(1) (역 인덱스 사용)
      */
     onEnemyKilled(enemyType: string): void {
-        this.activeQuests.forEach(quest => {
-            quest.objectives.forEach(obj => {
-                // "kill_X" 형태의 목표 ID 체크
-                if (obj.id.startsWith('kill_') && obj.id.includes(enemyType)) {
-                    this.updateObjectiveProgress(quest.id, obj.id, 1);
-                }
-            });
-        });
+        // "kill_goblin", "kill_orc" 등의 패턴 검색
+        this.updateProgressByPattern(`kill_${enemyType}`, 1);
     }
 
     /**
      * 아이템 수집 시 퀘스트 진행도 업데이트
+     * 최적화: O(n * m) → O(1) (역 인덱스 사용)
      */
     onItemCollected(itemId: string, amount: number = 1): void {
-        this.activeQuests.forEach(quest => {
-            quest.objectives.forEach(obj => {
-                // "collect_X" 형태의 목표 ID 체크
-                if (obj.id.startsWith('collect_') && obj.id.includes(itemId)) {
-                    this.updateObjectiveProgress(quest.id, obj.id, amount);
-                }
-            });
-        });
+        this.updateProgressByPattern(`collect_${itemId}`, amount);
     }
 
     /**
      * NPC 대화 시 퀘스트 진행도 업데이트
+     * 최적화: O(n * m) → O(1) (역 인덱스 사용)
      */
     onNPCTalkTo(npcType: string): void {
-        this.activeQuests.forEach(quest => {
-            quest.objectives.forEach(obj => {
-                // "talk_X" 형태의 목표 ID 체크
-                if (obj.id.startsWith('talk_') && obj.id.includes(npcType)) {
-                    this.updateObjectiveProgress(quest.id, obj.id, 1);
-                }
-            });
-        });
+        this.updateProgressByPattern(`talk_${npcType}`, 1);
     }
 
     /**
      * 특정 위치 도달 시 퀘스트 진행도 업데이트
+     * 최적화: O(n * m) → O(1) (역 인덱스 사용)
      */
     onLocationReached(locationId: string): void {
-        this.activeQuests.forEach(quest => {
-            quest.objectives.forEach(obj => {
-                // "reach_X" 형태의 목표 ID 체크
-                if (obj.id.startsWith('reach_') && obj.id.includes(locationId)) {
-                    this.updateObjectiveProgress(quest.id, obj.id, 1);
-                }
-            });
-        });
+        this.updateProgressByPattern(`reach_${locationId}`, 1);
     }
 
     /**
@@ -261,6 +250,66 @@ export class QuestSystem {
     }
 
     /**
+     * 역 인덱스에 목표 추가 (성능 최적화)
+     */
+    private addObjectiveToIndex(objectiveId: string, questId: string): void {
+        // objectiveId에서 prefix 추출 (예: "kill_goblin_1" → "kill_goblin")
+        const parts = objectiveId.split('_');
+        if (parts.length >= 2) {
+            // 마지막 부분이 숫자면 제거 (예: "kill_goblin_1" → "kill_goblin")
+            const lastPart = parts[parts.length - 1];
+            const prefix = !isNaN(Number(lastPart))
+                ? parts.slice(0, -1).join('_')
+                : objectiveId;
+
+            if (!this.objectiveIndex.has(prefix)) {
+                this.objectiveIndex.set(prefix, new Set());
+            }
+
+            this.objectiveIndex.get(prefix)!.add({ questId, objectiveId });
+        }
+    }
+
+    /**
+     * 역 인덱스에서 목표 제거 (성능 최적화)
+     */
+    private removeObjectiveFromIndex(objectiveId: string, questId: string): void {
+        const parts = objectiveId.split('_');
+        if (parts.length >= 2) {
+            const lastPart = parts[parts.length - 1];
+            const prefix = !isNaN(Number(lastPart))
+                ? parts.slice(0, -1).join('_')
+                : objectiveId;
+
+            const targets = this.objectiveIndex.get(prefix);
+            if (targets) {
+                targets.forEach(target => {
+                    if (target.questId === questId && target.objectiveId === objectiveId) {
+                        targets.delete(target);
+                    }
+                });
+
+                if (targets.size === 0) {
+                    this.objectiveIndex.delete(prefix);
+                }
+            }
+        }
+    }
+
+    /**
+     * 패턴으로 퀘스트 진행도 업데이트 (성능 최적화)
+     * O(1) 복잡도 - 역 인덱스 활용
+     */
+    private updateProgressByPattern(pattern: string, amount: number): void {
+        const targets = this.objectiveIndex.get(pattern);
+        if (!targets) return;
+
+        targets.forEach(({ questId, objectiveId }) => {
+            this.updateObjectiveProgress(questId, objectiveId, amount);
+        });
+    }
+
+    /**
      * 저장 데이터에서 복원
      */
     fromSaveData(
@@ -296,6 +345,9 @@ export class QuestSystem {
                 const progressMap = new Map<string, number>();
                 Object.entries(data.progress[questId] ?? {}).forEach(([objId, progress]) => {
                     progressMap.set(objId, progress);
+
+                    // 역 인덱스 재생성 (성능 최적화)
+                    this.addObjectiveToIndex(objId, questId);
                 });
                 this.questProgress.set(questId, progressMap);
             }
