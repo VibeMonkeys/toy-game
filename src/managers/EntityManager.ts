@@ -9,6 +9,7 @@ import { Enemy } from '../entities/Enemy';
 import { Boss } from '../entities/Boss';
 import { NPC } from '../entities/NPC';
 import { Vector2D } from '../types';
+import { getDistance } from '../utils/MathUtils';
 
 export class EntityManager {
     private player: Player | null = null;
@@ -91,9 +92,7 @@ export class EntityManager {
         let minDistance = Infinity;
 
         for (const enemy of this.enemies) {
-            const dx = enemy.x - position.x;
-            const dy = enemy.y - position.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+            const distance = getDistance(position.x, position.y, enemy.x, enemy.y);
 
             if (distance < minDistance) {
                 minDistance = distance;
@@ -109,9 +108,7 @@ export class EntityManager {
      */
     findEnemiesInRange(position: Vector2D, range: number): Enemy[] {
         return this.enemies.filter(enemy => {
-            const dx = enemy.x - position.x;
-            const dy = enemy.y - position.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+            const distance = getDistance(position.x, position.y, enemy.x, enemy.y);
             return distance <= range;
         });
     }
@@ -121,9 +118,7 @@ export class EntityManager {
      */
     findNPCInRange(position: Vector2D, range: number): NPC | null {
         for (const npc of this.npcs) {
-            const dx = npc.x - position.x;
-            const dy = npc.y - position.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+            const distance = getDistance(position.x, position.y, npc.x, npc.y);
 
             if (distance <= range) {
                 return npc;

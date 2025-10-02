@@ -41,6 +41,7 @@ import { BossUI } from '../ui/BossUI';
 import { getBossDataByFloor } from '../data/BossDatabase';
 import { EntityManager } from '../managers/EntityManager';
 import { GameStateManager } from '../managers/GameStateManager';
+import { getDistance } from '../utils/MathUtils';
 
 class Game {
     // 캔버스
@@ -781,9 +782,7 @@ class Game {
 
         // 범위 내 적 탐지
         for (const enemy of this.enemies) {
-            const dx = enemy.x - playerPos.x;
-            const dy = enemy.y - playerPos.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+            const distance = getDistance(playerPos.x, playerPos.y, enemy.x, enemy.y);
 
             if (distance <= attackRange) {
                 // 무기 시스템으로 데미지 계산
@@ -1739,9 +1738,7 @@ class Game {
         let minDistance = Infinity;
 
         for (const enemy of this.enemies) {
-            const dx = enemy.x - playerPos.x;
-            const dy = enemy.y - playerPos.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+            const distance = getDistance(playerPos.x, playerPos.y, enemy.x, enemy.y);
 
             if (distance < minDistance) {
                 minDistance = distance;

@@ -10,6 +10,7 @@ import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
 import { Camera } from './Camera';
 import { ParticleSystem } from './ParticleSystem';
+import { getDistance } from '../utils/MathUtils';
 
 /**
  * 투사체 생성 옵션
@@ -210,7 +211,7 @@ export class ProjectileSystem {
 
         const dx = proj.target.x - proj.x;
         const dy = proj.target.y - proj.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
+        const distance = getDistance(proj.x, proj.y, proj.target.x, proj.target.y);
 
         if (distance > 0) {
             const targetAngle = Math.atan2(dy, dx);
@@ -237,9 +238,7 @@ export class ProjectileSystem {
      * 충돌 감지
      */
     private checkCollision(proj: Projectile, targetX: number, targetY: number, targetRadius: number): boolean {
-        const dx = proj.x - targetX;
-        const dy = proj.y - targetY;
-        const distance = Math.sqrt(dx * dx + dy * dy);
+        const distance = getDistance(proj.x, proj.y, targetX, targetY);
 
         return distance < proj.radius + targetRadius;
     }

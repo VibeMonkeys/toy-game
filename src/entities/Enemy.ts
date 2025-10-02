@@ -9,6 +9,7 @@ import { COLORS } from '../utils/Constants';
 import { Renderer } from '../systems/Renderer';
 import { Player } from './Player';
 import { AnimationController, Direction } from '../systems/AnimationController';
+import { getDistance } from '../utils/MathUtils';
 
 export class Enemy {
     x: number;
@@ -207,7 +208,7 @@ export class Enemy {
     private moveTowardsPlayer(player: Player, deltaTime: number): void {
         const dx = player.x - this.x;
         const dy = player.y - this.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
+        const distance = getDistance(this.x, this.y, player.x, player.y);
 
         if (distance > 0) {
             const moveX = (dx / distance) * this.speed * deltaTime;

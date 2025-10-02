@@ -4,6 +4,8 @@
  * 아이템 생성, 드롭, 관리를 담당합니다.
  */
 
+import { getDistance } from '../utils/MathUtils';
+
 export enum ItemType {
     WEAPON = 'weapon',
     ARMOR = 'armor',
@@ -270,9 +272,7 @@ export class ItemSystem {
     checkPickup(playerX: number, playerY: number, pickupRange: number = 50): DroppedItem | null {
         for (let i = 0; i < this.droppedItems.length; i++) {
             const droppedItem = this.droppedItems[i];
-            const dx = droppedItem.x - playerX;
-            const dy = droppedItem.y - playerY;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+            const distance = getDistance(playerX, playerY, droppedItem.x, droppedItem.y);
 
             if (distance <= pickupRange) {
                 // 아이템 제거하고 반환
