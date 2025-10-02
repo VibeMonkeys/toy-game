@@ -51,7 +51,10 @@
       "Bash(npm run type-check:*)",
       "Bash(npx tsc:*)",
       "Bash(npx vite:*)",
-      "WebFetch(domain:anokolisa.itch.io)"
+      "WebFetch(domain:anokolisa.itch.io)",
+      "Bash(awk:*)",
+      "Bash(sed:*)",
+      "Bash(git restore:*)"
     ],
     "deny": [],
     "ask": []

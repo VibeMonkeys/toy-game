@@ -39,6 +39,7 @@ import { SpriteManager } from '../systems/SpriteManager';
 import { QUEST_DATABASE, getQuestsForFloor, getQuestsForNPC } from '../data/QuestData';
 import { BossUI } from '../ui/BossUI';
 import { getBossDataByFloor } from '../data/BossDatabase';
+import { EntityManager } from '../managers/EntityManager';
 
 class Game {
     // 캔버스
@@ -60,6 +61,7 @@ class Game {
     private dialogueSystem: DialogueSystem;
     private minimap: Minimap;
     private spriteManager: SpriteManager;
+    private entityManager: EntityManager;
     private titleScreen: TitleScreen;
     private creditsScreen: CreditsScreen;
     private howToPlayScreen: HowToPlayScreen;
@@ -86,11 +88,6 @@ class Game {
     private soulPoints: number = 0;
     private totalRuns: number = 0;
     private highestFloor: number = 0;
-
-    // 엔티티
-    private player: Player | null = null;
-    private enemies: Enemy[] = [];
-    private npcs: NPC[] = [];
 
     // 특성 선택
     private traitChoices: Trait[] = [];
@@ -143,6 +140,7 @@ class Game {
         this.questUI = new QuestUI(this.questSystem);
         this.upgradeSystem = new UpgradeSystem();
         this.bossUI = new BossUI();
+        this.entityManager = new EntityManager();
 
         // 로컬스토리지에서 플레이어 이름 로드
         this.loadPlayerName();
@@ -1823,13 +1821,16 @@ class Game {
                 throw new Error('플레이어 스폰 위치를 찾을 수 없습니다');
             }
 
-            this.player = new Player(spawnPos.x, spawnPos.y);
+            const player = new Player(spawnPos.x, spawnPos.y);
 
             // BuffSystem 주입
-            this.player.setBuffSystem(this.buffSystem);
+            player.setBuffSystem(this.buffSystem);
+
+            // EntityManager에 플레이어 등록
+            this.entityManager.setPlayer(player);
 
             // 플레이어 피격 콜백 설정
-            this.player.setOnTakeDamage((damage: number, playerX: number, playerY: number) => {
+            player.setOnTakeDamage((damage: number, playerX: number, playerY: number) => {
                 // 피격 효과음
                 this.audioManager.playSFX('damage');
                 // 피격 파티클 (빨간색)
@@ -1861,11 +1862,11 @@ class Game {
             const upgradedStats = this.upgradeSystem.applyUpgradesToStats(baseStats);
             console.log('⚡ 업그레이드 적용 전:', baseStats);
             console.log('⚡ 업그레이드 적용 후:', upgradedStats);
-            this.player.applyUpgradedStats(upgradedStats);
-            console.log('⚡ 플레이어 최종 스탯:', this.player.stats);
+            player.applyUpgradedStats(upgradedStats);
+            console.log('⚡ 플레이어 최종 스탯:', player.stats);
 
             // 카메라를 플레이어 위치로 즉시 이동
-            this.camera.snapToTarget(this.player.getPosition());
+            this.camera.snapToTarget(player.getPosition());
 
             // 게임플레이 모드로 전환
             this.changeGameMode(GameMode.PLAYING);
@@ -1893,50 +1894,50 @@ class Game {
             this.camera.setMapBounds(mapSize.width, mapSize.height);
 
             // 적 초기화
-            this.enemies = [];
+            this.entityManager.setEnemies([]);
             this.bossUI.setBoss(null); // 보스 UI 초기화
 
-        // 맵에서 생성된 적 스폰 포인트로 적 배치
-        const enemySpawns = this.mapManager.getEnemySpawnPoints();
-        const bossData = getBossDataByFloor(floor);
-        let bossSpawned = false;
+            // 맵에서 생성된 적 스폰 포인트로 적 배치
+            const enemySpawns = this.mapManager.getEnemySpawnPoints();
+            const bossData = getBossDataByFloor(floor);
+            let bossSpawned = false;
 
-        for (const spawn of enemySpawns) {
-            const isBoss = spawn.isBoss || false;
+            for (const spawn of enemySpawns) {
+                const isBoss = spawn.isBoss || false;
 
-            if (isBoss && bossData) {
-                // 보스 생성
-                const boss = new Boss(spawn.x, spawn.y, bossData);
-                boss.setProjectileSystem(this.projectileSystem); // ProjectileSystem 연결
-                boss.setBuffSystem(this.buffSystem); // BuffSystem 연결
+                if (isBoss && bossData) {
+                    // 보스 생성
+                    const boss = new Boss(spawn.x, spawn.y, bossData);
+                    boss.setProjectileSystem(this.projectileSystem); // ProjectileSystem 연결
+                    boss.setBuffSystem(this.buffSystem); // BuffSystem 연결
 
-                // 보스 페이즈 변경 콜백 설정
-                boss.setOnPhaseChange((phase: number, bossX: number, bossY: number) => {
-                    // 페이즈 변경 효과
-                    this.audioManager.playSFX('boss_phase');
-                    this.particleSystem.emit('boss_telegraph', bossX, bossY, { count: 30 });
-                    this.camera.shake(20, 400);
-                    console.log(`🔥 보스 페이즈 ${phase} 돌입!`);
-                });
+                    // 보스 페이즈 변경 콜백 설정
+                    boss.setOnPhaseChange((phase: number, bossX: number, bossY: number) => {
+                        // 페이즈 변경 효과
+                        this.audioManager.playSFX('boss_phase');
+                        this.particleSystem.emit('boss_telegraph', bossX, bossY, { count: 30 });
+                        this.camera.shake(20, 400);
+                        console.log(`🔥 보스 페이즈 ${phase} 돌입!`);
+                    });
 
-                this.enemies.push(boss);
-                this.bossUI.setBoss(boss);
-                bossSpawned = true;
-                console.log(`👑 보스 생성: ${bossData.name} (${floor}층)`);
+                    this.entityManager.addEnemy(boss);
+                    this.bossUI.setBoss(boss);
+                    bossSpawned = true;
+                    console.log(`👑 보스 생성: ${bossData.name} (${floor}층)`);
 
-                // 보스 등장 효과음 & BGM 변경
-                this.audioManager.playSFX('boss_appear');
-                this.audioManager.fadeBGMIn('boss', 2000);
-            } else {
-                // 일반 적 생성
-                this.enemies.push(new Enemy(spawn.x, spawn.y, spawn.type as any, false));
+                    // 보스 등장 효과음 & BGM 변경
+                    this.audioManager.playSFX('boss_appear');
+                    this.audioManager.fadeBGMIn('boss', 2000);
+                } else {
+                    // 일반 적 생성
+                    this.entityManager.addEnemy(new Enemy(spawn.x, spawn.y, spawn.type as any, false));
+                }
             }
-        }
 
-        console.log(`✅ ${this.enemies.length}마리 적 생성 완료 (보스층: ${bossSpawned ? 'YES' : 'NO'})`);
+            console.log(`✅ ${this.entityManager.getEnemyCount()}마리 적 생성 완료 (보스층: ${bossSpawned ? 'YES' : 'NO'})`);
 
-        // NPC 스폰
-        this.npcs = [];
+            // NPC 스폰
+            this.entityManager.setNPCs([]);
         const npcSpawns = dungeonMap.spawnPoints.npcs;
         const npcTypes: Array<'sage' | 'merchant' | 'blacksmith' | 'skill_master' | 'soul_keeper'> = [];
 
@@ -1956,14 +1957,14 @@ class Game {
             npcTypes.push('merchant', 'blacksmith');
         }
 
-        // NPC 생성
-        for (let i = 0; i < Math.min(npcSpawns.length, npcTypes.length); i++) {
-            const spawn = npcSpawns[i];
-            const npcType = npcTypes[i];
-            this.npcs.push(new NPC(spawn.x, spawn.y, npcType));
-        }
+            // NPC 생성
+            for (let i = 0; i < Math.min(npcSpawns.length, npcTypes.length); i++) {
+                const spawn = npcSpawns[i];
+                const npcType = npcTypes[i];
+                this.entityManager.addNPC(new NPC(spawn.x, spawn.y, npcType));
+            }
 
-        console.log(`👤 ${this.npcs.length}명 NPC 생성 완료`);
+            console.log(`👤 ${this.entityManager.getNPCs().length}명 NPC 생성 완료`);
 
             // 해당 층의 퀘스트 활성화 (첫 방문 시)
             const floorQuests = getQuestsForFloor(floor);
@@ -1976,8 +1977,7 @@ class Game {
         } catch (error) {
             console.error(`❌ ${floor}층 생성 실패:`, error);
             // 층 생성 실패 시 빈 층으로 진행 (게임 중단 방지)
-            this.enemies = [];
-            this.npcs = [];
+            this.entityManager.clear();
         }
     }
 
@@ -1990,6 +1990,33 @@ class Game {
         if (floor <= 6) return Math.random() < 0.5 ? 'orc' : 'skeleton';
         if (floor <= 8) return Math.random() < 0.5 ? 'skeleton' : 'troll';
         return Math.random() < 0.5 ? 'troll' : 'wraith';
+    }
+
+    /**
+     * ========================================
+     * EntityManager 게터 (마이그레이션 헬퍼)
+     * ========================================
+     */
+
+    /**
+     * 플레이어 가져오기 (EntityManager 래퍼)
+     */
+    private get player(): Player | null {
+        return this.entityManager.getPlayer();
+    }
+
+    /**
+     * 적 목록 가져오기 (EntityManager 래퍼)
+     */
+    private get enemies(): Enemy[] {
+        return this.entityManager.getEnemies();
+    }
+
+    /**
+     * NPC 목록 가져오기 (EntityManager 래퍼)
+     */
+    private get npcs(): NPC[] {
+        return this.entityManager.getNPCs();
     }
 }
 
