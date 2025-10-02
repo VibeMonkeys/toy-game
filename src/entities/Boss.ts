@@ -495,15 +495,6 @@ export class Boss extends Enemy {
     }
 
     /**
-     * 플레이어와의 거리
-     */
-    private getDistanceToPlayer(player: Player): number {
-        const dx = player.x - this.x;
-        const dy = player.y - this.y;
-        return Math.sqrt(dx * dx + dy * dy);
-    }
-
-    /**
      * 데미지 받기 (오버라이드)
      */
     takeDamage(damage: number): void {

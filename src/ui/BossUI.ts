@@ -43,7 +43,7 @@ export class BossUI {
      * 보스 활성 상태 확인
      */
     isBossActive(): boolean {
-        return this.isActive && this.boss !== null && this.boss.getHealth() > 0;
+        return this.isActive && this.boss !== null && this.boss.health > 0;
     }
 
     /**
@@ -94,8 +94,8 @@ export class BossUI {
 
         const ctx = renderer.getContext();
         const bossData = this.boss.getBossData();
-        const currentHealth = this.boss.getHealth();
-        const maxHealth = this.boss.getMaxHealth();
+        const currentHealth = this.boss.health;
+        const maxHealth = this.boss.maxHealth;
         const healthPercent = currentHealth / maxHealth;
 
         // 배경 (어두운 테두리)
@@ -348,7 +348,7 @@ export class BossUI {
 
         y += 15;
         renderer.drawText(
-            `HP: ${this.boss.getHealth()}/${this.boss.getMaxHealth()} (${Math.floor((this.boss.getHealth() / this.boss.getMaxHealth()) * 100)}%)`,
+            `HP: ${this.boss.health}/${this.boss.maxHealth} (${Math.floor((this.boss.health / this.boss.maxHealth) * 100)}%)`,
             10,
             y,
             '12px monospace',

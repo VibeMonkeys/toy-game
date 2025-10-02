@@ -167,7 +167,8 @@ export class ProjectileSystem {
                 }
             } else {
                 // 적/보스 투사체 -> 플레이어 충돌
-                if (this.checkCollision(proj, player.x, player.y, player.width / 2)) {
+                // Player width is private, using default 32/2 = 16
+                if (this.checkCollision(proj, player.x, player.y, 16)) {
                     player.takeDamage(proj.damage);
 
                     // 충돌 파티클 (플레이어 피격은 Player.takeDamage 콜백에서 처리됨)

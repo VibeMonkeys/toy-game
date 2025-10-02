@@ -985,7 +985,7 @@ class Game {
                                 console.log(`✅ 퀘스트 완료: ${quest.title}`);
                                 // 퀘스트 완료 효과
                                 this.audioManager.playSFX('quest_complete');
-                                this.particleSystem.emit('level_up', this.player.x, this.player.y, { count: 40 });
+                                this.particleSystem.emit('level_up', this.player!.x, this.player!.y, { count: 40 });
                                 this.camera.shake(15, 300);
 
                                 let rewardText = quest.completionText || '퀘스트를 완료했습니다!\n\n보상:\n';
@@ -1045,7 +1045,7 @@ class Game {
 
         // 사망 효과
         this.audioManager.playSFX('player_death');
-        this.particleSystem.emit('explosion', this.player.x, this.player.y, { count: 30, color: '#8B0000' });
+        this.particleSystem.emit('explosion', this.player!.x, this.player!.y, { count: 30, color: '#8B0000' });
         this.camera.shake(25, 400);
 
         // 소울 포인트 획득 (진행한 층수에 비례)
@@ -1287,7 +1287,7 @@ class Game {
             ctx.shadowOffsetY = 0;
 
             // 버프 아이콘 렌더링 (적/보스)
-            const enemyId = enemy.isBoss ? (enemy as Boss).getBossId() : `enemy_${enemy.type}_${this.enemies.indexOf(enemy)}`;
+            const enemyId = enemy instanceof Boss ? enemy.getBossId() : `enemy_${enemy.type}_${this.enemies.indexOf(enemy)}`;
             this.buffSystem.renderBuffIcons(this.renderer, enemyScreen.x, enemyScreen.y, enemyId);
         }
 

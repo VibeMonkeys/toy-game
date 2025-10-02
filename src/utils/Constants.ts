@@ -116,12 +116,11 @@ export const ENEMIES: Record<string, EnemyType> = {
 
 // 보스 타입
 export const BOSSES: Record<string, BossType> = {
-    GOBLIN_CHIEFTAIN: 'goblin_chieftain',
-    ORC_CHIEFTAIN: 'orc_chieftain',
-    TROLL_KING: 'troll_king',
-    SKELETON_LORD: 'skeleton_lord',
-    DEATH_KNIGHT: 'death_knight',
-    CHAOS_LORD: 'chaos_lord'
+    GOBLIN_KING: 'goblin_king',
+    ORC_WARLORD: 'orc_warlord',
+    UNDEAD_LORD: 'undead_lord',
+    CHAOS_DRAGON: 'chaos_dragon',
+    TRUE_CHAOS: 'true_chaos'
 } as const;
 
 // 방 타입

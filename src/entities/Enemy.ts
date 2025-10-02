@@ -195,7 +195,7 @@ export class Enemy {
     /**
      * 플레이어와의 거리
      */
-    private getDistanceToPlayer(player: Player): number {
+    protected getDistanceToPlayer(player: Player): number {
         const dx = player.x - this.x;
         const dy = player.y - this.y;
         return Math.sqrt(dx * dx + dy * dy);

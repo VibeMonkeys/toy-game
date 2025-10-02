@@ -104,7 +104,8 @@ export class Player {
      */
     update(deltaTime: number): void {
         // 버프 시스템 업데이트 (만료된 버프 제거)
-        this.buffSystem.update();
+        // TODO: 새 BuffSystem API로 통합 필요
+        // this.buffSystem.update(deltaTime);
 
         // 스탯 재계산 (기본 스탯 + 장비 + 버프)
         this.calculateFinalStats();
@@ -560,7 +561,9 @@ export class Player {
         if (equipBonus.criticalDamage) tempStats.criticalDamage += equipBonus.criticalDamage;
 
         // 3. 버프 배율 적용
-        this.stats = this.buffSystem.applyBuffs(tempStats);
+        // TODO: 새 BuffSystem API로 통합 필요
+        // this.stats = this.buffSystem.applyBuffs(tempStats);
+        this.stats = tempStats;
 
         // 4. 현재 리소스를 비율로 복원
         this.stats.health = this.stats.maxHealth * healthRatio;
@@ -611,15 +614,17 @@ export class Player {
                     break;
 
                 case 'buff':
-                    if (effect.stat && effect.duration) {
-                        this.buffSystem.addBuff({
-                            name: item.name,
-                            stat: effect.stat,
-                            value: effect.value,
-                            duration: effect.duration
-                        });
-                        console.log(`✨ ${item.name} 사용: ${effect.stat} +${(effect.value * 100).toFixed(0)}% (${effect.duration}초)`);
-                    }
+                    // TODO: 새 BuffSystem API로 통합 필요
+                    // if (effect.stat && effect.duration) {
+                    //     this.buffSystem.addBuff({
+                    //         name: item.name,
+                    //         stat: effect.stat,
+                    //         value: effect.value,
+                    //         duration: effect.duration
+                    //     });
+                    //     console.log(`✨ ${item.name} 사용: ${effect.stat} +${(effect.value * 100).toFixed(0)}% (${effect.duration}초)`);
+                    // }
+                    console.log(`⚠️ 버프 아이템 기능 임시 비활성화: ${item.name}`);
                     break;
 
                 case 'stat':
@@ -664,6 +669,8 @@ export class Player {
      * 활성 버프 목록
      */
     getActiveBuffs() {
-        return this.buffSystem.getActiveBuffs();
+        // TODO: 새 BuffSystem API로 통합 필요
+        // return this.buffSystem.getActiveBuffs();
+        return [];
     }
 }
