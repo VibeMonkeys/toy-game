@@ -40,6 +40,7 @@ import { QUEST_DATABASE, getQuestsForFloor, getQuestsForNPC } from '../data/Ques
 import { BossUI } from '../ui/BossUI';
 import { getBossDataByFloor } from '../data/BossDatabase';
 import { EntityManager } from '../managers/EntityManager';
+import { GameStateManager } from '../managers/GameStateManager';
 
 class Game {
     // 캔버스
@@ -62,6 +63,7 @@ class Game {
     private minimap: Minimap;
     private spriteManager: SpriteManager;
     private entityManager: EntityManager;
+    private gameStateManager: GameStateManager;
     private titleScreen: TitleScreen;
     private creditsScreen: CreditsScreen;
     private howToPlayScreen: HowToPlayScreen;
@@ -73,21 +75,8 @@ class Game {
     private upgradeSystem: UpgradeSystem;
     private bossUI: BossUI;
 
-    // 게임 상태
-    private gameMode: GameMode = GameMode.LOADING;
-    private previousGameMode: GameMode = GameMode.PLAYING; // Soul Chamber 토글용
+    // 게임 런타임 상태
     private isRunning: boolean = false;
-    private currentFloor: number = 1;
-    private inventoryOpen: boolean = false;
-    private soulChamberOpen: boolean = false;
-
-    // 플레이어 정보
-    private playerName: string = GAME_INFO.DEFAULT_PLAYER_NAME;
-
-    // 메타 진행도
-    private soulPoints: number = 0;
-    private totalRuns: number = 0;
-    private highestFloor: number = 0;
 
     // 특성 선택
     private traitChoices: Trait[] = [];
@@ -141,6 +130,7 @@ class Game {
         this.upgradeSystem = new UpgradeSystem();
         this.bossUI = new BossUI();
         this.entityManager = new EntityManager();
+        this.gameStateManager = new GameStateManager();
 
         // 로컬스토리지에서 플레이어 이름 로드
         this.loadPlayerName();
@@ -1079,10 +1069,8 @@ class Game {
         console.log(`💜 소울 포인트 ${earnedSouls} 획득! (총: ${this.soulPoints})`);
 
         // 통계 업데이트
-        this.totalRuns++;
-        if (this.currentFloor > this.highestFloor) {
-            this.highestFloor = this.currentFloor;
-        }
+        this.gameStateManager.incrementTotalRuns();
+        // 최고 도달 층은 nextFloor()에서 자동 업데이트됨 (이미 현재 층이 반영되어 있음)
 
         // Soul Chamber로 복귀 (사망으로 인한 자동 복귀)
         this.soulChamberOpen = false;
@@ -1715,8 +1703,9 @@ class Game {
      */
     private savePlayerName(): void {
         try {
-            localStorage.setItem('dungeonOdyssey_playerName', this.playerName);
-            console.log(`💾 플레이어 이름 저장: ${this.playerName}`);
+            const playerName = this.gameStateManager.getPlayerName();
+            localStorage.setItem('dungeonOdyssey_playerName', playerName);
+            console.log(`💾 플레이어 이름 저장: ${playerName}`);
         } catch (error) {
             console.error('❌ 플레이어 이름 저장 실패:', error);
         }
@@ -1729,8 +1718,8 @@ class Game {
         try {
             const savedName = localStorage.getItem('dungeonOdyssey_playerName');
             if (savedName) {
-                this.playerName = savedName;
-                console.log(`💾 플레이어 이름 로드: ${this.playerName}`);
+                this.gameStateManager.setPlayerName(savedName);
+                console.log(`💾 플레이어 이름 로드: ${savedName}`);
             }
         } catch (error) {
             console.error('❌ 플레이어 이름 로드 실패:', error);
@@ -1767,9 +1756,8 @@ class Game {
      * 게임 모드 변경
      */
     private changeGameMode(newMode: GameMode): void {
-        console.log(`🔄 게임 모드 변경: ${this.gameMode} → ${newMode}`);
         const oldMode = this.gameMode;
-        this.gameMode = newMode;
+        this.gameStateManager.changeGameMode(newMode);
 
         // BGM 변경
         if (oldMode !== newMode) {
@@ -1810,7 +1798,8 @@ class Game {
         console.log('🆕 새 게임 시작!');
 
         try {
-            this.currentFloor = 1;
+            // 게임 상태 초기화
+            this.gameStateManager.resetForNewGame();
 
             // 첫 번째 층 생성
             this.generateFloor(1);
@@ -2017,6 +2006,114 @@ class Game {
      */
     private get npcs(): NPC[] {
         return this.entityManager.getNPCs();
+    }
+
+    /**
+     * ========================================
+     * GameStateManager 게터 (마이그레이션 헬퍼)
+     * ========================================
+     */
+
+    /**
+     * 게임 모드
+     */
+    private get gameMode(): GameMode {
+        return this.gameStateManager.getGameMode();
+    }
+
+    private set gameMode(mode: GameMode) {
+        this.gameStateManager.changeGameMode(mode);
+    }
+
+    /**
+     * 이전 게임 모드 (read-only, 내부용)
+     */
+    private get previousGameMode(): GameMode {
+        return this.gameStateManager.getPreviousGameMode();
+    }
+
+    private set previousGameMode(_: GameMode) {
+        // changeGameMode가 자동으로 previousGameMode를 설정하므로 비워둠
+    }
+
+    /**
+     * 현재 층
+     */
+    private get currentFloor(): number {
+        return this.gameStateManager.getCurrentFloor();
+    }
+
+    private set currentFloor(floor: number) {
+        this.gameStateManager.setCurrentFloor(floor);
+    }
+
+    /**
+     * 플레이어 이름
+     */
+    private get playerName(): string {
+        return this.gameStateManager.getPlayerName();
+    }
+
+    private set playerName(name: string) {
+        this.gameStateManager.setPlayerName(name);
+    }
+
+    /**
+     * 소울 포인트
+     */
+    private get soulPoints(): number {
+        return this.gameStateManager.getSoulPoints();
+    }
+
+    private set soulPoints(points: number) {
+        // 직접 할당이 아닌 addSoulPoints 사용 권장, 하지만 하위 호환성 위해 제공
+        const current = this.gameStateManager.getSoulPoints();
+        const diff = points - current;
+        this.gameStateManager.addSoulPoints(diff);
+    }
+
+    /**
+     * 인벤토리 열림 상태
+     */
+    private get inventoryOpen(): boolean {
+        return this.gameStateManager.isInventoryOpen();
+    }
+
+    private set inventoryOpen(open: boolean) {
+        if (open && !this.gameStateManager.isInventoryOpen()) {
+            this.gameStateManager.toggleInventory();
+        } else if (!open && this.gameStateManager.isInventoryOpen()) {
+            this.gameStateManager.toggleInventory();
+        }
+    }
+
+    /**
+     * Soul Chamber 열림 상태
+     */
+    private get soulChamberOpen(): boolean {
+        return this.gameStateManager.isSoulChamberOpen();
+    }
+
+    private set soulChamberOpen(open: boolean) {
+        if (open && !this.gameStateManager.isSoulChamberOpen()) {
+            this.gameStateManager.toggleSoulChamber();
+        } else if (!open && this.gameStateManager.isSoulChamberOpen()) {
+            this.gameStateManager.toggleSoulChamber();
+        }
+    }
+
+    /**
+     * 총 플레이 횟수
+     */
+    private get totalRuns(): number {
+        return this.gameStateManager.getTotalRuns();
+    }
+
+    /**
+     * 최고 도달 층
+     */
+    private get highestFloor(): number {
+        return this.gameStateManager.getHighestFloor();
     }
 }
 
