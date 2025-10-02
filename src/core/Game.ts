@@ -11,8 +11,10 @@ import { Renderer } from '../systems/Renderer';
 import { MapManager } from '../systems/MapManager';
 import { Camera } from '../systems/Camera';
 import { DamageNumberSystem } from '../systems/DamageNumberSystem';
+import { ParticleSystem } from '../systems/ParticleSystem';
 import { ProjectileSystem } from '../systems/ProjectileSystem';
 import { BuffSystem } from '../systems/BuffSystem';
+import { AudioManager } from '../systems/AudioManager';
 import { ItemSystem } from '../systems/ItemSystem';
 import { Inventory } from '../systems/Inventory';
 import { Trait } from '../systems/TraitSystem';
@@ -48,8 +50,10 @@ class Game {
     private mapManager: MapManager;
     private camera: Camera;
     private damageNumberSystem: DamageNumberSystem;
+    private particleSystem: ParticleSystem;
     private projectileSystem: ProjectileSystem;
     private buffSystem: BuffSystem;
+    private audioManager: AudioManager;
     private itemSystem: ItemSystem;
     private inventory: Inventory;
     private questSystem: QuestSystem;
@@ -118,8 +122,10 @@ class Game {
         this.mapManager = new MapManager();
         this.camera = new Camera();
         this.damageNumberSystem = new DamageNumberSystem();
+        this.particleSystem = new ParticleSystem();
         this.projectileSystem = new ProjectileSystem();
         this.buffSystem = new BuffSystem();
+        this.audioManager = new AudioManager();
         this.itemSystem = new ItemSystem();
         this.inventory = new Inventory();
         this.questSystem = new QuestSystem();
@@ -705,6 +711,9 @@ class Game {
         // 데미지 숫자 업데이트
         this.damageNumberSystem.update(this.deltaTime);
 
+        // 파티클 시스템 업데이트
+        this.particleSystem.update(this.deltaTime);
+
         // 투사체 시스템 업데이트
         this.projectileSystem.update(this.deltaTime, this.player, this.enemies);
 
@@ -720,6 +729,10 @@ class Game {
             const added = this.inventory.addItem(pickedItem.item);
             if (added) {
                 console.log(`📦 ${pickedItem.item.name} 획득!`);
+                // 아이템 획득 효과음
+                this.audioManager.playSFX('item_pickup');
+                // 아이템 획득 파티클
+                this.particleSystem.emit('item_collect', pickedItem.x, pickedItem.y);
                 // 퀘스트 진행도 업데이트
                 this.questSystem.onItemCollected(pickedItem.item.id, 1);
             } else {
@@ -747,6 +760,9 @@ class Game {
         const playerPos = this.player.getPosition();
         const attackRange = this.player.getAttackRange();
 
+        // 공격 슬래시 파티클
+        this.particleSystem.emit('attack_slash', playerPos.x, playerPos.y, { count: 10 });
+
         // 범위 내 적 탐지
         for (const enemy of this.enemies) {
             const dx = enemy.x - playerPos.x;
@@ -769,6 +785,12 @@ class Game {
                     finalDamage,
                     isCritical
                 );
+
+                // 공격 히트 파티클
+                this.particleSystem.emit('attack_hit', enemy.x, enemy.y, {
+                    count: isCritical ? 20 : 12,
+                    color: isCritical ? '#FFFF00' : '#FFFFFF'
+                });
 
                 console.log(`💥 데미지: ${finalDamage}${isCritical ? ' (크리티컬!)' : ''}`);
 
@@ -794,6 +816,13 @@ class Game {
             console.log(`👑 보스 처치! ${(enemy as Boss).getBossData().name}`);
             this.bossUI.setBoss(null); // 보스 UI 비활성화
             this.camera.shake(30, 500); // 강한 화면 흔들림
+            // 보스 처치 폭발 파티클 (대규모)
+            this.particleSystem.emit('explosion', enemy.x, enemy.y, { count: 50 });
+            // BGM을 일반 floor BGM으로 변경
+            this.audioManager.fadeBGMIn('floor', 2000);
+        } else {
+            // 일반 적 처치 폭발 파티클
+            this.particleSystem.emit('explosion', enemy.x, enemy.y, { count: 25 });
         }
 
         // 경험치 획득
@@ -811,6 +840,8 @@ class Game {
 
         // 아이템 드롭
         this.itemSystem.dropRandomItem(enemy.x, enemy.y, enemy.type, this.currentFloor);
+        // 아이템 드롭 반짝임 파티클
+        this.particleSystem.emit('sparkle', enemy.x, enemy.y, { count: 8 });
 
         // 퀘스트 진행도 업데이트
         this.questSystem.onEnemyKilled(enemy.type);
@@ -819,6 +850,10 @@ class Game {
             console.log(`✨ 레벨업! 현재 레벨: ${this.player.level}`);
             // 레벨업 이펙트 (화면 번쩍임)
             this.camera.shake(20, 300);
+            // 레벨업 효과음
+            this.audioManager.playSFX('level_up');
+            // 레벨업 파티클
+            this.particleSystem.emit('level_up', this.player.x, this.player.y);
         }
     }
 
@@ -947,6 +982,11 @@ class Game {
                             const rewards = this.questSystem.completeQuest(quest.id, this.player!, this.inventory);
                             if (rewards) {
                                 console.log(`✅ 퀘스트 완료: ${quest.title}`);
+                                // 퀘스트 완료 효과
+                                this.audioManager.playSFX('quest_complete');
+                                this.particleSystem.emit('level_up', this.player.x, this.player.y, { count: 40 });
+                                this.camera.shake(15, 300);
+
                                 let rewardText = quest.completionText || '퀘스트를 완료했습니다!\n\n보상:\n';
                                 if (rewards.experience) rewardText += `경험치 +${rewards.experience}\n`;
                                 if (rewards.soulPoints) rewardText += `소울 포인트 +${rewards.soulPoints}\n`;
@@ -1001,6 +1041,11 @@ class Game {
      */
     private handlePlayerDeath(): void {
         console.log('💀 플레이어 사망');
+
+        // 사망 효과
+        this.audioManager.playSFX('player_death');
+        this.particleSystem.emit('explosion', this.player.x, this.player.y, { count: 30, color: '#8B0000' });
+        this.camera.shake(25, 400);
 
         // 소울 포인트 획득 (진행한 층수에 비례)
         const earnedSouls = this.currentFloor * 5;
@@ -1339,6 +1384,9 @@ class Game {
         // 투사체 렌더링
         this.projectileSystem.render(this.renderer, this.camera);
 
+        // 파티클 렌더링
+        this.particleSystem.render(this.renderer, this.camera);
+
         // 데미지 숫자 렌더링
         this.damageNumberSystem.render(this.renderer);
 
@@ -1674,7 +1722,39 @@ class Game {
      */
     private changeGameMode(newMode: GameMode): void {
         console.log(`🔄 게임 모드 변경: ${this.gameMode} → ${newMode}`);
+        const oldMode = this.gameMode;
         this.gameMode = newMode;
+
+        // BGM 변경
+        if (oldMode !== newMode) {
+            switch (newMode) {
+                case GameMode.TITLE:
+                case GameMode.CHARACTER_CREATE:
+                case GameMode.CREDITS:
+                case GameMode.HOW_TO_PLAY:
+                    this.audioManager.fadeBGMIn('title', 1000);
+                    break;
+
+                case GameMode.PLAYING:
+                    // 보스층이면 boss BGM, 아니면 floor BGM
+                    const hasBoss = this.bossUI.isBossActive();
+                    this.audioManager.fadeBGMIn(hasBoss ? 'boss' : 'floor', 1000);
+                    break;
+
+                case GameMode.VICTORY:
+                    this.audioManager.fadeBGMIn('victory', 1000);
+                    break;
+
+                case GameMode.GAME_OVER:
+                    this.audioManager.fadeBGMIn('gameover', 1000);
+                    break;
+
+                case GameMode.SOUL_CHAMBER:
+                    // Soul Chamber는 타이틀 BGM 사용
+                    this.audioManager.fadeBGMIn('title', 1000);
+                    break;
+            }
+        }
     }
 
     /**
@@ -1750,10 +1830,24 @@ class Game {
                 const boss = new Boss(spawn.x, spawn.y, bossData);
                 boss.setProjectileSystem(this.projectileSystem); // ProjectileSystem 연결
                 boss.setBuffSystem(this.buffSystem); // BuffSystem 연결
+
+                // 보스 페이즈 변경 콜백 설정
+                boss.setOnPhaseChange((phase: number, bossX: number, bossY: number) => {
+                    // 페이즈 변경 효과
+                    this.audioManager.playSFX('boss_phase');
+                    this.particleSystem.emit('boss_telegraph', bossX, bossY, { count: 30 });
+                    this.camera.shake(20, 400);
+                    console.log(`🔥 보스 페이즈 ${phase} 돌입!`);
+                });
+
                 this.enemies.push(boss);
                 this.bossUI.setBoss(boss);
                 bossSpawned = true;
                 console.log(`👑 보스 생성: ${bossData.name} (${floor}층)`);
+
+                // 보스 등장 효과음 & BGM 변경
+                this.audioManager.playSFX('boss_appear');
+                this.audioManager.fadeBGMIn('boss', 2000);
             } else {
                 // 일반 적 생성
                 this.enemies.push(new Enemy(spawn.x, spawn.y, spawn.type as any, false));

@@ -41,6 +41,9 @@ export class Boss extends Enemy {
     private projectileSystem: ProjectileSystem | null = null;
     private buffSystem: BuffSystem | null = null;
 
+    // 콜백
+    private onPhaseChangeCallback: ((phase: number, bossX: number, bossY: number) => void) | null = null;
+
     constructor(x: number, y: number, bossData: BossData) {
         // Enemy 생성자 호출 (임시 타입으로)
         super(x, y, bossData.id as any, true);
@@ -114,6 +117,11 @@ export class Boss extends Enemy {
             this.currentPhase = newPhase.phase;
             this.currentPhaseData = newPhase;
             console.log(`👑 ${this.bossData.name} - Phase ${this.currentPhase}`);
+
+            // 페이즈 변경 콜백 호출
+            if (this.onPhaseChangeCallback) {
+                this.onPhaseChangeCallback(this.currentPhase, this.x, this.y);
+            }
             return;
         }
 
@@ -131,6 +139,11 @@ export class Boss extends Enemy {
         // 전환 후 페이즈 데이터 저장
         this.currentPhaseData = newPhase;
         this.currentPhase = newPhase.phase;
+
+        // 페이즈 변경 콜백 호출
+        if (this.onPhaseChangeCallback) {
+            this.onPhaseChangeCallback(this.currentPhase, this.x, this.y);
+        }
     }
 
     /**
@@ -535,6 +548,13 @@ export class Boss extends Enemy {
      */
     setBuffSystem(system: BuffSystem): void {
         this.buffSystem = system;
+    }
+
+    /**
+     * 페이즈 변경 콜백 설정
+     */
+    setOnPhaseChange(callback: (phase: number, bossX: number, bossY: number) => void): void {
+        this.onPhaseChangeCallback = callback;
     }
 
     /**
