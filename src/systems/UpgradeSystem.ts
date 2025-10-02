@@ -235,12 +235,15 @@ export class UpgradeSystem {
                 // 스탯 타입에 따라 적용
                 if (stat === 'luck') {
                     // luck은 가산 방식
-                    (upgradedStats as any)[stat] += bonusValue;
+                    upgradedStats.luck += bonusValue;
                 } else if (stat === 'potion_capacity') {
                     // 특수 스탯 (필요시 구현)
-                } else {
-                    // 나머지 스탯은 기본값에 보너스 추가
-                    (upgradedStats as any)[stat] += bonusValue;
+                } else if (stat in upgradedStats) {
+                    // 나머지 스탯은 기본값에 보너스 추가 (타입 가드)
+                    const key = stat as keyof PlayerStats;
+                    if (typeof upgradedStats[key] === 'number') {
+                        (upgradedStats[key] as number) += bonusValue;
+                    }
 
                     // maxHealth가 증가하면 health도 같이 증가
                     if (stat === 'maxHealth') {

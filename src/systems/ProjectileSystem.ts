@@ -11,6 +11,19 @@ import { Enemy } from '../entities/Enemy';
 import { Camera } from './Camera';
 import { ParticleSystem } from './ParticleSystem';
 
+/**
+ * 투사체 생성 옵션
+ */
+export interface ProjectileOptions {
+    radius?: number;
+    color?: string;
+    lifetime?: number;
+    homing?: boolean;
+    target?: Position;
+    piercing?: boolean;
+    maxHits?: number;
+}
+
 export class ProjectileSystem {
     private projectiles: Projectile[] = [];
     private nextId: number = 0;
@@ -35,15 +48,7 @@ export class ProjectileSystem {
         speed: number,
         damage: number,
         owner: 'player' | 'enemy' | 'boss',
-        options?: {
-            radius?: number;
-            color?: string;
-            lifetime?: number;
-            homing?: boolean;
-            target?: Position;
-            piercing?: boolean;
-            maxHits?: number;
-        }
+        options?: ProjectileOptions
     ): void {
         const velocityX = Math.cos(angle) * speed;
         const velocityY = Math.sin(angle) * speed;
@@ -82,7 +87,7 @@ export class ProjectileSystem {
         speed: number,
         damage: number,
         owner: 'player' | 'enemy' | 'boss',
-        options?: any
+        options?: ProjectileOptions
     ): void {
         if (count === 1) {
             this.createProjectile(x, y, baseAngle, speed, damage, owner, options);
@@ -108,7 +113,7 @@ export class ProjectileSystem {
         speed: number,
         damage: number,
         owner: 'player' | 'enemy' | 'boss',
-        options?: any
+        options?: ProjectileOptions
     ): void {
         const angleStep = (Math.PI * 2) / count;
 

@@ -45,8 +45,8 @@ export class Boss extends Enemy {
     private onPhaseChangeCallback: ((phase: number, bossX: number, bossY: number) => void) | null = null;
 
     constructor(x: number, y: number, bossData: BossData) {
-        // Enemy 생성자 호출 (임시 타입으로)
-        super(x, y, bossData.id as any, true);
+        // Enemy 생성자 호출 (더미 타입으로, 보스는 isBoss=true로 구별됨)
+        super(x, y, 'goblin', true); // 더미 EnemyType (보스는 bossData로 식별)
 
         this.bossData = bossData;
 
@@ -465,7 +465,7 @@ export class Boss extends Enemy {
         // 보스 자신에게 버프 적용
         this.buffSystem.applyBuff(
             `boss_${this.bossData.id}`,
-            buffType as any, // BuffType으로 캐스팅
+            buffType,
             duration,
             value,
             {

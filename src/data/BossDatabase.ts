@@ -185,7 +185,7 @@ const ORC_WARLORD: BossData = {
                         {
                             action: 'buff',
                             duration: 500,
-                            buffType: 'attack_speed',
+                            buffType: 'speed_up', // 공격 속도 증가 → 이동 속도 증가로 해석
                             buffDuration: 10000,
                             buffValue: 1.5
                         }

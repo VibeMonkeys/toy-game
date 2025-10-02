@@ -256,7 +256,7 @@ export interface FloorData {
 export interface SpawnPoint {
     x: number;
     y: number;
-    type: EnemyType | BossType | string;
+    type: EnemyType | BossType;
     isBoss?: boolean;
 }
 
@@ -386,7 +386,7 @@ export interface DialogueTree {
 
 export interface NPCService {
     type: 'shop' | 'upgrade' | 'quest';
-    items?: any[];
+    items?: string[]; // 아이템 ID 목록
 }
 
 // ============================================
@@ -505,7 +505,7 @@ export interface PatternSequence {
     projectileSpeed?: number;
     homing?: boolean;
     // 버프 관련
-    buffType?: string;
+    buffType?: BuffType;
     buffDuration?: number;
     buffValue?: number;
 }
@@ -669,7 +669,11 @@ export interface SaveData {
     timestamp: number;
     gameState: GameState;
     playerState: PlayerState;
-    questData: any;
+    questData: {
+        activeQuests: string[];
+        completedQuests: string[];
+        progress: Record<string, Record<string, number>>;
+    };
     metaProgress: GameProgress;
 }
 

@@ -4,7 +4,7 @@
  * docs/OPTIMIZED_GAME_DESIGN.md 기반으로 완전 새로 구현
  */
 
-import { GameMode, PlayerStats, Vector2D } from '../types';
+import { GameMode, PlayerStats, Vector2D, EnemyType } from '../types';
 import { GAME_MODES, SCREEN, GAMEPLAY, GAME_INFO } from '../utils/Constants';
 import { InputManager } from '../systems/InputManager';
 import { Renderer } from '../systems/Renderer';
@@ -1918,8 +1918,8 @@ class Game {
                     this.audioManager.playSFX('boss_appear');
                     this.audioManager.fadeBGMIn('boss', 2000);
                 } else {
-                    // 일반 적 생성
-                    this.entityManager.addEnemy(new Enemy(spawn.x, spawn.y, spawn.type as any, false));
+                    // 일반 적 생성 (isBoss=false이므로 EnemyType 보장)
+                    this.entityManager.addEnemy(new Enemy(spawn.x, spawn.y, spawn.type as EnemyType, false));
                 }
             }
 

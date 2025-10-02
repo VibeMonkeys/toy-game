@@ -4,7 +4,7 @@
  * 플레이어 캐릭터를 관리합니다.
  */
 
-import { Position, Vector2D, PlayerStats, WeaponType, Item } from '../types';
+import { Position, Vector2D, PlayerStats, WeaponType, Item, ArmorSlot, BuffType } from '../types';
 import { GAMEPLAY, COLORS } from '../utils/Constants';
 import { CombatSystem } from '../systems/CombatSystem';
 import { TraitSystem } from '../systems/TraitSystem';
@@ -588,8 +588,8 @@ export class Player {
     /**
      * 장비 해제
      */
-    unequipItem(slot: string): Item | null {
-        const item = this.equipmentSystem.unequip(slot as any);
+    unequipItem(slot: ArmorSlot): Item | null {
+        const item = this.equipmentSystem.unequip(slot);
         if (item) {
             this.calculateFinalStats(); // 스탯 재계산
         }
@@ -623,7 +623,7 @@ export class Player {
                         const playerId = this.getPlayerId();
 
                         // ItemEffect.stat을 BuffType으로 매핑
-                        const buffTypeMap: Record<string, string> = {
+                        const buffTypeMap: Record<string, BuffType> = {
                             'attack': 'attack_up',
                             'defense': 'defense_up',
                             'speed': 'speed_up',
@@ -635,7 +635,7 @@ export class Player {
                         if (buffType) {
                             this.buffSystem.applyBuff(
                                 playerId,
-                                buffType as any, // BuffType
+                                buffType,
                                 effect.duration * 1000, // 초 → ms
                                 effect.value,
                                 {
