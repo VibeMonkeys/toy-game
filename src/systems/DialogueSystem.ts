@@ -23,11 +23,11 @@ export class DialogueSystem {
     private selectedChoiceIndex: number = 0;
 
     // UI 설정
-    private readonly boxX: number = 100;
-    private readonly boxY: number = 480;
-    private readonly boxWidth: number = 1080;
-    private readonly boxHeight: number = 200;
-    private readonly padding: number = 20;
+    private readonly boxX: number = 80;
+    private readonly boxY: number = 450;
+    private readonly boxWidth: number = 1120;
+    private readonly boxHeight: number = 240;
+    private readonly padding: number = 25;
 
     /**
      * 대화 시작
@@ -130,123 +130,158 @@ export class DialogueSystem {
     }
 
     /**
-     * 렌더링
+     * 렌더링 (완전히 재설계)
      */
     render(renderer: Renderer): void {
         if (!this.isActive) return;
 
         const ctx = renderer.getContext();
 
-        // 배경 어둡게
+        // 1. 배경 어둡게
         ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
         ctx.fillRect(0, 0, 1280, 720);
 
-        // 대화창 배경
+        // 2. 대화창 배경
         ctx.fillStyle = 'rgba(30, 30, 40, 0.95)';
         ctx.fillRect(this.boxX, this.boxY, this.boxWidth, this.boxHeight);
 
-        // 대화창 테두리
+        // 3. 대화창 테두리
         ctx.strokeStyle = '#FFD700';
         ctx.lineWidth = 3;
         ctx.strokeRect(this.boxX, this.boxY, this.boxWidth, this.boxHeight);
 
-        // NPC 이름
+        // 4. NPC 이름 태그 (박스 바깥 상단)
         if (this.currentNPC) {
+            const nameTagWidth = 200;
+            const nameTagHeight = 40;
+            const nameTagX = this.boxX + 20;
+            const nameTagY = this.boxY - nameTagHeight;
+
             ctx.fillStyle = 'rgba(50, 50, 60, 1)';
-            ctx.fillRect(this.boxX, this.boxY - 40, 200, 40);
+            ctx.fillRect(nameTagX, nameTagY, nameTagWidth, nameTagHeight);
             ctx.strokeStyle = '#FFD700';
             ctx.lineWidth = 2;
-            ctx.strokeRect(this.boxX, this.boxY - 40, 200, 40);
+            ctx.strokeRect(nameTagX, nameTagY, nameTagWidth, nameTagHeight);
 
-            renderer.drawText(
-                this.currentNPC.data.name,
-                this.boxX + 100,
-                this.boxY - 15,
-                'bold 18px Arial',
-                '#FFD700',
-                'center'
-            );
+            ctx.font = 'bold 16px Arial';
+            ctx.fillStyle = '#FFD700';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(this.currentNPC.data.name, nameTagX + nameTagWidth / 2, nameTagY + nameTagHeight / 2);
         }
 
-        // 대화 텍스트 (여러 줄 지원)
-        const textX = this.boxX + this.padding;
-        const textY = this.boxY + this.padding + 20;
-        const maxWidth = this.boxWidth - this.padding * 2;
+        // 5. 내부 컨텐츠 영역 계산
+        const contentX = this.boxX + this.padding;
+        const contentY = this.boxY + this.padding;
+        const contentWidth = this.boxWidth - this.padding * 2;
+        const contentHeight = this.boxHeight - this.padding * 2;
+
+        // 6. 대화 텍스트 영역
+        const hasChoices = this.choices.length > 0;
+        const textAreaHeight = hasChoices ? 70 : contentHeight - 40;
+
+        ctx.save();
+        // 텍스트 영역 클리핑 (박스 밖으로 안 나가게)
+        ctx.beginPath();
+        ctx.rect(contentX, contentY, contentWidth, textAreaHeight);
+        ctx.clip();
 
         this.drawWrappedText(
             ctx,
             this.displayedText,
-            textX,
-            textY,
-            maxWidth,
+            contentX + 5,
+            contentY + 5,
+            contentWidth - 10,
+            textAreaHeight - 10,
             24,
-            '16px Arial',
+            '15px Arial',
             '#FFFFFF'
         );
+        ctx.restore();
 
-        // 타이핑 중이 아닐 때만 진행 표시
+        // 7. 타이핑 완료 후 UI
         if (this.textProgress >= this.currentText.length) {
-            // 선택지 표시
-            if (this.choices.length > 0) {
-                const choiceStartY = this.boxY + 120;
+            if (hasChoices) {
+                // 선택지 영역 구분선
+                const dividerY = contentY + textAreaHeight + 10;
+                ctx.strokeStyle = 'rgba(255, 215, 0, 0.4)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(contentX, dividerY);
+                ctx.lineTo(contentX + contentWidth, dividerY);
+                ctx.stroke();
+
+                // 선택지 타이틀
+                ctx.font = 'bold 14px Arial';
+                ctx.fillStyle = '#FFD700';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'top';
+                ctx.fillText('선택하세요:', contentX + 5, dividerY + 10);
+
+                // 선택지 목록
+                const choiceAreaY = dividerY + 35;
+                const choiceHeight = 38;
+                const choiceSpacing = 5;
+
                 this.choices.forEach((choice, index) => {
                     const isSelected = index === this.selectedChoiceIndex;
-                    const choiceY = choiceStartY + index * 35;
+                    const choiceY = choiceAreaY + index * (choiceHeight + choiceSpacing);
+
+                    // 선택지 박스가 대화창 내부에 있는지 확인
+                    if (choiceY + choiceHeight > this.boxY + this.boxHeight - this.padding) {
+                        return; // 박스 밖으로 나가면 그리지 않음
+                    }
 
                     // 선택된 항목 배경
                     if (isSelected) {
                         ctx.fillStyle = 'rgba(255, 215, 0, 0.2)';
-                        ctx.fillRect(this.boxX + 20, choiceY - 20, this.boxWidth - 40, 30);
+                        ctx.fillRect(contentX + 5, choiceY, contentWidth - 10, choiceHeight);
+
+                        ctx.strokeStyle = '#FFD700';
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(contentX + 5, choiceY, contentWidth - 10, choiceHeight);
+                    } else {
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(contentX + 5, choiceY, contentWidth - 10, choiceHeight);
                     }
 
-                    // 선택 화살표
-                    const arrow = isSelected ? '▶' : ' ';
-                    renderer.drawText(
-                        `${arrow} ${choice.text}`,
-                        textX + 10,
-                        choiceY,
-                        isSelected ? 'bold 14px Arial' : '14px Arial',
-                        isSelected ? '#FFD700' : '#CCCCCC',
-                        'left'
-                    );
+                    // 선택지 텍스트
+                    const arrow = isSelected ? '▶ ' : '   ';
+                    ctx.font = isSelected ? 'bold 15px Arial' : '14px Arial';
+                    ctx.fillStyle = isSelected ? '#FFD700' : '#CCCCCC';
+                    ctx.textAlign = 'left';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(arrow + choice.text, contentX + 15, choiceY + choiceHeight / 2);
                 });
 
-                // 조작법 힌트
-                renderer.drawText(
-                    '↑↓ 선택  |  Enter 확정',
-                    this.boxX + this.boxWidth - this.padding - 10,
-                    this.boxY + this.boxHeight - 10,
-                    '12px Arial',
-                    '#888888',
-                    'right'
-                );
+                // 조작법 힌트 (하단 우측)
+                ctx.font = '11px Arial';
+                ctx.fillStyle = '#888888';
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'bottom';
+                ctx.fillText('↑↓ 선택  |  Enter 확정', this.boxX + this.boxWidth - this.padding, this.boxY + this.boxHeight - 10);
             } else {
-                // 선택지 없으면 계속 표시
+                // 선택지 없음 - 계속 표시 (하단 우측)
                 const pulse = Math.sin(Date.now() / 300) * 0.3 + 0.7;
-                renderer.drawText(
-                    '▼ Space 계속',
-                    this.boxX + this.boxWidth - this.padding - 10,
-                    this.boxY + this.boxHeight - 10,
-                    '14px Arial',
-                    `rgba(255, 215, 0, ${pulse})`,
-                    'right'
-                );
+                ctx.font = 'bold 14px Arial';
+                ctx.fillStyle = `rgba(255, 215, 0, ${pulse})`;
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'bottom';
+                ctx.fillText('▼ Space 계속', this.boxX + this.boxWidth - this.padding, this.boxY + this.boxHeight - 10);
             }
         } else {
-            // 타이핑 중일 때 스킵 안내
-            renderer.drawText(
-                'Space 스킵',
-                this.boxX + this.boxWidth - this.padding - 10,
-                this.boxY + this.boxHeight - 10,
-                '12px Arial',
-                '#888888',
-                'right'
-            );
+            // 타이핑 중 - 스킵 안내 (하단 우측)
+            ctx.font = '11px Arial';
+            ctx.fillStyle = '#888888';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText('Space 스킵', this.boxX + this.boxWidth - this.padding, this.boxY + this.boxHeight - 10);
         }
     }
 
     /**
-     * 여러 줄 텍스트 그리기
+     * 여러 줄 텍스트 그리기 (높이 제한 추가)
      */
     private drawWrappedText(
         ctx: CanvasRenderingContext2D,
@@ -254,31 +289,58 @@ export class DialogueSystem {
         x: number,
         y: number,
         maxWidth: number,
+        maxHeight: number,
         lineHeight: number,
         font: string,
         color: string
     ): void {
         ctx.font = font;
         ctx.fillStyle = color;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
 
+        // 빈 텍스트 처리
+        if (!text || text.length === 0) return;
+
+        const lines: string[] = [];
         const words = text.split(' ');
-        let line = '';
-        let currentY = y;
+        let currentLine = '';
 
+        // 1단계: 텍스트를 줄바꿈 처리
         for (let i = 0; i < words.length; i++) {
-            const testLine = line + words[i] + ' ';
+            const testLine = currentLine + (currentLine ? ' ' : '') + words[i];
             const metrics = ctx.measureText(testLine);
 
-            if (metrics.width > maxWidth && i > 0) {
-                ctx.fillText(line, x, currentY);
-                line = words[i] + ' ';
-                currentY += lineHeight;
+            if (metrics.width > maxWidth && currentLine.length > 0) {
+                // 현재 줄 저장하고 새 줄 시작
+                lines.push(currentLine);
+                currentLine = words[i];
             } else {
-                line = testLine;
+                currentLine = testLine;
             }
         }
 
-        ctx.fillText(line, x, currentY);
+        // 마지막 줄 추가
+        if (currentLine) {
+            lines.push(currentLine);
+        }
+
+        // 2단계: 줄 렌더링 (높이 제한 적용)
+        let currentY = y;
+        for (let i = 0; i < lines.length; i++) {
+            // 높이 초과 체크
+            if (currentY + lineHeight > y + maxHeight) {
+                // 마지막에 "..." 표시
+                if (i > 0) {
+                    const prevY = y + (i - 1) * lineHeight;
+                    ctx.fillText(lines[i - 1] + '...', x, prevY);
+                }
+                break;
+            }
+
+            ctx.fillText(lines[i], x, currentY);
+            currentY += lineHeight;
+        }
     }
 
     /**
