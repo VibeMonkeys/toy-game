@@ -28,6 +28,7 @@ export class QuestUI {
      */
     toggle(): void {
         this.isOpen = !this.isOpen;
+        console.log(`📜 QuestUI.toggle() called - isOpen: ${this.isOpen}, 활성 퀘스트 수: ${this.questSystem.getActiveQuests().length}`);
     }
 
     /**
@@ -179,48 +180,78 @@ export class QuestUI {
         ctx.fillStyle = typeColor;
         ctx.fillRect(x, y, 50, 20);
 
-        renderer.drawText(
-            quest.type === 'MAIN' ? 'MAIN' : 'SIDE',
-            x + 25,
-            y + 15,
-            'bold 10px Arial',
-            '#FFFFFF',
-            'center'
-        );
+        ctx.font = 'bold 10px Arial';
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(quest.type === 'MAIN' ? 'MAIN' : 'SIDE', x + 25, y + 10);
 
         // 퀘스트 제목
-        renderer.drawText(
-            quest.title,
-            x + 60,
-            y + 15,
-            'bold 14px Arial',
-            '#FFD700'
-        );
+        ctx.font = 'bold 14px Arial';
+        ctx.fillStyle = '#FFD700';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillText(quest.title, x + 60, y + 3);
+
+        // 퀘스트 설명 (추가)
+        let descY = y + 25;
+        if (quest.description) {
+            ctx.font = '11px Arial';
+            ctx.fillStyle = '#CCCCCC';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+
+            // 긴 설명은 줄바꿈
+            const maxWidth = this.panelWidth - this.padding * 2 - 20;
+            const words = quest.description.split(' ');
+            let line = '';
+
+            for (const word of words) {
+                const testLine = line + (line ? ' ' : '') + word;
+                const metrics = ctx.measureText(testLine);
+
+                if (metrics.width > maxWidth && line) {
+                    ctx.fillText(line, x + 10, descY);
+                    descY += 16;
+                    line = word;
+                } else {
+                    line = testLine;
+                }
+            }
+
+            if (line) {
+                ctx.fillText(line, x + 10, descY);
+                descY += 16;
+            }
+
+            descY += 5; // 설명과 목표 사이 간격
+        }
 
         // 목표 목록
-        let objY = y + 35;
+        let objY = descY;
+
+        // "목표:" 라벨
+        ctx.font = 'bold 11px Arial';
+        ctx.fillStyle = '#FFD700';
+        ctx.fillText('목표:', x + 10, objY);
+        objY += 18;
+
         quest.objectives.forEach(obj => {
             const color = obj.completed ? '#00FF00' : '#FFFFFF';
             const checkmark = obj.completed ? '✓' : '○';
 
-            renderer.drawText(
-                `${checkmark} ${obj.text}`,
-                x + 10,
-                objY,
-                '12px Arial',
-                color
-            );
+            ctx.font = '12px Arial';
+            ctx.fillStyle = color;
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            ctx.fillText(`${checkmark} ${obj.text}`, x + 15, objY);
 
             // 진행도 표시
             if (obj.target && obj.target > 1) {
                 const progress = obj.progress ?? 0;
-                renderer.drawText(
-                    `[${progress}/${obj.target}]`,
-                    x + this.panelWidth - this.padding * 2 - 50,
-                    objY,
-                    '11px Arial',
-                    color
-                );
+                ctx.font = '11px Arial';
+                ctx.textAlign = 'right';
+                ctx.fillText(`[${progress}/${obj.target}]`, x + this.panelWidth - this.padding * 2 - 30, objY);
             }
 
             objY += 20;
@@ -231,6 +262,38 @@ export class QuestUI {
      * 퀘스트 아이템 높이 계산
      */
     private getQuestItemHeight(quest: Quest): number {
-        return 35 + quest.objectives.length * 20;
+        let height = 25; // 제목 영역
+
+        // 설명 높이 추가
+        if (quest.description) {
+            const maxWidth = this.panelWidth - this.padding * 2 - 20;
+            const words = quest.description.split(' ');
+            let lineCount = 1;
+            let line = '';
+
+            // 임시로 canvas 컨텍스트 필요
+            const tempCanvas = document.createElement('canvas');
+            const ctx = tempCanvas.getContext('2d')!;
+            ctx.font = '11px Arial';
+
+            for (const word of words) {
+                const testLine = line + (line ? ' ' : '') + word;
+                const metrics = ctx.measureText(testLine);
+
+                if (metrics.width > maxWidth && line) {
+                    lineCount++;
+                    line = word;
+                } else {
+                    line = testLine;
+                }
+            }
+
+            height += lineCount * 16 + 5; // 설명 줄 수 × 16px + 간격
+        }
+
+        height += 18; // "목표:" 라벨
+        height += quest.objectives.length * 20; // 목표들
+
+        return height;
     }
 }

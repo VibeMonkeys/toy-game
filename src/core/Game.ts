@@ -645,6 +645,9 @@ class Game {
         // 퀘스트 UI 토글 (Q 키)
         if (this.inputManager.isKeyJustPressed('KeyQ')) {
             this.questUI.toggle();
+            console.log('📜 퀘스트 UI 토글:', this.questUI.isQuestUIOpen());
+            // 토글 후 즉시 return (다른 입력 처리 방지)
+            return;
         }
 
         // 퀘스트 UI가 열려있으면 일부 입력 차단
@@ -652,6 +655,7 @@ class Game {
             // ESC로 닫기
             if (this.inputManager.isKeyJustPressed('Escape')) {
                 this.questUI.close();
+                console.log('📜 퀘스트 UI 닫기');
                 return;
             }
             // 다른 입력은 차단
@@ -908,6 +912,8 @@ class Game {
 
         // NPC가 제공하는 퀘스트 확인
         const npcQuests = getQuestsForNPC(npc.type);
+        console.log(`📜 NPC 퀘스트 목록:`, npcQuests.map(q => q.id));
+
         let dialogue = npc.data.dialogues.default;
         let questChoices: string[] = [];
 
@@ -916,6 +922,8 @@ class Game {
             const canStart = this.questSystem.canStartQuest(quest.id);
             const isActive = this.questSystem.getActiveQuests().some(q => q.id === quest.id);
             const isReady = this.questSystem.isQuestReadyToComplete(quest.id);
+
+            console.log(`  - ${quest.id}: canStart=${canStart}, isActive=${isActive}, isReady=${isReady}`);
 
             if (canStart && !isActive) {
                 // 새 퀘스트 제공 가능
@@ -947,10 +955,15 @@ class Game {
 
         choices.push('👋 작별 인사');
 
+        console.log(`💬 대화 선택지:`, choices);
+
         // DialogueChoice 배열 생성
         const dialogueChoices: { text: string; action: () => void }[] = choices.map((text, index) => ({
             text,
-            action: () => this.handleNPCChoice(npc, index, questChoices.length)
+            action: () => {
+                console.log(`✅ 선택: ${text} (index: ${index})`);
+                this.handleNPCChoice(npc, index, questChoices.length);
+            }
         }));
 
         this.dialogueSystem.startDialogue(npc, dialogue, dialogueChoices);
@@ -973,21 +986,65 @@ class Game {
                 if ((canStart && !isActive) || (isActive && isReady)) {
                     if (questIndex === choiceIndex) {
                         if (canStart && !isActive) {
-                            // 퀘스트 시작
-                            const started = this.questSystem.startQuest(quest);
-                            if (started) {
-                                console.log(`📜 퀘스트 시작: ${quest.title}`);
-                                this.dialogueSystem.startDialogue(
-                                    npc,
-                                    quest.storyText || `${quest.title} 퀘스트를 시작합니다.`,
-                                    [{
-                                        text: '확인',
-                                        action: () => {
-                                            npc.endInteraction();
-                                        }
-                                    }]
-                                );
+                            // 퀘스트 설명 보여주기
+                            let questDescription = `📜 ${quest.title}\n\n`;
+                            questDescription += `${quest.description}\n\n`;
+                            questDescription += `목표:\n`;
+                            quest.objectives.forEach((obj, idx) => {
+                                questDescription += `${idx + 1}. ${obj.text}`;
+                                if (obj.target && obj.target > 1) {
+                                    questDescription += ` (${obj.target}개)`;
+                                }
+                                questDescription += `\n`;
+                            });
+                            questDescription += `\n보상:\n`;
+                            if (quest.rewards.experience) {
+                                questDescription += `- 경험치: ${quest.rewards.experience}\n`;
                             }
+                            if (quest.rewards.soulPoints) {
+                                questDescription += `- 소울 포인트: ${quest.rewards.soulPoints}\n`;
+                            }
+                            if (quest.rewards.items && quest.rewards.items.length > 0) {
+                                questDescription += `- 아이템: ${quest.rewards.items.join(', ')}\n`;
+                            }
+
+                            this.dialogueSystem.startDialogue(
+                                npc,
+                                questDescription,
+                                [
+                                    {
+                                        text: '✅ 수락한다',
+                                        action: () => {
+                                            // 실제 퀘스트 시작
+                                            const started = this.questSystem.startQuest(quest);
+                                            if (started) {
+                                                console.log(`📜 퀘스트 시작: ${quest.title}`);
+                                                const startText = quest.storyText || `${quest.title} 퀘스트를 시작합니다!`;
+                                                this.dialogueSystem.startDialogue(
+                                                    npc,
+                                                    startText,
+                                                    [{
+                                                        text: '알겠습니다!',
+                                                        action: () => {
+                                                            npc.endInteraction();
+                                                        }
+                                                    }]
+                                                );
+                                            }
+                                        }
+                                    },
+                                    {
+                                        text: '❌ 거절한다',
+                                        action: () => {
+                                            this.dialogueSystem.startDialogue(
+                                                npc,
+                                                '알겠습니다. 준비가 되면 다시 찾아오세요.',
+                                                []
+                                            );
+                                        }
+                                    }
+                                ]
+                            )
                         } else if (isReady) {
                             // 퀘스트 완료
                             const rewards = this.questSystem.completeQuest(quest.id, this.player!, this.inventory);
